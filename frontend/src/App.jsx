@@ -1,122 +1,170 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import React, { useState, useEffect } from 'react';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import SearchModal from './components/SearchModal';
+import HomePage from './pages/HomePage';
+import FindTalentPage from './pages/FindTalentPage';
+import FindWorkPage from './pages/FindWorkPage';
+import ProjectsHubPage from './pages/ProjectsHubPage';
+import PricingPage from './pages/PricingPage';
+import ResourcesPage from './pages/ResourcesPage';
+import AuthPage from './pages/AuthPage';
+import FreelancerProfilePage from './pages/FreelancerProfilePage';
+import { FREELANCERS, PROJECTS } from './data/mockData';
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [currentPage, setCurrentPage] = useState('home');
+  const [selectedFreelancer, setSelectedFreelancer] = useState(FREELANCERS[0]);
+  const [selectedProject, setSelectedProject] = useState(PROJECTS[0]);
+  const [projectsInitialTab, setProjectsInitialTab] = useState('projects');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    try {
+      return localStorage.getItem('wv_is_logged_in') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleSetIsLoggedIn = (val) => {
+    setIsLoggedIn(val);
+    try {
+      localStorage.setItem('wv_is_logged_in', String(val));
+    } catch {
+      // ignore
+    }
+  };
+
+  // Global Ctrl+K / Cmd+K Search Shortcut
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  // Sync hash with page for browser back/forward navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (['home', 'talent', 'work', 'projects', 'pricing', 'resources', 'auth', 'profile'].includes(hash)) {
+        setCurrentPage(hash);
+      }
+    };
+
+    if (window.location.hash) {
+      handleHashChange();
+    }
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const navigateToPage = (page, options = {}) => {
+    if (options && options.tab) {
+      setProjectsInitialTab(options.tab);
+    }
+    setCurrentPage(page);
+    window.location.hash = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSearchResultSelect = (targetPage, item) => {
+    setIsSearchOpen(false);
+    if (targetPage === 'profile' && item) {
+      setSelectedFreelancer(item);
+    }
+    if (targetPage === 'work' && item) {
+      setSelectedProject(item);
+    }
+    navigateToPage(targetPage);
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="min-h-screen bg-[#FFF9F5] text-[#171717] flex flex-col font-sans selection:bg-[#FCE2D3] selection:text-[#F36B21]">
+      {/* Top Universal Navbar */}
+      <Navbar
+        currentPage={currentPage}
+        setCurrentPage={navigateToPage}
+        isLoggedIn={isLoggedIn}
+        setIsLoggedIn={handleSetIsLoggedIn}
+        onOpenSearch={() => setIsSearchOpen(true)}
+      />
 
-      <div className="ticks"></div>
+      {/* Main Content Area */}
+      <main className="flex-1">
+        {currentPage === 'home' && (
+          <HomePage
+            setCurrentPage={navigateToPage}
+            setSelectedFreelancer={setSelectedFreelancer}
+            setSelectedProject={setSelectedProject}
+          />
+        )}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        {currentPage === 'talent' && (
+          <FindTalentPage
+            setCurrentPage={navigateToPage}
+            setSelectedFreelancer={setSelectedFreelancer}
+          />
+        )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {currentPage === 'work' && (
+          <FindWorkPage
+            setCurrentPage={navigateToPage}
+            setSelectedProject={setSelectedProject}
+          />
+        )}
+
+        {currentPage === 'projects' && (
+          <ProjectsHubPage
+            setCurrentPage={navigateToPage}
+            initialTab={projectsInitialTab}
+          />
+        )}
+
+        {currentPage === 'pricing' && (
+          <PricingPage
+            setCurrentPage={navigateToPage}
+          />
+        )}
+
+        {currentPage === 'resources' && (
+          <ResourcesPage
+            setCurrentPage={navigateToPage}
+          />
+        )}
+
+        {currentPage === 'auth' && (
+          <AuthPage
+            setCurrentPage={navigateToPage}
+            setIsLoggedIn={handleSetIsLoggedIn}
+          />
+        )}
+
+        {currentPage === 'profile' && (
+          <FreelancerProfilePage
+            freelancer={selectedFreelancer}
+            setCurrentPage={navigateToPage}
+          />
+        )}
+      </main>
+
+      {/* Global Command Palette / Search Modal */}
+      <SearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        onSelectResult={handleSearchResultSelect}
+      />
+
+      {/* Footer on content pages */}
+      {currentPage !== 'auth' && (
+        <Footer setCurrentPage={navigateToPage} />
+      )}
+    </div>
+  );
 }
-
-export default App
