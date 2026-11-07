@@ -54,7 +54,7 @@ export default function ResourcesPage() {
           </div>
 
           <h1 className="font-editorial text-4xl sm:text-6xl lg:text-[62px] leading-[1.1] tracking-tight text-[#171717]">
-            Workverse <span className="text-[#F36B21] italic">Resources Hub</span>
+            Workora <span className="text-[#F36B21] italic">Resources Hub</span>
           </h1>
 
           <p className="text-base sm:text-lg text-[#777777] max-w-xl mx-auto">
