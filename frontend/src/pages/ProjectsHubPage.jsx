@@ -36,6 +36,12 @@ import {
   Eye,
   AlertCircle,
   ExternalLink,
+  Play,
+  Pause,
+  RotateCcw,
+  Printer,
+  ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
 import {
   PROJECTS,
@@ -46,6 +52,72 @@ import {
   PAYMENTS_DATA,
 } from '../data/mockData';
 
+const INITIAL_KANBAN_TASKS = [
+  {
+    id: 'kb-1',
+    title: 'Architecture RFC & Token Sync',
+    project: 'SaaS Dashboard Development',
+    column: 'backlog',
+    priority: 'High',
+    estimate: '8 hrs',
+    assignee: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+  },
+  {
+    id: 'kb-2',
+    title: 'Stripe Escrow Webhook Integration',
+    project: 'E-commerce Platform',
+    column: 'backlog',
+    priority: 'Medium',
+    estimate: '12 hrs',
+    assignee: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
+  },
+  {
+    id: 'kb-3',
+    title: 'Core Telemetry & Analytics Charts',
+    project: 'SaaS Dashboard Development',
+    column: 'progress',
+    priority: 'High',
+    estimate: '16 hrs',
+    assignee: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+  },
+  {
+    id: 'kb-4',
+    title: 'PostgreSQL Migration & Indexing',
+    project: 'E-commerce Platform',
+    column: 'progress',
+    priority: 'Medium',
+    estimate: '6 hrs',
+    assignee: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80',
+  },
+  {
+    id: 'kb-5',
+    title: 'Mobile Responsive Audit & Tap Targets',
+    project: 'Brand Identity & Web',
+    column: 'review',
+    priority: 'Urgent',
+    estimate: '4 hrs',
+    assignee: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
+  },
+  {
+    id: 'kb-6',
+    title: 'Design Tokens & UI Component Kit',
+    project: 'Brand Identity & Web',
+    column: 'done',
+    priority: 'High',
+    estimate: '14 hrs',
+    assignee: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
+  },
+  {
+    id: 'kb-7',
+    title: 'Wireframes & User Flow Signoff',
+    project: 'SaaS Dashboard Development',
+    column: 'done',
+    priority: 'Medium',
+    estimate: '10 hrs',
+    assignee: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+  },
+];
+
 export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects' }) {
   const [activeSidebarNav, setActiveSidebarNav] = useState(initialTab || 'projects');
 
@@ -53,7 +125,16 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
     if (initialTab) {
       setActiveSidebarNav(initialTab);
     }
-  }, [initialTab]); // 'projects' | 'proposals' | 'messages' | 'files' | 'team' | 'payments' | 'settings'
+  }, [initialTab]); // 'projects' | 'kanban' | 'proposals' | 'messages' | 'files' | 'team' | 'payments' | 'settings'
+
+  // Toast Notification State
+  const [toast, setToast] = useState(null);
+  const triggerToast = (title, message, type = 'success') => {
+    setToast({ title, message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 3500);
+  };
 
   // Projects State
   const [projectStatusFilter, setProjectStatusFilter] = useState('All');
@@ -61,12 +142,92 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
   const [projectList, setProjectList] = useState(PROJECTS);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
 
-  // New Project Form State
+  // New Project 3-Step Wizard State
+  const [wizardStep, setWizardStep] = useState(1);
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newBudget, setNewBudget] = useState('$1,500');
   const [newCategory, setNewCategory] = useState('Web Development');
   const [newDeadline, setNewDeadline] = useState('Dec 20, 2026');
+  const [m1Name, setM1Name] = useState('Discovery & Architecture');
+  const [m1Pct, setM1Pct] = useState('30');
+  const [m2Name, setM2Name] = useState('Core Feature Build');
+  const [m2Pct, setM2Pct] = useState('50');
+  const [m3Name, setM3Name] = useState('Testing & Deployment');
+  const [m3Pct, setM3Pct] = useState('20');
+
+  // Kanban Tasks State
+  const [kanbanTasks, setKanbanTasks] = useState(INITIAL_KANBAN_TASKS);
+  const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskCol, setNewTaskCol] = useState('backlog');
+  const [newTaskPriority, setNewTaskPriority] = useState('Medium');
+  const [newTaskEstimate, setNewTaskEstimate] = useState('4 hrs');
+  const [newTaskProject, setNewTaskProject] = useState('SaaS Dashboard Development');
+
+  // Live Stopwatch Time Tracker State
+  const [timerSeconds, setTimerSeconds] = useState(5076); // 01:24:36
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [hourlyRate, setHourlyRate] = useState(45);
+
+  useEffect(() => {
+    let interval = null;
+    if (isTimerRunning) {
+      interval = setInterval(() => {
+        setTimerSeconds((prev) => prev + 1);
+      }, 1000);
+    } else if (!isTimerRunning && timerSeconds !== 0) {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning]);
+
+  const formatTimer = (sec) => {
+    const hrs = Math.floor(sec / 3600);
+    const mins = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  const moveTask = (taskId, direction) => {
+    const cols = ['backlog', 'progress', 'review', 'done'];
+    setKanbanTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          const currentIndex = cols.indexOf(t.column);
+          const nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+          if (nextIndex >= 0 && nextIndex < cols.length) {
+            const nextCol = cols[nextIndex];
+            triggerToast('Task Moved', `Moved "${t.title}" to ${nextCol.toUpperCase()}`);
+            return { ...t, column: nextCol };
+          }
+        }
+        return t;
+      })
+    );
+  };
+
+  const handleCreateTask = (e) => {
+    e.preventDefault();
+    if (newTaskTitle.trim()) {
+      const task = {
+        id: `kb-${Date.now()}`,
+        title: newTaskTitle.trim(),
+        project: newTaskProject,
+        column: newTaskCol,
+        priority: newTaskPriority,
+        estimate: newTaskEstimate,
+        assignee: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+      };
+      setKanbanTasks((prev) => [task, ...prev]);
+      setIsNewTaskModalOpen(false);
+      setNewTaskTitle('');
+      triggerToast('Task Created', `Added "${task.title}" to Kanban board`);
+    }
+  };
+
+  // Official Invoice Modal State
+  const [activeInvoicePayment, setActiveInvoicePayment] = useState(null);
 
   // Proposals State
   const [proposals, setProposals] = useState(PROPOSALS_DATA);
@@ -421,6 +582,7 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
             <div className="bg-white rounded-3xl border border-[#EAE2DC] p-3 space-y-1 sticky top-28 shadow-xs">
               {[
                 { id: 'projects', label: 'My Projects', icon: FolderKanban },
+                { id: 'kanban', label: 'Milestones Board', icon: Activity, badge: 'Live' },
                 { id: 'proposals', label: 'Proposals', icon: Send, badge: String(proposals.length) },
                 { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '1' },
                 { id: 'files', label: 'Files', icon: Folder, badge: String(filesList.length) },
@@ -613,7 +775,213 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
               </>
             )}
 
-            {/* VIEW 2: PROPOSALS & PITCHES */}
+            {/* VIEW 2: MILESTONES KANBAN BOARD & LIVE TIME TRACKER */}
+            {activeSidebarNav === 'kanban' && (
+              <div className="space-y-6">
+                {/* 1. Live Stopwatch / Session Hourly Tracker Banner */}
+                <div className="bg-gradient-to-br from-[#171717] to-[#262626] text-white rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden">
+                  <div className="absolute -right-10 -bottom-10 w-60 h-60 bg-[#F36B21]/20 rounded-full blur-3xl pointer-events-none" />
+
+                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-2">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-semibold text-[#FCE2D3]">
+                        <span className={`w-2 h-2 rounded-full ${isTimerRunning ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                        <span>Live Milestone Time Tracker</span>
+                      </div>
+                      <h3 className="text-lg sm:text-xl font-bold text-white">
+                        SaaS Dashboard Development
+                      </h3>
+                      <p className="text-xs text-white/70">
+                        Active Contractor: <span className="text-white font-semibold">Arjun Mehta</span> • Escrow Rate: <span className="text-[#F36B21] font-bold">${hourlyRate}/hr</span>
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                      {/* Big Digital Clock */}
+                      <div className="px-5 py-3 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-md text-center min-w-[150px]">
+                        <span className="font-mono text-2xl sm:text-3xl font-extrabold tracking-wider text-white">
+                          {formatTimer(timerSeconds)}
+                        </span>
+                        <span className="block text-[10px] text-white/60 uppercase tracking-widest mt-0.5">
+                          Session Duration
+                        </span>
+                      </div>
+
+                      {/* Controls */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setIsTimerRunning(!isTimerRunning)}
+                          className={`w-11 h-11 rounded-full flex items-center justify-center transition-transform active:scale-95 cursor-pointer shadow-md ${
+                            isTimerRunning
+                              ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                              : 'bg-[#F36B21] hover:bg-[#e05e16] text-white'
+                          }`}
+                          title={isTimerRunning ? 'Pause Session' : 'Start Session'}
+                        >
+                          {isTimerRunning ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setIsTimerRunning(false);
+                            setTimerSeconds(0);
+                            triggerToast('Timer Reset', 'Session stopwatch reset to 00:00:00');
+                          }}
+                          className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+                          title="Reset Timer"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Log Work Button */}
+                      <button
+                        onClick={() => {
+                          const hrs = (timerSeconds / 3600).toFixed(2);
+                          const earned = ((timerSeconds / 3600) * hourlyRate).toFixed(2);
+                          triggerToast('Session Logged', `Logged ${hrs} hrs ($${earned}) to active milestone!`);
+                        }}
+                        className="px-4 py-2.5 rounded-full bg-white text-[#171717] hover:bg-[#FFF3EC] font-bold text-xs transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                      >
+                        Log ${((timerSeconds / 3600) * hourlyRate).toFixed(2)} to Milestone
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Milestones Board Header & Add Task CTA */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-[#171717]">Milestones Delivery Board</h2>
+                    <p className="text-xs text-[#888888] mt-0.5">
+                      Move scoped deliverables across sprint columns with live status sync
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => setIsNewTaskModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer self-start sm:self-auto"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Task Card</span>
+                  </button>
+                </div>
+
+                {/* 3. 4-Column Responsive Kanban Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+                  {[
+                    { id: 'backlog', title: 'Backlog / Specs' },
+                    { id: 'progress', title: 'In Development' },
+                    { id: 'review', title: 'Milestone Review' },
+                    { id: 'done', title: 'Approved & Released' },
+                  ].map((col) => {
+                    const colTasks = kanbanTasks.filter((t) => t.column === col.id);
+                    return (
+                      <div
+                        key={col.id}
+                        className="bg-[#FFF9F5] border border-[#EAE2DC] rounded-3xl p-4 space-y-3 min-h-[360px] flex flex-col justify-between"
+                      >
+                        <div className="space-y-3">
+                          {/* Column Header */}
+                          <div className="flex items-center justify-between pb-2 border-b border-[#EAE2DC]">
+                            <span className="text-xs font-bold text-[#171717]">{col.title}</span>
+                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-white border border-[#EAE2DC] text-[#777777]">
+                              {colTasks.length}
+                            </span>
+                          </div>
+
+                          {/* Task Cards */}
+                          <div className="space-y-3">
+                            {colTasks.map((t) => (
+                              <div
+                                key={t.id}
+                                className="bg-white rounded-2xl border border-[#EAE2DC] p-3.5 space-y-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:border-[#F36B21]/50 hover:shadow-md transition-all group"
+                              >
+                                <div className="flex items-center justify-between gap-1">
+                                  <span
+                                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                      t.priority === 'Urgent'
+                                        ? 'bg-rose-100 text-rose-700'
+                                        : t.priority === 'High'
+                                        ? 'bg-amber-100 text-amber-800'
+                                        : 'bg-slate-100 text-slate-700'
+                                    }`}
+                                  >
+                                    {t.priority}
+                                  </span>
+                                  <span className="text-[10px] text-[#888888] font-medium flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-[#F36B21]" />
+                                    {t.estimate}
+                                  </span>
+                                </div>
+
+                                <h4 className="text-xs font-bold text-[#171717] leading-snug group-hover:text-[#F36B21] transition-colors">
+                                  {t.title}
+                                </h4>
+
+                                <p className="text-[10px] text-[#777777] font-medium">
+                                  {t.project}
+                                </p>
+
+                                <div className="flex items-center justify-between pt-2 border-t border-[#F3ECE7]">
+                                  <img
+                                    src={t.assignee}
+                                    alt="Assignee"
+                                    className="w-5 h-5 rounded-full object-cover border border-[#EAE2DC]"
+                                  />
+
+                                  {/* Shift arrows */}
+                                  <div className="flex items-center gap-1">
+                                    {col.id !== 'backlog' && (
+                                      <button
+                                        onClick={() => moveTask(t.id, 'prev')}
+                                        className="p-1 rounded-md hover:bg-[#FFF3EC] text-[#777777] hover:text-[#171717] transition-colors cursor-pointer"
+                                        title="Move to previous stage"
+                                      >
+                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                    {col.id !== 'done' && (
+                                      <button
+                                        onClick={() => moveTask(t.id, 'next')}
+                                        className="p-1 rounded-md hover:bg-[#FFF3EC] text-[#F36B21] transition-colors cursor-pointer"
+                                        title="Move to next stage"
+                                      >
+                                        <ChevronRight className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+
+                            {colTasks.length === 0 && (
+                              <div className="text-center py-8 text-[11px] text-[#999999] border-2 border-dashed border-[#EAE2DC] rounded-2xl">
+                                Empty Stage
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Column Footer Quick Add */}
+                        <button
+                          onClick={() => {
+                            setNewTaskCol(col.id);
+                            setIsNewTaskModalOpen(true);
+                          }}
+                          className="w-full py-2 rounded-xl border border-dashed border-[#EAE2DC] hover:border-[#F36B21] hover:bg-white text-[11px] font-semibold text-[#777777] hover:text-[#F36B21] flex items-center justify-center gap-1 transition-all cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Task</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 3: PROPOSALS & PITCHES */}
             {activeSidebarNav === 'proposals' && (
               <div className="space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
@@ -1032,18 +1400,21 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
 
                           {pay.status === 'In Escrow' || pay.status === 'Pending Approval' ? (
                             <button
-                              onClick={() => handleReleaseEscrow(pay.id)}
+                              onClick={() => {
+                                handleReleaseEscrow(pay.id);
+                                triggerToast('Escrow Released', `Disbursed ${pay.amount} to ${pay.recipient}!`);
+                              }}
                               className="px-4 py-2 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
                             >
                               Release Payout
                             </button>
                           ) : (
                             <button
-                              onClick={() => handleSimulateDownload(`Invoice_${pay.id}.pdf`)}
-                              className="px-3.5 py-1.5 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] text-xs font-medium text-[#777777] hover:text-[#171717] flex items-center gap-1 cursor-pointer"
+                              onClick={() => setActiveInvoicePayment(pay)}
+                              className="px-3.5 py-1.5 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] text-xs font-semibold text-[#777777] hover:text-[#171717] flex items-center gap-1.5 cursor-pointer hover:bg-[#FFF3EC] transition-all"
                             >
-                              <Download className="w-3 h-3" />
-                              <span>Receipt</span>
+                              <FileText className="w-3.5 h-3.5 text-[#F36B21]" />
+                              <span>View Invoice</span>
                             </button>
                           )}
                         </div>
@@ -1284,105 +1655,258 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
       </section>
 
       {/* ========================================================
-          MODAL 1: CREATE NEW PROJECT
+          MODAL 1: CREATE NEW PROJECT (3-STEP WIZARD)
       ======================================================== */}
       {isNewProjectModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-150">
           <div
-            className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-[#EAE2DC] p-6 sm:p-8 space-y-6"
+            className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-[#EAE2DC] p-6 sm:p-8 space-y-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between">
-              <div>
+            {/* Header & Step Tracker */}
+            <div className="flex items-start justify-between border-b border-[#F3ECE7] pb-4">
+              <div className="space-y-1">
                 <span className="px-2.5 py-0.5 rounded-full bg-[#FFF3EC] text-[#F36B21] text-xs font-semibold border border-[#FCE2D3]">
-                  Project Setup
+                  Project Setup Wizard
                 </span>
-                <h3 className="text-lg font-bold text-[#171717] mt-1.5">Create New Project</h3>
-                <p className="text-xs text-[#777777]">Initialize milestones, assign scope, and invite contributors.</p>
+                <h3 className="text-xl font-bold text-[#171717]">
+                  {wizardStep === 1 && 'Step 1: Scope & Role Identity'}
+                  {wizardStep === 2 && 'Step 2: Milestone Escrow Schedule'}
+                  {wizardStep === 3 && 'Step 3: Budget & Escrow Guarantee'}
+                </h3>
               </div>
               <button
-                onClick={() => setIsNewProjectModalOpen(false)}
-                className="p-1 rounded-full text-[#777777] hover:text-[#171717] hover:bg-[#FFF3EC] cursor-pointer"
+                onClick={() => {
+                  setIsNewProjectModalOpen(false);
+                  setWizardStep(1);
+                }}
+                className="p-1.5 rounded-full text-[#777777] hover:text-[#171717] hover:bg-[#FFF3EC] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateProject} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
-                  Project Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="e.g. Next.js SaaS Architecture"
-                  className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-sm font-semibold focus:outline-none focus:border-[#F36B21]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
-                    Category
-                  </label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+            {/* Step Indicators */}
+            <div className="flex items-center justify-between gap-2 px-1">
+              {[
+                { s: 1, label: 'Scope' },
+                { s: 2, label: 'Milestones' },
+                { s: 3, label: 'Budget & Escrow' },
+              ].map((st) => (
+                <div key={st.s} className="flex items-center gap-2 flex-1">
+                  <div
+                    className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
+                      wizardStep === st.s
+                        ? 'bg-[#F36B21] text-white shadow-xs'
+                        : wizardStep > st.s
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-[#FFF3EC] text-[#888888]'
+                    }`}
                   >
-                    <option value="Web Development">Web Development</option>
-                    <option value="UI/UX Design">UI/UX Design</option>
-                    <option value="Data & AI">Data & AI</option>
-                    <option value="Marketing">Marketing</option>
-                  </select>
+                    {wizardStep > st.s ? '✓' : st.s}
+                  </div>
+                  <span className="text-xs font-semibold text-[#171717] hidden sm:inline">{st.label}</span>
+                  {st.s < 3 && <div className="flex-1 h-0.5 bg-[#EAE2DC] mx-1" />}
                 </div>
+              ))}
+            </div>
+
+            {/* STEP 1: Basic Scope */}
+            {wizardStep === 1 && (
+              <div className="space-y-4 animate-in fade-in duration-150">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
-                    Budget (USD)
+                    Project Initiative Title
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="e.g. Next.js SaaS Analytics Platform"
+                    className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-sm font-semibold focus:outline-none focus:border-[#F36B21]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                      Domain Category
+                    </label>
+                    <select
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                    >
+                      <option value="Web Development">Web Development</option>
+                      <option value="UI/UX Design">UI/UX Design</option>
+                      <option value="Data & AI">Data & AI</option>
+                      <option value="Marketing">Marketing</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                      Target Completion Date
+                    </label>
+                    <input
+                      type="text"
+                      value={newDeadline}
+                      onChange={(e) => setNewDeadline(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                    Technical Scope & Deliverables
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={newDesc}
+                    onChange={(e) => setNewDesc(e.target.value)}
+                    placeholder="Provide overview, tech stack requirements, and key architectural criteria..."
+                    className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs focus:outline-none focus:border-[#F36B21] leading-relaxed"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsNewProjectModalOpen(false)}
+                    className="px-4 py-2 rounded-full text-xs font-semibold text-[#777777] hover:text-[#171717] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!newTitle.trim()}
+                    onClick={() => setWizardStep(2)}
+                    className="flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-[#171717] hover:bg-[#F36B21] disabled:opacity-50 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                  >
+                    <span>Next: Milestones</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2: Milestones Breakdown */}
+            {wizardStep === 2 && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <p className="text-xs text-[#777777]">
+                  Define milestone phases to protect both your deliverables and developer payments via automated escrow.
+                </p>
+
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-[#171717]">
+                      <span>Milestone 1</span>
+                      <span className="text-[#F36B21]">{m1Pct}% Allocation</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={m1Name}
+                      onChange={(e) => setM1Name(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-xl bg-white border border-[#EAE2DC] text-xs font-semibold"
+                    />
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-[#171717]">
+                      <span>Milestone 2</span>
+                      <span className="text-[#F36B21]">{m2Pct}% Allocation</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={m2Name}
+                      onChange={(e) => setM2Name(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-xl bg-white border border-[#EAE2DC] text-xs font-semibold"
+                    />
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-[#171717]">
+                      <span>Milestone 3</span>
+                      <span className="text-[#F36B21]">{m3Pct}% Allocation</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={m3Name}
+                      onChange={(e) => setM3Name(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-xl bg-white border border-[#EAE2DC] text-xs font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-center text-xs text-emerald-800 font-semibold">
+                  ✓ 100% Milestone Schedule Balanced (30% + 50% + 20%)
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setWizardStep(1)}
+                    className="px-4 py-2 rounded-full text-xs font-semibold text-[#777777] hover:text-[#171717] cursor-pointer"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWizardStep(3)}
+                    className="flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-[#171717] hover:bg-[#F36B21] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                  >
+                    <span>Next: Escrow Deposit</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: Budget & Escrow Confirmation */}
+            {wizardStep === 3 && (
+              <form onSubmit={handleCreateProject} className="space-y-4 animate-in fade-in duration-150">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                    Total Contract Budget (USD)
                   </label>
                   <input
                     type="text"
                     value={newBudget}
                     onChange={(e) => setNewBudget(e.target.value)}
                     placeholder="$2,500"
-                    className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                    className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-base font-extrabold text-[#171717] focus:outline-none focus:border-[#F36B21]"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
-                  Scope & Deliverables
-                </label>
-                <textarea
-                  rows={3}
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  placeholder="Describe technical requirements, milestone outcomes..."
-                  className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs focus:outline-none focus:border-[#F36B21] leading-relaxed"
-                />
-              </div>
+                <div className="p-4 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#171717]">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <span>Workverse 100% Escrow Protection</span>
+                  </div>
+                  <p className="text-[11px] text-[#777777] leading-relaxed">
+                    Funds will be safeguarded in smart escrow. Payouts are only disbursed when you inspect and approve each milestone deliverable.
+                  </p>
+                </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsNewProjectModalOpen(false)}
-                  className="px-5 py-2.5 rounded-full text-xs font-semibold text-[#777777] hover:text-[#171717] cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-md shadow-orange-500/20 active:scale-95 transition-all cursor-pointer"
-                >
-                  <span>Launch Project</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </form>
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setWizardStep(2)}
+                    className="px-4 py-2 rounded-full text-xs font-semibold text-[#777777] hover:text-[#171717] cursor-pointer"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold shadow-md shadow-orange-500/25 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <span>Launch & Fund Escrow</span>
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
@@ -1558,6 +2082,236 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL 4: OFFICIAL TAX INVOICE & ESCROW RECEIPT
+      ======================================================== */}
+      {activeInvoicePayment && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setActiveInvoicePayment(null)}
+        >
+          <div
+            className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#EAE2DC] p-6 sm:p-8 space-y-6 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Invoice Top Strip */}
+            <div className="flex items-start justify-between border-b border-[#F3ECE7] pb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F36B21] to-[#E0560E] flex items-center justify-center text-white shadow-md">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-[#171717]">Workverse Escrow Disbursement</h3>
+                  <p className="text-xs text-[#777777]">Official Tax Invoice & Release Certificate</p>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <span className="text-xs font-mono font-bold text-[#F36B21] block">WV-INV-2026-0892</span>
+                <span className="text-[10px] text-[#888888]">Issued: {activeInvoicePayment.date}</span>
+              </div>
+            </div>
+
+            {/* Client / Contractor Dossier */}
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-[#888888]">Billed To (Client)</span>
+                <p className="font-bold text-[#171717] mt-0.5">Workverse Ventures LLC</p>
+                <p className="text-[#777777]">San Francisco, CA • VAT: US-9281928</p>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-[#888888]">Paid To (Contractor)</span>
+                <p className="font-bold text-[#171717] mt-0.5">{activeInvoicePayment.recipient}</p>
+                <p className="text-[#777777]">Verified Freelance Specialist</p>
+              </div>
+            </div>
+
+            {/* Financial Ledger Table */}
+            <div className="border border-[#EAE2DC] rounded-2xl overflow-hidden text-xs">
+              <div className="bg-[#FFF9F5] px-4 py-2.5 font-bold text-[#171717] grid grid-cols-12 gap-2 border-b border-[#EAE2DC]">
+                <span className="col-span-6">Milestone Deliverable</span>
+                <span className="col-span-3 text-center">Status</span>
+                <span className="col-span-3 text-right">Net Amount</span>
+              </div>
+              <div className="p-4 grid grid-cols-12 gap-2 items-center">
+                <div className="col-span-6 space-y-0.5">
+                  <span className="font-bold text-[#171717]">{activeInvoicePayment.milestone}</span>
+                  <p className="text-[10px] text-[#777777]">{activeInvoicePayment.project}</p>
+                </div>
+                <div className="col-span-3 text-center">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                    Disbursed ✓
+                  </span>
+                </div>
+                <div className="col-span-3 text-right font-extrabold text-[#171717] text-sm">
+                  {activeInvoicePayment.amount}
+                </div>
+              </div>
+            </div>
+
+            {/* Cryptographic Escrow Seal */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-[#666666] flex items-center justify-between">
+              <span className="flex items-center gap-1.5 font-mono">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Tx Hash: 0x8a92...f71c4d</span>
+              </span>
+              <span className="text-emerald-700 font-semibold">100% Escrow Cleared</span>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-between pt-2">
+              <button
+                onClick={() => setActiveInvoicePayment(null)}
+                className="px-4 py-2 rounded-full text-xs font-semibold text-[#777777] hover:text-[#171717] cursor-pointer"
+              >
+                Close
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#EAE2DC] hover:bg-[#FFF3EC] text-xs font-semibold text-[#171717] cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Receipt</span>
+                </button>
+                <button
+                  onClick={() => {
+                    handleSimulateDownload(`Invoice_${activeInvoicePayment.id}.pdf`);
+                    setActiveInvoicePayment(null);
+                  }}
+                  className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#171717] hover:bg-[#F36B21] text-white text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download PDF</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL 5: ADD TASK TO KANBAN BOARD
+      ======================================================== */}
+      {isNewTaskModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setIsNewTaskModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#EAE2DC] p-6 sm:p-8 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="px-2.5 py-0.5 rounded-full bg-[#FFF3EC] text-[#F36B21] text-xs font-semibold border border-[#FCE2D3]">
+                  Sprint Task
+                </span>
+                <h3 className="text-lg font-bold text-[#171717] mt-1.5">Add Task to Board</h3>
+              </div>
+              <button
+                onClick={() => setIsNewTaskModalOpen(false)}
+                className="p-1 rounded-full text-[#777777] hover:text-[#171717] hover:bg-[#FFF3EC] cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTask} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                  Task Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  placeholder="e.g. Optimize Lighthouse score to 95+"
+                  className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                    Target Column
+                  </label>
+                  <select
+                    value={newTaskCol}
+                    onChange={(e) => setNewTaskCol(e.target.value)}
+                    className="w-full px-3 py-2 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold"
+                  >
+                    <option value="backlog">Backlog</option>
+                    <option value="progress">In Development</option>
+                    <option value="review">Milestone Review</option>
+                    <option value="done">Completed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                    Priority Tier
+                  </label>
+                  <select
+                    value={newTaskPriority}
+                    onChange={(e) => setNewTaskPriority(e.target.value)}
+                    className="w-full px-3 py-2 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold"
+                  >
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                  Estimated Effort (Hours)
+                </label>
+                <input
+                  type="text"
+                  value={newTaskEstimate}
+                  onChange={(e) => setNewTaskEstimate(e.target.value)}
+                  placeholder="e.g. 6 hrs"
+                  className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsNewTaskModalOpen(false)}
+                  className="px-4 py-2 rounded-full text-xs font-semibold text-[#777777] hover:text-[#171717] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                >
+                  Add Card
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Animated Toast Notification */}
+      {toast && (
+        <div className="fixed top-20 right-6 z-50 bg-[#171717] text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 animate-in slide-in-from-top-4 duration-200">
+          <div className="w-6 h-6 rounded-full bg-[#F36B21] flex items-center justify-center text-white shrink-0">
+            <Check className="w-3.5 h-3.5 stroke-[3]" />
+          </div>
+          <div>
+            <h5 className="text-xs font-bold text-white">{toast.title}</h5>
+            <p className="text-[11px] text-white/80">{toast.message}</p>
           </div>
         </div>
       )}

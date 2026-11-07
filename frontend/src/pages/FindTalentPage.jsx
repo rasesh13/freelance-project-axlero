@@ -251,11 +251,10 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                   <button
                     key={item.label}
                     onClick={() => setSearchQuery(item.query)}
-                    className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 shadow-xs ${
-                      searchQuery === item.query
-                        ? 'bg-[#F36B21] text-white border-[#F36B21]'
-                        : 'bg-white hover:bg-[#FFF3EC] hover:border-[#FCE2D3] hover:text-[#F36B21] border-[#EAE2DC] text-[#444444]'
-                    }`}
+                    className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 shadow-xs ${searchQuery === item.query
+                      ? 'bg-[#F36B21] text-white border-[#F36B21]'
+                      : 'bg-white hover:bg-[#FFF3EC] hover:border-[#FCE2D3] hover:text-[#F36B21] border-[#EAE2DC] text-[#444444]'
+                      }`}
                   >
                     <span className="text-[11px] font-bold opacity-80">{item.icon}</span>
                     <span className="font-medium">{item.label}</span>
@@ -269,11 +268,10 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                 <button
                   type="button"
                   onClick={() => setAvailableOnly(!availableOnly)}
-                  className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
-                    availableOnly
-                      ? 'bg-emerald-500 text-white border-emerald-500 font-semibold'
-                      : 'bg-white hover:bg-[#FFF3EC] hover:border-[#FCE2D3] border-[#EAE2DC] text-[#444444]'
-                  }`}
+                  className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${availableOnly
+                    ? 'bg-emerald-500 text-white border-emerald-500 font-semibold'
+                    : 'bg-white hover:bg-[#FFF3EC] hover:border-[#FCE2D3] border-[#EAE2DC] text-[#444444]'
+                    }`}
                 >
                   <span className={`w-2 h-2 rounded-full ${availableOnly ? 'bg-white' : 'bg-emerald-500'}`} />
                   <span>Available Now</span>
@@ -281,11 +279,10 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                 <button
                   type="button"
                   onClick={() => setTopRatedOnly(!topRatedOnly)}
-                  className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
-                    topRatedOnly
-                      ? 'bg-[#171717] text-white border-[#171717] font-semibold'
-                      : 'bg-white hover:bg-[#FFF3EC] hover:border-[#FCE2D3] border-[#EAE2DC] text-[#444444]'
-                  }`}
+                  className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${topRatedOnly
+                    ? 'bg-[#171717] text-white border-[#171717] font-semibold'
+                    : 'bg-white hover:bg-[#FFF3EC] hover:border-[#FCE2D3] border-[#EAE2DC] text-[#444444]'
+                    }`}
                 >
                   <Star className={`w-3.5 h-3.5 ${topRatedOnly ? 'fill-white text-white' : 'fill-amber-500 text-amber-500'}`} />
                   <span>Top Rated (4.9+)</span>
@@ -293,11 +290,10 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                 <button
                   type="button"
                   onClick={() => setVerifiedOnly(!verifiedOnly)}
-                  className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
-                    verifiedOnly
-                      ? 'bg-[#F36B21] text-white border-[#F36B21] font-semibold'
-                      : 'bg-white hover:bg-[#FFF3EC] hover:border-[#FCE2D3] border-[#EAE2DC] text-[#444444]'
-                  }`}
+                  className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${verifiedOnly
+                    ? 'bg-[#F36B21] text-white border-[#F36B21] font-semibold'
+                    : 'bg-white hover:bg-[#FFF3EC] hover:border-[#FCE2D3] border-[#EAE2DC] text-[#444444]'
+                    }`}
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Verified Talent Only</span>
@@ -305,11 +301,10 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                 <button
                   type="button"
                   onClick={() => setSelectedRateRange(selectedRateRange === '< $35' ? 'All' : '< $35')}
-                  className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
-                    selectedRateRange === '< $35'
-                      ? 'bg-[#171717] text-white border-[#171717] font-semibold'
-                      : 'bg-white hover:bg-[#FFF3EC] hover:border-[#FCE2D3] border-[#EAE2DC] text-[#444444]'
-                  }`}
+                  className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${selectedRateRange === '< $35'
+                    ? 'bg-[#171717] text-white border-[#171717] font-semibold'
+                    : 'bg-white hover:bg-[#FFF3EC] hover:border-[#FCE2D3] border-[#EAE2DC] text-[#444444]'
+                    }`}
                 >
                   <span>Under $35/hr</span>
                 </button>
@@ -446,20 +441,18 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                         >
                           <div className="flex items-center gap-2.5">
                             <span
-                              className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
-                                isSelected
-                                  ? 'border-[#F36B21] bg-white'
-                                  : 'border-[#CCCCCC] bg-white group-hover:border-[#999999]'
-                              }`}
+                              className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${isSelected
+                                ? 'border-[#F36B21] bg-white'
+                                : 'border-[#CCCCCC] bg-white group-hover:border-[#999999]'
+                                }`}
                             >
                               {isSelected && <span className="w-2 h-2 rounded-full bg-[#F36B21]" />}
                             </span>
                             <span
-                              className={`transition-colors ${
-                                isSelected
-                                  ? 'font-bold text-[#171717]'
-                                  : 'text-[#555555] group-hover:text-[#171717]'
-                              }`}
+                              className={`transition-colors ${isSelected
+                                ? 'font-bold text-[#171717]'
+                                : 'text-[#555555] group-hover:text-[#171717]'
+                                }`}
                             >
                               {cat.name}
                             </span>
@@ -498,20 +491,18 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                           className="w-full flex items-center gap-2.5 text-xs cursor-pointer group py-0.5"
                         >
                           <span
-                            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
-                              isSelected
-                                ? 'border-[#F36B21] bg-white'
-                                : 'border-[#CCCCCC] bg-white group-hover:border-[#999999]'
-                            }`}
+                            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${isSelected
+                              ? 'border-[#F36B21] bg-white'
+                              : 'border-[#CCCCCC] bg-white group-hover:border-[#999999]'
+                              }`}
                           >
                             {isSelected && <span className="w-2 h-2 rounded-full bg-[#F36B21]" />}
                           </span>
                           <span
-                            className={`transition-colors ${
-                              isSelected
-                                ? 'font-bold text-[#171717]'
-                                : 'text-[#555555] group-hover:text-[#171717]'
-                            }`}
+                            className={`transition-colors ${isSelected
+                              ? 'font-bold text-[#171717]'
+                              : 'text-[#555555] group-hover:text-[#171717]'
+                              }`}
                           >
                             {exp}
                           </span>
@@ -548,20 +539,18 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                           className="w-full flex items-center gap-2.5 text-xs cursor-pointer group py-0.5"
                         >
                           <span
-                            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
-                              isSelected
-                                ? 'border-[#F36B21] bg-white'
-                                : 'border-[#CCCCCC] bg-white group-hover:border-[#999999]'
-                            }`}
+                            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${isSelected
+                              ? 'border-[#F36B21] bg-white'
+                              : 'border-[#CCCCCC] bg-white group-hover:border-[#999999]'
+                              }`}
                           >
                             {isSelected && <span className="w-2 h-2 rounded-full bg-[#F36B21]" />}
                           </span>
                           <span
-                            className={`transition-colors ${
-                              isSelected
-                                ? 'font-bold text-[#171717]'
-                                : 'text-[#555555] group-hover:text-[#171717]'
-                            }`}
+                            className={`transition-colors ${isSelected
+                              ? 'font-bold text-[#171717]'
+                              : 'text-[#555555] group-hover:text-[#171717]'
+                              }`}
                           >
                             {rate}
                           </span>
@@ -598,20 +587,18 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                           className="w-full flex items-center gap-2.5 text-xs cursor-pointer group py-0.5"
                         >
                           <span
-                            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
-                              isSelected
-                                ? 'border-[#F36B21] bg-white'
-                                : 'border-[#CCCCCC] bg-white group-hover:border-[#999999]'
-                            }`}
+                            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${isSelected
+                              ? 'border-[#F36B21] bg-white'
+                              : 'border-[#CCCCCC] bg-white group-hover:border-[#999999]'
+                              }`}
                           >
                             {isSelected && <span className="w-2 h-2 rounded-full bg-[#F36B21]" />}
                           </span>
                           <span
-                            className={`transition-colors ${
-                              isSelected
-                                ? 'font-bold text-[#171717]'
-                                : 'text-[#555555] group-hover:text-[#171717]'
-                            }`}
+                            className={`transition-colors ${isSelected
+                              ? 'font-bold text-[#171717]'
+                              : 'text-[#555555] group-hover:text-[#171717]'
+                              }`}
                           >
                             {loc}
                           </span>
@@ -640,22 +627,20 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                 <div className="flex items-center bg-white border border-[#EAE2DC] rounded-xl p-1 shadow-xs">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-1.5 rounded-lg transition-colors ${
-                      viewMode === 'grid'
-                        ? 'bg-[#FCE2D3] text-[#F36B21]'
-                        : 'text-[#777777] hover:text-[#171717]'
-                    }`}
+                    className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid'
+                      ? 'bg-[#FCE2D3] text-[#F36B21]'
+                      : 'text-[#777777] hover:text-[#171717]'
+                      }`}
                     title="Grid View"
                   >
                     <LayoutGrid className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`p-1.5 rounded-lg transition-colors ${
-                      viewMode === 'list'
-                        ? 'bg-[#FCE2D3] text-[#F36B21]'
-                        : 'text-[#777777] hover:text-[#171717]'
-                    }`}
+                    className={`p-1.5 rounded-lg transition-colors ${viewMode === 'list'
+                      ? 'bg-[#FCE2D3] text-[#F36B21]'
+                      : 'text-[#777777] hover:text-[#171717]'
+                      }`}
                     title="List View"
                   >
                     <List className="w-4 h-4" />
@@ -719,11 +704,10 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                               <CheckCircle2 className="w-4 h-4 text-[#F36B21] fill-[#FFF3EC]" />
                             )}
                             <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                                t.available
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'bg-zinc-100 text-zinc-600'
-                              }`}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${t.available
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-zinc-100 text-zinc-600'
+                                }`}
                             >
                               {t.available ? '● Available' : 'Busy'}
                             </span>
@@ -774,9 +758,8 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                           </button>
                           <button
                             onClick={(e) => toggleSave(t.id, e)}
-                            className={`p-2.5 rounded-full border border-[#EAE2DC] hover:bg-[#FFF3EC] transition-colors ${
-                              isSaved ? 'text-[#F36B21] border-[#FCE2D3]' : 'text-[#888888]'
-                            }`}
+                            className={`p-2.5 rounded-full border border-[#EAE2DC] hover:bg-[#FFF3EC] transition-colors ${isSaved ? 'text-[#F36B21] border-[#FCE2D3]' : 'text-[#888888]'
+                              }`}
                             title="Save Freelancer"
                           >
                             <Heart className={`w-4 h-4 ${isSaved ? 'fill-[#F36B21]' : ''}`} />
@@ -805,16 +788,14 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                       <div className="h-24 sm:h-26 w-full bg-gradient-to-br from-[#FFF3EC] via-[#FCE2D3]/40 to-[#FFF9F5] relative p-4 flex items-start justify-between border-b border-[#FCE2D3]/30">
                         {/* Status Badge */}
                         <span
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md shadow-xs ${
-                            t.available
-                              ? 'bg-white/90 border border-emerald-200 text-emerald-700'
-                              : 'bg-white/90 border border-zinc-200 text-zinc-600'
-                          }`}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md shadow-xs ${t.available
+                            ? 'bg-white/90 border border-emerald-200 text-emerald-700'
+                            : 'bg-white/90 border border-zinc-200 text-zinc-600'
+                            }`}
                         >
                           <span
-                            className={`w-2 h-2 rounded-full ${
-                              t.available ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-400'
-                            }`}
+                            className={`w-2 h-2 rounded-full ${t.available ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-400'
+                              }`}
                           />
                           {t.available ? 'Available' : 'Busy'}
                         </span>
@@ -822,11 +803,10 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                         {/* Save Heart Button */}
                         <button
                           onClick={(e) => toggleSave(t.id, e)}
-                          className={`w-8 h-8 rounded-full bg-white/90 backdrop-blur-md border border-[#EAE2DC] flex items-center justify-center hover:scale-110 transition-all shadow-xs ${
-                            isSaved
-                              ? 'text-[#F36B21] border-[#FCE2D3]'
-                              : 'text-[#888888] hover:text-[#F36B21]'
-                          }`}
+                          className={`w-8 h-8 rounded-full bg-white/90 backdrop-blur-md border border-[#EAE2DC] flex items-center justify-center hover:scale-110 transition-all shadow-xs ${isSaved
+                            ? 'text-[#F36B21] border-[#FCE2D3]'
+                            : 'text-[#888888] hover:text-[#F36B21]'
+                            }`}
                           title="Save Freelancer"
                         >
                           <Heart className={`w-4 h-4 ${isSaved ? 'fill-[#F36B21]' : ''}`} />
