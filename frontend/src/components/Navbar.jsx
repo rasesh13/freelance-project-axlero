@@ -17,7 +17,7 @@ export default function Navbar({
   const navItems = [
     { id: 'talent', label: 'Find Talent' },
     { id: 'work', label: 'Find Work' },
-    { id: 'projects', label: 'Projects' },
+    { id: 'projects', label: isLoggedIn && userRole === 'freelancer' ? 'My Workspace' : 'Projects' },
     { id: 'pricing', label: 'Pricing' },
     { id: 'resources', label: 'Resources', hasDropdown: true },
   ];
@@ -136,21 +136,6 @@ export default function Navbar({
           {isLoggedIn ? (
             /* Logged-In User Controls */
             <div className="flex items-center gap-2.5 sm:gap-3 relative">
-              {/* Persona Switcher Pill */}
-              <button
-                onClick={() => {
-                  const nextRole = userRole === 'client' ? 'freelancer' : 'client';
-                  if (setUserRole) setUserRole(nextRole);
-                  handleNavClick('projects');
-                }}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFF3EC] hover:bg-[#FCE2D3] border border-[#FCE2D3] text-xs font-bold text-[#171717] transition-all cursor-pointer shadow-2xs group"
-                title="Click to toggle between Client and Freelancer Dashboard views"
-              >
-                <span className="text-sm">{userRole === 'client' ? '👔' : '💻'}</span>
-                <span className="capitalize">{userRole === 'client' ? 'Client' : 'Freelancer'} View</span>
-                <span className="text-[10px] text-[#F36B21] font-bold group-hover:scale-110 transition-transform">⇄ Switch</span>
-              </button>
-
               {/* Notification Bell with Badge */}
               <button
                 onClick={() => handleNavClick('projects')}
@@ -190,30 +175,12 @@ export default function Navbar({
                           {userRole === 'client' ? 'Sarah Jenkins' : 'Arjun Mehta'}
                         </p>
                         <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#FFF3EC] text-[#F36B21] border border-[#FCE2D3] uppercase">
-                          {userRole}
+                          {userRole === 'client' ? 'Client' : 'Freelancer'}
                         </span>
                       </div>
                       <p className="text-xs text-[#777777]">
                         {userRole === 'client' ? 'sarah@cloudscale.ai' : 'arjun@workverse.io'}
                       </p>
-                    </div>
-
-                    {/* Role Switcher in Dropdown */}
-                    <div className="p-1.5 bg-[#FFF9F5] rounded-xl my-1 border border-[#F3ECE7]">
-                      <button
-                        onClick={() => {
-                          const nextRole = userRole === 'client' ? 'freelancer' : 'client';
-                          if (setUserRole) setUserRole(nextRole);
-                          setUserDropdownOpen(false);
-                          handleNavClick('projects');
-                        }}
-                        className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-bold text-[#F36B21] hover:bg-[#FFF3EC] rounded-lg transition-colors cursor-pointer"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <span>{userRole === 'client' ? '💻 Switch to Freelancer' : '👔 Switch to Client'}</span>
-                        </span>
-                        <span>⇄</span>
-                      </button>
                     </div>
 
                     <div className="py-1">
@@ -225,7 +192,7 @@ export default function Navbar({
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#171717] rounded-xl hover:bg-[#FFF3EC] transition-colors cursor-pointer"
                       >
                         <User className="w-4 h-4 text-[#777777]" />
-                        <span>{userRole === 'client' ? 'Company Profile' : 'Freelancer Profile'}</span>
+                        <span>{userRole === 'client' ? 'Company Profile' : 'My Public Profile'}</span>
                       </button>
 
                       <button
@@ -236,7 +203,7 @@ export default function Navbar({
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#171717] rounded-xl hover:bg-[#FFF3EC] transition-colors cursor-pointer"
                       >
                         <Briefcase className="w-4 h-4 text-[#777777]" />
-                        <span>{userRole === 'client' ? 'Client Hiring Hub' : 'Freelancer Workspace'}</span>
+                        <span>{userRole === 'client' ? 'Client Projects Hub' : 'Freelancer Workspace'}</span>
                       </button>
 
                       <button
@@ -256,6 +223,7 @@ export default function Navbar({
                         onClick={() => {
                           setUserDropdownOpen(false);
                           setIsLoggedIn(false);
+                          handleNavClick('home');
                         }}
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
                       >
@@ -324,10 +292,13 @@ export default function Navbar({
                   className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white border border-[#EAE2DC] font-medium text-sm text-[#171717]"
                 >
                   <User className="w-4 h-4" />
-                  <span>My Freelancer Profile</span>
+                  <span>{userRole === 'client' ? 'Company Profile' : 'My Freelancer Profile'}</span>
                 </button>
                 <button
-                  onClick={() => setIsLoggedIn(false)}
+                  onClick={() => {
+                    setIsLoggedIn(false);
+                    handleNavClick('home');
+                  }}
                   className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-red-50 text-red-600 font-medium text-sm"
                 >
                   <LogOut className="w-4 h-4" />

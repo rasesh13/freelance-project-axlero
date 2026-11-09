@@ -787,48 +787,9 @@ export default function ProjectsHubPage({
       )}
 
       {/* ========================================================
-          PERSISTENT PERSONA BANNER / ROLE SWITCHER
-      ======================================================== */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <div className="bg-gradient-to-r from-[#FFF3EC] via-white to-[#FFF3EC] border border-[#FCE2D3] rounded-3xl p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-white border border-[#FCE2D3] flex items-center justify-center text-xl shadow-xs shrink-0">
-              {userRole === 'client' ? '👔' : '💻'}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#171717]">
-                  Active Persona: <strong className="text-[#F36B21]">{userRole === 'client' ? 'Client / Hiring Mode' : 'Freelancer / Talent Mode'}</strong>
-                </span>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              </div>
-              <p className="text-xs text-[#777777] mt-0.5">
-                {userRole === 'client'
-                  ? 'Showing Client Dashboard: manage RFP project postings, review incoming candidate bids, and release escrow.'
-                  : 'Showing Freelancer Dashboard: manage active contracts, log live billable hours, submit deliverables, and withdraw earnings.'}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              const nextRole = userRole === 'client' ? 'freelancer' : 'client';
-              if (setUserRole) setUserRole(nextRole);
-              setActiveSidebarNav(nextRole === 'client' ? 'projects' : 'contracts');
-              triggerToast('Dashboard Switched', `Switched to ${nextRole === 'client' ? 'Client / Hiring' : 'Freelancer / Talent'} Workspace`);
-            }}
-            className="self-start sm:self-auto px-5 py-2.5 rounded-full bg-[#171717] hover:bg-[#F36B21] text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-2"
-          >
-            <span>Switch to {userRole === 'client' ? 'Freelancer Dashboard' : 'Client Dashboard'}</span>
-            <span>⇄</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ========================================================
           MAIN WORKSPACE DASHBOARD (EXPANSIVE WORKBENCH)
       ======================================================== */}
-      <section className={`mx-auto px-4 sm:px-6 lg:px-8 pt-6 transition-all duration-300 ${activeSidebarNav === 'kanban' ? 'max-w-[1720px]' : 'max-w-7xl'}`}>
+      <section className={`mx-auto px-4 sm:px-6 lg:px-8 pt-8 transition-all duration-300 ${activeSidebarNav === 'kanban' ? 'max-w-[1720px]' : 'max-w-7xl'}`}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* 1. Left Sidebar Navigation */}
           <div className="lg:col-span-2">
