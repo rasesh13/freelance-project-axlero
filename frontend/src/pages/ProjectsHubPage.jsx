@@ -61,6 +61,9 @@ const INITIAL_KANBAN_TASKS = [
     priority: 'High',
     estimate: '8 hrs',
     assignee: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+    assigneeName: 'Elena Rostova',
+    assigneeRole: 'Lead Architect',
+    subtasks: '3/4 done',
   },
   {
     id: 'kb-2',
@@ -70,6 +73,9 @@ const INITIAL_KANBAN_TASKS = [
     priority: 'Medium',
     estimate: '12 hrs',
     assignee: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
+    assigneeName: 'Marcus Vance',
+    assigneeRole: 'Backend Engineer',
+    subtasks: '1/3 done',
   },
   {
     id: 'kb-3',
@@ -79,6 +85,9 @@ const INITIAL_KANBAN_TASKS = [
     priority: 'High',
     estimate: '16 hrs',
     assignee: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+    assigneeName: 'Arjun Mehta',
+    assigneeRole: 'Frontend Lead',
+    subtasks: '5/6 done',
   },
   {
     id: 'kb-4',
@@ -88,6 +97,9 @@ const INITIAL_KANBAN_TASKS = [
     priority: 'Medium',
     estimate: '6 hrs',
     assignee: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80',
+    assigneeName: 'David Chen',
+    assigneeRole: 'DB Administrator',
+    subtasks: '2/2 done',
   },
   {
     id: 'kb-5',
@@ -97,6 +109,9 @@ const INITIAL_KANBAN_TASKS = [
     priority: 'Urgent',
     estimate: '4 hrs',
     assignee: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
+    assigneeName: 'Vinita Parmar',
+    assigneeRole: 'UX Specialist',
+    subtasks: '4/4 ready',
   },
   {
     id: 'kb-6',
@@ -106,6 +121,9 @@ const INITIAL_KANBAN_TASKS = [
     priority: 'High',
     estimate: '14 hrs',
     assignee: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
+    assigneeName: 'Vinita Parmar',
+    assigneeRole: 'UX Specialist',
+    subtasks: 'Completed',
   },
   {
     id: 'kb-7',
@@ -115,6 +133,9 @@ const INITIAL_KANBAN_TASKS = [
     priority: 'Medium',
     estimate: '10 hrs',
     assignee: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+    assigneeName: 'Arjun Mehta',
+    assigneeRole: 'Frontend Lead',
+    subtasks: 'Approved',
   },
 ];
 
@@ -164,6 +185,8 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
   const [newTaskPriority, setNewTaskPriority] = useState('Medium');
   const [newTaskEstimate, setNewTaskEstimate] = useState('4 hrs');
   const [newTaskProject, setNewTaskProject] = useState('SaaS Dashboard Development');
+  const [kanbanSearch, setKanbanSearch] = useState('');
+  const [kanbanPriorityFilter, setKanbanPriorityFilter] = useState('All');
 
   // Live Stopwatch Time Tracker State
   const [timerSeconds, setTimerSeconds] = useState(5076); // 01:24:36
@@ -218,6 +241,9 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
         priority: newTaskPriority,
         estimate: newTaskEstimate,
         assignee: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+        assigneeName: 'Arjun Mehta',
+        assigneeRole: 'Frontend Lead',
+        subtasks: '1/2 ready',
       };
       setKanbanTasks((prev) => [task, ...prev]);
       setIsNewTaskModalOpen(false);
@@ -573,9 +599,9 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
       )}
 
       {/* ========================================================
-          MAIN WORKSPACE DASHBOARD (3-COLUMN LAYOUT)
+          MAIN WORKSPACE DASHBOARD (EXPANSIVE WORKBENCH)
       ======================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <section className={`mx-auto px-4 sm:px-6 lg:px-8 pt-8 transition-all duration-300 ${activeSidebarNav === 'kanban' ? 'max-w-[1720px]' : 'max-w-7xl'}`}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* 1. Left Sidebar Navigation */}
           <div className="lg:col-span-2">
@@ -637,7 +663,7 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
           </div>
 
           {/* 2. Center Column: DYNAMICALLY SWITCHES BASED ON ACTIVE SIDEBAR NAV */}
-          <div className="lg:col-span-7 space-y-6">
+          <div className={`${activeSidebarNav === 'kanban' ? 'lg:col-span-10' : 'lg:col-span-7'} space-y-6 transition-all duration-300`}>
             {/* VIEW 1: MY PROJECTS */}
             {activeSidebarNav === 'projects' && (
               <>
@@ -778,177 +804,346 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
             {/* VIEW 2: MILESTONES KANBAN BOARD & LIVE TIME TRACKER */}
             {activeSidebarNav === 'kanban' && (
               <div className="space-y-6">
-                {/* 1. Live Stopwatch / Session Hourly Tracker Banner */}
-                <div className="bg-gradient-to-br from-[#171717] to-[#262626] text-white rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden">
-                  <div className="absolute -right-10 -bottom-10 w-60 h-60 bg-[#F36B21]/20 rounded-full blur-3xl pointer-events-none" />
+                {/* 1. Executive Stopwatch & Time Tracking Command Center */}
+                <div className="bg-[#141414] border border-white/10 text-white rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+                  {/* Ambient Radial Glows */}
+                  <div className="absolute -right-16 -top-16 w-80 h-80 bg-[#F36B21]/20 rounded-full blur-3xl pointer-events-none" />
+                  <div className="absolute left-1/3 -bottom-20 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="space-y-2">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-semibold text-[#FCE2D3]">
-                        <span className={`w-2 h-2 rounded-full ${isTimerRunning ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                        <span>Live Milestone Time Tracker</span>
+                  <div className="relative z-10 flex flex-col gap-6">
+                    {/* Top Badges & Project Context Row */}
+                    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-semibold text-[#FCE2D3]">
+                          <span className={`w-2.5 h-2.5 rounded-full ${isTimerRunning ? 'bg-emerald-400 animate-pulse ring-4 ring-emerald-400/20' : 'bg-amber-400'}`} />
+                          <span>{isTimerRunning ? 'Stopwatch Active' : 'Session Ready'}</span>
+                        </div>
+                        <span className="text-white/40">•</span>
+                        <div className="flex items-center gap-2 text-xs text-white/80">
+                          <span className="text-[#888888]">Active Milestone:</span>
+                          <span className="font-semibold text-white bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">Phase 2: Core Components & Escrow Hook</span>
+                        </div>
                       </div>
-                      <h3 className="text-lg sm:text-xl font-bold text-white">
-                        SaaS Dashboard Development
-                      </h3>
-                      <p className="text-xs text-white/70">
-                        Active Contractor: <span className="text-white font-semibold">Arjun Mehta</span> • Escrow Rate: <span className="text-[#F36B21] font-bold">${hourlyRate}/hr</span>
-                      </p>
+
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-semibold">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Escrow Funded: $4,850.00</span>
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-center gap-4">
-                      {/* Big Digital Clock */}
-                      <div className="px-5 py-3 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-md text-center min-w-[150px]">
-                        <span className="font-mono text-2xl sm:text-3xl font-extrabold tracking-wider text-white">
-                          {formatTimer(timerSeconds)}
-                        </span>
-                        <span className="block text-[10px] text-white/60 uppercase tracking-widest mt-0.5">
-                          Session Duration
-                        </span>
+                    {/* Main Controls & Live Clock Row */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                      {/* Left: Active Contractor & Project Details */}
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
+                          <img
+                            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
+                            alt="Contractor"
+                            className="w-14 h-14 rounded-2xl object-cover border-2 border-[#F36B21] shadow-md"
+                          />
+                          <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#141414]" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-bold text-white tracking-tight">SaaS Dashboard Development</h3>
+                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-[#F36B21]/20 text-[#F36B21] border border-[#F36B21]/30">Active Sprint</span>
+                          </div>
+                          <p className="text-xs text-white/70 mt-1 flex flex-wrap items-center gap-2">
+                            <span>Contractor: <strong className="text-white">Arjun Mehta</strong></span>
+                            <span className="text-white/30">•</span>
+                            <span>Rate: <strong className="text-[#F36B21] font-bold">${hourlyRate}.00/hr</strong></span>
+                            <span className="text-white/30">•</span>
+                            <span>Auto-disbursement: <strong className="text-emerald-400">Enabled</strong></span>
+                          </p>
+                        </div>
                       </div>
 
-                      {/* Controls */}
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setIsTimerRunning(!isTimerRunning)}
-                          className={`w-11 h-11 rounded-full flex items-center justify-center transition-transform active:scale-95 cursor-pointer shadow-md ${
-                            isTimerRunning
-                              ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                              : 'bg-[#F36B21] hover:bg-[#e05e16] text-white'
-                          }`}
-                          title={isTimerRunning ? 'Pause Session' : 'Start Session'}
-                        >
-                          {isTimerRunning ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
-                        </button>
+                      {/* Right: Digital LED Display & Tactile Controls */}
+                      <div className="flex flex-wrap items-center gap-4 sm:gap-6 self-start lg:self-auto">
+                        {/* LED Display Box */}
+                        <div className="px-6 py-3.5 rounded-2xl bg-black/60 border border-white/15 backdrop-blur-xl shadow-inner flex flex-col items-center justify-center min-w-[190px]">
+                          <span className="font-mono text-3xl sm:text-4xl lg:text-5xl font-black tracking-widest text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.25)]">
+                            {formatTimer(timerSeconds)}
+                          </span>
+                          <div className="flex items-center justify-between w-full mt-1 px-1 text-[10px] text-white/60">
+                            <span className="uppercase tracking-widest font-mono">Session Timer</span>
+                            <span className="font-mono text-emerald-400 font-bold">
+                              +${((timerSeconds / 3600) * hourlyRate).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
 
+                        {/* Play/Pause & Reset Controls */}
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            onClick={() => setIsTimerRunning(!isTimerRunning)}
+                            className={`h-12 px-5 rounded-2xl flex items-center gap-2.5 text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer shadow-lg ${
+                              isTimerRunning
+                                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/25 ring-2 ring-amber-400/50'
+                                : 'bg-[#F36B21] hover:bg-[#e05e16] text-white shadow-orange-500/30'
+                            }`}
+                            title={isTimerRunning ? 'Pause Session' : 'Start Session'}
+                          >
+                            {isTimerRunning ? (
+                              <>
+                                <Pause className="w-5 h-5 fill-current" />
+                                <span>Pause</span>
+                              </>
+                            ) : (
+                              <>
+                                <Play className="w-5 h-5 fill-current ml-0.5" />
+                                <span>Start Session</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setIsTimerRunning(false);
+                              setTimerSeconds(0);
+                              triggerToast('Timer Reset', 'Stopwatch reset to 00:00:00');
+                            }}
+                            className="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white flex items-center justify-center transition-colors cursor-pointer"
+                            title="Reset Stopwatch"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* Log Hours to Milestone CTA */}
                         <button
                           onClick={() => {
-                            setIsTimerRunning(false);
-                            setTimerSeconds(0);
-                            triggerToast('Timer Reset', 'Session stopwatch reset to 00:00:00');
+                            const hrs = (timerSeconds / 3600).toFixed(2);
+                            const earned = ((timerSeconds / 3600) * hourlyRate).toFixed(2);
+                            triggerToast('Session Logged to Milestone', `Logged ${hrs} hrs ($${earned}) with verified escrow audit!`);
                           }}
-                          className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
-                          title="Reset Timer"
+                          className="h-12 px-6 rounded-2xl bg-white hover:bg-[#FFF3EC] text-[#171717] font-bold text-xs sm:text-sm transition-all shadow-md hover:shadow-xl active:scale-95 flex items-center gap-2 cursor-pointer whitespace-nowrap"
                         >
-                          <RotateCcw className="w-4 h-4" />
+                          <DollarSign className="w-4 h-4 text-[#F36B21]" />
+                          <span>Log ${((timerSeconds / 3600) * hourlyRate).toFixed(2)} to Milestone</span>
                         </button>
                       </div>
-
-                      {/* Log Work Button */}
-                      <button
-                        onClick={() => {
-                          const hrs = (timerSeconds / 3600).toFixed(2);
-                          const earned = ((timerSeconds / 3600) * hourlyRate).toFixed(2);
-                          triggerToast('Session Logged', `Logged ${hrs} hrs ($${earned}) to active milestone!`);
-                        }}
-                        className="px-4 py-2.5 rounded-full bg-white text-[#171717] hover:bg-[#FFF3EC] font-bold text-xs transition-colors shadow-sm cursor-pointer whitespace-nowrap"
-                      >
-                        Log ${((timerSeconds / 3600) * hourlyRate).toFixed(2)} to Milestone
-                      </button>
                     </div>
                   </div>
                 </div>
 
-                {/* 2. Milestones Board Header & Add Task CTA */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+                {/* 2. Live Sprint Status & Quick Metrics Strip */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between shadow-xs">
+                    <div>
+                      <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider block">Sprint Deliverables</span>
+                      <span className="text-xl font-bold text-[#171717] mt-0.5 block">{kanbanTasks.length} Tasks</span>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-[#FFF3EC] text-[#F36B21] flex items-center justify-center font-bold">
+                      <FolderKanban className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between shadow-xs">
+                    <div>
+                      <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider block">Estimated Scope</span>
+                      <span className="text-xl font-bold text-[#171717] mt-0.5 block">70 Hours</span>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between shadow-xs">
+                    <div>
+                      <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider block">Milestone Escrow</span>
+                      <span className="text-xl font-bold text-emerald-600 mt-0.5 block">$12,450.00</span>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between shadow-xs">
+                    <div>
+                      <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider block">Sprint Deadline</span>
+                      <span className="text-xl font-bold text-[#171717] mt-0.5 block">Nov 18, 2026</span>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Milestones Board Header, Search & Filter Controls */}
+                <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-[#171717]">Milestones Delivery Board</h2>
-                    <p className="text-xs text-[#888888] mt-0.5">
-                      Move scoped deliverables across sprint columns with live status sync
+                    <div className="flex items-center gap-2.5">
+                      <h2 className="text-xl sm:text-2xl font-bold text-[#171717]">Milestones Delivery Board</h2>
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#FFF3EC] text-[#F36B21] text-xs font-bold border border-[#FCE2D3]">
+                        Sprint 04 Live
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#777777] mt-1">
+                      Move scoped deliverables across sprint stages with real-time status transitions and escrow sync.
                     </p>
                   </div>
 
-                  <button
-                    onClick={() => setIsNewTaskModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer self-start sm:self-auto"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Task Card</span>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Search */}
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-[#888888] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={kanbanSearch}
+                        onChange={(e) => setKanbanSearch(e.target.value)}
+                        placeholder="Search deliverables..."
+                        className="pl-9 pr-3.5 py-2 rounded-xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-medium focus:outline-none focus:border-[#F36B21] w-44 sm:w-56"
+                      />
+                    </div>
+
+                    {/* Priority Filter */}
+                    <div className="flex items-center gap-1 bg-[#FFF9F5] border border-[#EAE2DC] rounded-xl p-1 text-xs">
+                      {['All', 'Urgent', 'High', 'Medium'].map((pri) => (
+                        <button
+                          key={pri}
+                          onClick={() => setKanbanPriorityFilter(pri)}
+                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
+                            kanbanPriorityFilter === pri
+                              ? 'bg-[#171717] text-white font-semibold shadow-xs'
+                              : 'text-[#777777] hover:text-[#171717]'
+                          }`}
+                        >
+                          {pri}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Add Task CTA */}
+                    <button
+                      onClick={() => setIsNewTaskModalOpen(true)}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-md shadow-orange-500/20 transition-transform active:scale-95 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Task Card</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* 3. 4-Column Responsive Kanban Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+                {/* 4. Full-Width 4-Column Responsive Kanban Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-6 items-start">
                   {[
-                    { id: 'backlog', title: 'Backlog / Specs' },
-                    { id: 'progress', title: 'In Development' },
-                    { id: 'review', title: 'Milestone Review' },
-                    { id: 'done', title: 'Approved & Released' },
+                    { id: 'backlog', title: 'Backlog / Specs', accentColor: 'bg-slate-400', badgeBg: 'bg-slate-100 text-slate-700' },
+                    { id: 'progress', title: 'In Development', accentColor: 'bg-[#F36B21]', badgeBg: 'bg-amber-100 text-amber-800' },
+                    { id: 'review', title: 'Milestone Review', accentColor: 'bg-purple-500', badgeBg: 'bg-purple-100 text-purple-800' },
+                    { id: 'done', title: 'Approved & Released', accentColor: 'bg-emerald-500', badgeBg: 'bg-emerald-100 text-emerald-800' },
                   ].map((col) => {
-                    const colTasks = kanbanTasks.filter((t) => t.column === col.id);
+                    const colTasks = kanbanTasks.filter((t) => {
+                      const matchesCol = t.column === col.id;
+                      const matchesSearch = !kanbanSearch || t.title.toLowerCase().includes(kanbanSearch.toLowerCase()) || t.project.toLowerCase().includes(kanbanSearch.toLowerCase());
+                      const matchesPriority = kanbanPriorityFilter === 'All' || t.priority === kanbanPriorityFilter;
+                      return matchesCol && matchesSearch && matchesPriority;
+                    });
+
                     return (
                       <div
                         key={col.id}
-                        className="bg-[#FFF9F5] border border-[#EAE2DC] rounded-3xl p-4 space-y-3 min-h-[360px] flex flex-col justify-between"
+                        className="bg-[#FFF9F5] border border-[#EAE2DC] rounded-3xl p-5 space-y-4 min-h-[520px] flex flex-col justify-between shadow-xs transition-all"
                       >
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           {/* Column Header */}
-                          <div className="flex items-center justify-between pb-2 border-b border-[#EAE2DC]">
-                            <span className="text-xs font-bold text-[#171717]">{col.title}</span>
-                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-white border border-[#EAE2DC] text-[#777777]">
+                          <div className="flex items-center justify-between pb-3 border-b border-[#EAE2DC]">
+                            <div className="flex items-center gap-2.5">
+                              <span className={`w-3 h-3 rounded-full ${col.accentColor}`} />
+                              <span className="text-sm font-bold text-[#171717]">{col.title}</span>
+                            </div>
+                            <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border border-black/5 ${col.badgeBg}`}>
                               {colTasks.length}
                             </span>
                           </div>
 
-                          {/* Task Cards */}
-                          <div className="space-y-3">
+                          {/* Task Cards Container */}
+                          <div className="space-y-3.5">
                             {colTasks.map((t) => (
                               <div
                                 key={t.id}
-                                className="bg-white rounded-2xl border border-[#EAE2DC] p-3.5 space-y-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:border-[#F36B21]/50 hover:shadow-md transition-all group"
+                                className="bg-white rounded-2xl border border-[#EAE2DC] p-4.5 space-y-3 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:border-[#F36B21]/60 hover:shadow-[0_12px_28px_rgba(243,107,33,0.08)] transition-all group relative"
                               >
-                                <div className="flex items-center justify-between gap-1">
+                                {/* Top Row: Priority Pill & Estimate */}
+                                <div className="flex items-center justify-between gap-2">
                                   <span
-                                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                                       t.priority === 'Urgent'
-                                        ? 'bg-rose-100 text-rose-700'
+                                        ? 'bg-rose-100 text-rose-700 border border-rose-200'
                                         : t.priority === 'High'
-                                        ? 'bg-amber-100 text-amber-800'
-                                        : 'bg-slate-100 text-slate-700'
+                                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                        : 'bg-slate-100 text-slate-700 border border-slate-200'
                                     }`}
                                   >
                                     {t.priority}
                                   </span>
-                                  <span className="text-[10px] text-[#888888] font-medium flex items-center gap-1">
+                                  <span className="text-[11px] text-[#666666] font-semibold flex items-center gap-1 bg-[#FFF9F5] px-2.5 py-0.5 rounded-full border border-[#EAE2DC]">
                                     <Clock className="w-3 h-3 text-[#F36B21]" />
                                     {t.estimate}
                                   </span>
                                 </div>
 
-                                <h4 className="text-xs font-bold text-[#171717] leading-snug group-hover:text-[#F36B21] transition-colors">
+                                {/* Task Title */}
+                                <h4 className="text-sm font-bold text-[#171717] leading-snug group-hover:text-[#F36B21] transition-colors">
                                   {t.title}
                                 </h4>
 
-                                <p className="text-[10px] text-[#777777] font-medium">
-                                  {t.project}
-                                </p>
+                                {/* Project Name & Subtasks / Progress Indicator */}
+                                <div className="space-y-1.5 pt-1">
+                                  <p className="text-xs text-[#777777] font-medium flex items-center gap-1.5">
+                                    <FolderKanban className="w-3.5 h-3.5 text-[#888888]" />
+                                    <span className="truncate">{t.project}</span>
+                                  </p>
+                                  {t.subtasks && (
+                                    <div className="flex items-center justify-between text-[10px] text-[#888888] font-medium pt-1 border-t border-[#F7F2EE]">
+                                      <span>Checklist: {t.subtasks}</span>
+                                      <span className="text-emerald-600 font-semibold">Ready</span>
+                                    </div>
+                                  )}
+                                </div>
 
-                                <div className="flex items-center justify-between pt-2 border-t border-[#F3ECE7]">
-                                  <img
-                                    src={t.assignee}
-                                    alt="Assignee"
-                                    className="w-5 h-5 rounded-full object-cover border border-[#EAE2DC]"
-                                  />
+                                {/* Footer: Contractor Profile & Move Action Controls */}
+                                <div className="flex items-center justify-between pt-3 border-t border-[#F3ECE7]">
+                                  <div className="flex items-center gap-2">
+                                    <img
+                                      src={t.assignee}
+                                      alt="Assignee"
+                                      className="w-6 h-6 rounded-full object-cover border border-[#EAE2DC] shadow-xs"
+                                    />
+                                    <span className="text-[11px] font-semibold text-[#171717] truncate max-w-[110px]">
+                                      {t.assigneeName || 'Assigned'}
+                                    </span>
+                                  </div>
 
-                                  {/* Shift arrows */}
-                                  <div className="flex items-center gap-1">
+                                  {/* Direction Shift Controls */}
+                                  <div className="flex items-center gap-1.5">
                                     {col.id !== 'backlog' && (
                                       <button
                                         onClick={() => moveTask(t.id, 'prev')}
-                                        className="p-1 rounded-md hover:bg-[#FFF3EC] text-[#777777] hover:text-[#171717] transition-colors cursor-pointer"
+                                        className="px-2 py-1 rounded-lg bg-[#FFF9F5] hover:bg-[#FFF3EC] border border-[#EAE2DC] text-[#777777] hover:text-[#171717] text-[11px] font-medium flex items-center gap-0.5 transition-colors cursor-pointer"
                                         title="Move to previous stage"
                                       >
                                         <ChevronLeft className="w-3.5 h-3.5" />
+                                        <span className="hidden sm:inline">Prev</span>
                                       </button>
                                     )}
                                     {col.id !== 'done' && (
                                       <button
                                         onClick={() => moveTask(t.id, 'next')}
-                                        className="p-1 rounded-md hover:bg-[#FFF3EC] text-[#F36B21] transition-colors cursor-pointer"
+                                        className="px-2.5 py-1 rounded-lg bg-[#FFF3EC] hover:bg-[#F36B21] text-[#F36B21] hover:text-white text-[11px] font-semibold flex items-center gap-0.5 transition-all shadow-xs cursor-pointer"
                                         title="Move to next stage"
                                       >
+                                        <span>Next</span>
                                         <ChevronRight className="w-3.5 h-3.5" />
                                       </button>
+                                    )}
+                                    {col.id === 'done' && (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-200">
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        <span>Done</span>
+                                      </span>
                                     )}
                                   </div>
                                 </div>
@@ -956,23 +1151,26 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
                             ))}
 
                             {colTasks.length === 0 && (
-                              <div className="text-center py-8 text-[11px] text-[#999999] border-2 border-dashed border-[#EAE2DC] rounded-2xl">
-                                Empty Stage
+                              <div className="text-center py-12 px-4 border-2 border-dashed border-[#EAE2DC] rounded-2xl bg-white/50 space-y-2">
+                                <span className="text-xs font-semibold text-[#888888] block">No deliverables in this stage</span>
+                                <p className="text-[11px] text-[#AAAAAA]">
+                                  {kanbanSearch || kanbanPriorityFilter !== 'All' ? 'Try adjusting your filters' : 'Add a task card to get started'}
+                                </p>
                               </div>
                             )}
                           </div>
                         </div>
 
-                        {/* Column Footer Quick Add */}
+                        {/* Column Quick Add Task Footer */}
                         <button
                           onClick={() => {
                             setNewTaskCol(col.id);
                             setIsNewTaskModalOpen(true);
                           }}
-                          className="w-full py-2 rounded-xl border border-dashed border-[#EAE2DC] hover:border-[#F36B21] hover:bg-white text-[11px] font-semibold text-[#777777] hover:text-[#F36B21] flex items-center justify-center gap-1 transition-all cursor-pointer"
+                          className="w-full py-2.5 mt-4 rounded-xl border border-dashed border-[#EAE2DC] hover:border-[#F36B21] hover:bg-white text-xs font-semibold text-[#777777] hover:text-[#F36B21] flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-white/60 shadow-xs"
                         >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Add Task</span>
+                          <Plus className="w-4 h-4" />
+                          <span>Add Deliverable</span>
                         </button>
                       </div>
                     );
@@ -1523,134 +1721,136 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
           </div>
 
           {/* 3. Right Sidebar: Project Overview Donut, Upcoming Deadlines, Boost Banner */}
-          <div className="lg:col-span-3 space-y-5">
-            {/* Card 1: Project Overview (Donut Chart & Legend) */}
-            <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-4 shadow-xs">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
-                <Activity className="w-3.5 h-3.5 text-[#F36B21]" />
-                <span>Project Overview</span>
-              </h3>
+          {activeSidebarNav !== 'kanban' && (
+            <div className="lg:col-span-3 space-y-5 animate-in fade-in duration-200">
+              {/* Card 1: Project Overview (Donut Chart & Legend) */}
+              <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-4 shadow-xs">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-[#F36B21]" />
+                  <span>Project Overview</span>
+                </h3>
 
-              {/* Ring / Donut Chart Visualization */}
-              <div className="flex items-center justify-center py-2">
-                <div className="relative w-32 h-32 flex items-center justify-center">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      stroke="#FFF3EC"
-                      strokeWidth="10"
-                      fill="none"
-                    />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      stroke="#F36B21"
-                      strokeWidth="10"
-                      strokeDasharray="251.2"
-                      strokeDashoffset="85"
-                      strokeLinecap="round"
-                      fill="none"
-                    />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
-                      stroke="#FBBF24"
-                      strokeWidth="10"
-                      strokeDasharray="251.2"
-                      strokeDashoffset="230"
-                      strokeLinecap="round"
-                      fill="none"
-                    />
-                  </svg>
-                  <div className="absolute text-center">
-                    <span className="text-2xl font-extrabold text-[#171717]">{projectList.length}</span>
-                    <p className="text-[10px] text-[#777777] font-medium">Projects</p>
+                {/* Ring / Donut Chart Visualization */}
+                <div className="flex items-center justify-center py-2">
+                  <div className="relative w-32 h-32 flex items-center justify-center">
+                    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        stroke="#FFF3EC"
+                        strokeWidth="10"
+                        fill="none"
+                      />
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        stroke="#F36B21"
+                        strokeWidth="10"
+                        strokeDasharray="251.2"
+                        strokeDashoffset="85"
+                        strokeLinecap="round"
+                        fill="none"
+                      />
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        stroke="#FBBF24"
+                        strokeWidth="10"
+                        strokeDasharray="251.2"
+                        strokeDashoffset="230"
+                        strokeLinecap="round"
+                        fill="none"
+                      />
+                    </svg>
+                    <div className="absolute text-center">
+                      <span className="text-2xl font-extrabold text-[#171717]">{projectList.length}</span>
+                      <p className="text-[10px] text-[#777777] font-medium">Projects</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Donut Legend */}
+                <div className="space-y-2 pt-2 border-t border-[#F3ECE7] text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#F36B21]" />
+                      <span className="text-[#777777]">In Progress</span>
+                    </div>
+                    <span className="font-bold text-[#171717]">
+                      {projectList.filter((p) => p.status === 'In Progress').length}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                      <span className="text-[#777777]">In Review</span>
+                    </div>
+                    <span className="font-bold text-[#171717]">
+                      {projectList.filter((p) => p.status === 'In Review').length}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                      <span className="text-[#777777]">Completed</span>
+                    </div>
+                    <span className="font-bold text-[#171717]">
+                      {projectList.filter((p) => p.status === 'Completed').length}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Donut Legend */}
-              <div className="space-y-2 pt-2 border-t border-[#F3ECE7] text-xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#F36B21]" />
-                    <span className="text-[#777777]">In Progress</span>
+              {/* Card 2: Upcoming Deadlines */}
+              <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-3 shadow-xs">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[#F36B21]" />
+                  <span>Upcoming Deadlines</span>
+                </h3>
+
+                <div className="space-y-2.5 pt-1 text-xs">
+                  <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#F36B21]" />
+                      <span className="font-semibold text-[#171717]">SaaS Dashboard</span>
+                    </div>
+                    <span className="text-[10px] font-medium text-[#777777]">Nov 12, 2026</span>
                   </div>
-                  <span className="font-bold text-[#171717]">
-                    {projectList.filter((p) => p.status === 'In Progress').length}
-                  </span>
+
+                  <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                      <span className="font-semibold text-[#171717]">Brand Website</span>
+                    </div>
+                    <span className="text-[10px] font-medium text-[#777777]">Nov 18, 2026</span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                    <span className="text-[#777777]">In Review</span>
+              </div>
+
+              {/* Card 3: Quick Workflow Boost */}
+              <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#FFF3EC] to-[#FCE2D3] border border-[#FCE2D3] p-5 shadow-xs">
+                <div className="space-y-2 relative z-10">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#F36B21]">
+                    <Zap className="w-4 h-4" />
+                    <span>Boost Your Workflow</span>
                   </div>
-                  <span className="font-bold text-[#171717]">
-                    {projectList.filter((p) => p.status === 'In Review').length}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-                    <span className="text-[#777777]">Completed</span>
-                  </div>
-                  <span className="font-bold text-[#171717]">
-                    {projectList.filter((p) => p.status === 'Completed').length}
-                  </span>
+                  <p className="text-xs text-[#666666] leading-relaxed">
+                    Use advanced collaboration tools, automated milestone disbursements, and smart contract escrow.
+                  </p>
+                  <button
+                    onClick={() => setIsNewProjectModalOpen(true)}
+                    className="px-4 py-1.5 rounded-full bg-[#F36B21] text-white text-xs font-semibold hover:bg-[#e05e16] transition-colors shadow-xs mt-2 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Explore Tools</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             </div>
-
-            {/* Card 2: Upcoming Deadlines */}
-            <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-3 shadow-xs">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[#F36B21]" />
-                <span>Upcoming Deadlines</span>
-              </h3>
-
-              <div className="space-y-2.5 pt-1 text-xs">
-                <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#F36B21]" />
-                    <span className="font-semibold text-[#171717]">SaaS Dashboard</span>
-                  </div>
-                  <span className="text-[10px] font-medium text-[#777777]">Nov 12, 2026</span>
-                </div>
-
-                <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span className="font-semibold text-[#171717]">Brand Website</span>
-                  </div>
-                  <span className="text-[10px] font-medium text-[#777777]">Nov 18, 2026</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 3: Quick Workflow Boost */}
-            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#FFF3EC] to-[#FCE2D3] border border-[#FCE2D3] p-5 shadow-xs">
-              <div className="space-y-2 relative z-10">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#F36B21]">
-                  <Zap className="w-4 h-4" />
-                  <span>Boost Your Workflow</span>
-                </div>
-                <p className="text-xs text-[#666666] leading-relaxed">
-                  Use advanced collaboration tools, automated milestone disbursements, and smart contract escrow.
-                </p>
-                <button
-                  onClick={() => setIsNewProjectModalOpen(true)}
-                  className="px-4 py-1.5 rounded-full bg-[#F36B21] text-white text-xs font-semibold hover:bg-[#e05e16] transition-colors shadow-xs mt-2 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>Explore Tools</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </section>
 
