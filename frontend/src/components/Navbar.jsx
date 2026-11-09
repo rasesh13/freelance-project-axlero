@@ -6,6 +6,8 @@ export default function Navbar({
   setCurrentPage,
   isLoggedIn,
   setIsLoggedIn,
+  userRole = 'client',
+  setUserRole,
   onOpenSearch,
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -133,7 +135,22 @@ export default function Navbar({
 
           {isLoggedIn ? (
             /* Logged-In User Controls */
-            <div className="flex items-center gap-3 relative">
+            <div className="flex items-center gap-2.5 sm:gap-3 relative">
+              {/* Persona Switcher Pill */}
+              <button
+                onClick={() => {
+                  const nextRole = userRole === 'client' ? 'freelancer' : 'client';
+                  if (setUserRole) setUserRole(nextRole);
+                  handleNavClick('projects');
+                }}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFF3EC] hover:bg-[#FCE2D3] border border-[#FCE2D3] text-xs font-bold text-[#171717] transition-all cursor-pointer shadow-2xs group"
+                title="Click to toggle between Client and Freelancer Dashboard views"
+              >
+                <span className="text-sm">{userRole === 'client' ? '👔' : '💻'}</span>
+                <span className="capitalize">{userRole === 'client' ? 'Client' : 'Freelancer'} View</span>
+                <span className="text-[10px] text-[#F36B21] font-bold group-hover:scale-110 transition-transform">⇄ Switch</span>
+              </button>
+
               {/* Notification Bell with Badge */}
               <button
                 onClick={() => handleNavClick('projects')}
@@ -148,11 +165,15 @@ export default function Navbar({
               <div className="relative">
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 p-1 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] transition-all bg-white"
+                  className="flex items-center gap-2 p-1 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] transition-all bg-white cursor-pointer"
                 >
                   <img
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
-                    alt="Arjun Mehta"
+                    src={
+                      userRole === 'client'
+                        ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80'
+                        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80'
+                    }
+                    alt={userRole === 'client' ? 'Sarah Jenkins' : 'Arjun Mehta'}
                     className="w-8 h-8 rounded-full object-cover"
                   />
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white absolute -bottom-0.5 right-1" />
@@ -161,11 +182,38 @@ export default function Navbar({
                 {userDropdownOpen && (
                   <div
                     onMouseLeave={() => setUserDropdownOpen(false)}
-                    className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#EAE2DC] p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                    className="absolute right-0 top-full mt-2 w-60 bg-white rounded-2xl shadow-xl border border-[#EAE2DC] p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
                   >
                     <div className="px-3 py-2 border-b border-[#EAE2DC]">
-                      <p className="text-sm font-semibold text-[#171717]">Arjun Mehta</p>
-                      <p className="text-xs text-[#777777]">arjun@workverse.io</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-[#171717]">
+                          {userRole === 'client' ? 'Sarah Jenkins' : 'Arjun Mehta'}
+                        </p>
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#FFF3EC] text-[#F36B21] border border-[#FCE2D3] uppercase">
+                          {userRole}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#777777]">
+                        {userRole === 'client' ? 'sarah@cloudscale.ai' : 'arjun@workverse.io'}
+                      </p>
+                    </div>
+
+                    {/* Role Switcher in Dropdown */}
+                    <div className="p-1.5 bg-[#FFF9F5] rounded-xl my-1 border border-[#F3ECE7]">
+                      <button
+                        onClick={() => {
+                          const nextRole = userRole === 'client' ? 'freelancer' : 'client';
+                          if (setUserRole) setUserRole(nextRole);
+                          setUserDropdownOpen(false);
+                          handleNavClick('projects');
+                        }}
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-bold text-[#F36B21] hover:bg-[#FFF3EC] rounded-lg transition-colors cursor-pointer"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span>{userRole === 'client' ? '💻 Switch to Freelancer' : '👔 Switch to Client'}</span>
+                        </span>
+                        <span>⇄</span>
+                      </button>
                     </div>
 
                     <div className="py-1">
@@ -174,10 +222,10 @@ export default function Navbar({
                           setUserDropdownOpen(false);
                           handleNavClick('profile');
                         }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#171717] rounded-xl hover:bg-[#FFF3EC] transition-colors"
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#171717] rounded-xl hover:bg-[#FFF3EC] transition-colors cursor-pointer"
                       >
                         <User className="w-4 h-4 text-[#777777]" />
-                        <span>My Profile</span>
+                        <span>{userRole === 'client' ? 'Company Profile' : 'Freelancer Profile'}</span>
                       </button>
 
                       <button
@@ -185,10 +233,10 @@ export default function Navbar({
                           setUserDropdownOpen(false);
                           handleNavClick('projects');
                         }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#171717] rounded-xl hover:bg-[#FFF3EC] transition-colors"
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#171717] rounded-xl hover:bg-[#FFF3EC] transition-colors cursor-pointer"
                       >
                         <Briefcase className="w-4 h-4 text-[#777777]" />
-                        <span>Projects Hub</span>
+                        <span>{userRole === 'client' ? 'Client Hiring Hub' : 'Freelancer Workspace'}</span>
                       </button>
 
                       <button
@@ -196,7 +244,7 @@ export default function Navbar({
                           setUserDropdownOpen(false);
                           handleNavClick('pricing');
                         }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#171717] rounded-xl hover:bg-[#FFF3EC] transition-colors"
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#171717] rounded-xl hover:bg-[#FFF3EC] transition-colors cursor-pointer"
                       >
                         <Settings className="w-4 h-4 text-[#777777]" />
                         <span>Subscription Plan</span>
@@ -209,7 +257,7 @@ export default function Navbar({
                           setUserDropdownOpen(false);
                           setIsLoggedIn(false);
                         }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 rounded-xl hover:bg-red-50 transition-colors"
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>Sign Out</span>

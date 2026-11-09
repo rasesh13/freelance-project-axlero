@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowRight, Eye, EyeOff, Check, Sparkles, Shield, ArrowLeft } from 'lucide-react';
 
-export default function AuthPage({ setCurrentPage, setIsLoggedIn }) {
+export default function AuthPage({ setCurrentPage, setIsLoggedIn, userRole, setUserRole }) {
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -9,7 +9,7 @@ export default function AuthPage({ setCurrentPage, setIsLoggedIn }) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [agreeTerms, setAgreeTerms] = useState(true);
-  const [role, setRole] = useState('client'); // 'client' | 'freelancer'
+  const [role, setRole] = useState(userRole || 'client'); // 'client' | 'freelancer'
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showForgotModal, setShowForgotModal] = useState(false);
@@ -34,6 +34,9 @@ export default function AuthPage({ setCurrentPage, setIsLoggedIn }) {
 
     setTimeout(() => {
       setIsLoading(false);
+      if (setUserRole) {
+        setUserRole(role);
+      }
       setIsLoggedIn(true);
       setCurrentPage('projects');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -44,6 +47,9 @@ export default function AuthPage({ setCurrentPage, setIsLoggedIn }) {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
+      if (setUserRole) {
+        setUserRole(role);
+      }
       setIsLoggedIn(true);
       setCurrentPage('projects');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -256,33 +262,50 @@ export default function AuthPage({ setCurrentPage, setIsLoggedIn }) {
                 </div>
               )}
 
-              {/* Account intent toggle on Sign Up */}
-              {authMode === 'signup' && (
-                <div className="grid grid-cols-2 gap-2 text-xs">
+              {/* Account intent / workspace role selector (Available on both Login & Sign Up) */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#171717]">
+                  {authMode === 'login' ? 'Select Workspace Mode' : 'I am joining Workverse to'}
+                </label>
+                <div className="grid grid-cols-2 gap-2.5 text-xs">
                   <button
                     type="button"
                     onClick={() => setRole('client')}
-                    className={`py-2 px-3 rounded-xl border text-center font-semibold transition-all ${
+                    className={`p-3 rounded-2xl border text-left font-semibold transition-all cursor-pointer flex flex-col gap-1 ${
                       role === 'client'
-                        ? 'border-[#F36B21] bg-[#FFF3EC] text-[#F36B21]'
-                        : 'border-[#EAE2DC] text-[#777777]'
+                        ? 'border-[#F36B21] bg-[#FFF3EC] text-[#F36B21] shadow-xs ring-1 ring-[#F36B21]'
+                        : 'border-[#EAE2DC] bg-[#FFF9F5] text-[#777777] hover:border-[#F36B21]/50'
                     }`}
                   >
-                    I want to hire talent
+                    <div className="flex items-center gap-1.5 text-xs font-bold">
+                      <span className="text-sm">👔</span>
+                      <span>Hire Talent</span>
+                    </div>
+                    <span className="text-[10px] font-normal text-[#888888]">Client & Hiring Hub</span>
                   </button>
+
                   <button
                     type="button"
                     onClick={() => setRole('freelancer')}
-                    className={`py-2 px-3 rounded-xl border text-center font-semibold transition-all ${
+                    className={`p-3 rounded-2xl border text-left font-semibold transition-all cursor-pointer flex flex-col gap-1 ${
                       role === 'freelancer'
-                        ? 'border-[#F36B21] bg-[#FFF3EC] text-[#F36B21]'
-                        : 'border-[#EAE2DC] text-[#777777]'
+                        ? 'border-[#F36B21] bg-[#FFF3EC] text-[#F36B21] shadow-xs ring-1 ring-[#F36B21]'
+                        : 'border-[#EAE2DC] bg-[#FFF9F5] text-[#777777] hover:border-[#F36B21]/50'
                     }`}
                   >
-                    I want to freelance
+                    <div className="flex items-center gap-1.5 text-xs font-bold">
+                      <span className="text-sm">💻</span>
+                      <span>Work as Freelancer</span>
+                    </div>
+                    <span className="text-[10px] font-normal text-[#888888]">Specialist & Time Hub</span>
                   </button>
                 </div>
-              )}
+                <p className="text-[11px] text-[#888888]">
+                  {role === 'client'
+                    ? 'Opens Client Hub to manage project postings, review bids, and release escrow.'
+                    : 'Opens Freelancer Hub to manage active contracts, time tracker, and earnings.'}
+                </p>
+              </div>
 
               {/* Email */}
               <div className="space-y-1">

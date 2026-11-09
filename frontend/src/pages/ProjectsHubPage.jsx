@@ -42,6 +42,9 @@ import {
   Printer,
   ChevronRight,
   ChevronLeft,
+  Briefcase,
+  User,
+  Wallet,
 } from 'lucide-react';
 import {
   PROJECTS,
@@ -139,14 +142,146 @@ const INITIAL_KANBAN_TASKS = [
   },
 ];
 
-export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects' }) {
-  const [activeSidebarNav, setActiveSidebarNav] = useState(initialTab || 'projects');
+const FREELANCER_CONTRACTS = [
+  {
+    id: 'cnt-1',
+    title: 'SaaS Dashboard Development',
+    client: {
+      name: 'Sarah Jenkins',
+      company: 'CloudScale AI',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
+    },
+    type: 'Hourly',
+    rate: '$45.00/hr',
+    weeklyLimit: '40 hrs/wk',
+    totalEarned: '$4,850.00',
+    escrowLocked: '$3,200.00',
+    currentMilestone: 'Phase 2: Core Telemetry & Analytics Charts',
+    deadline: 'Nov 12, 2026',
+    status: 'In Progress',
+    progress: 65,
+    milestonesCount: '4 of 6 approved',
+    thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'cnt-2',
+    title: 'PostgreSQL Migration & Index Optimization',
+    client: {
+      name: 'Marcus Cole',
+      company: 'FinTech Labs',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+    },
+    type: 'Fixed Price',
+    rate: '$3,200.00',
+    totalEarned: '$2,000.00',
+    escrowLocked: '$1,200.00',
+    currentMilestone: 'Milestone 3: Sharding & Query Optimization',
+    deadline: 'Nov 20, 2026',
+    status: 'In Progress',
+    progress: 70,
+    milestonesCount: '2 of 3 approved',
+    thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'cnt-3',
+    title: 'Design Tokens & UI Component Kit',
+    client: {
+      name: 'Elena Woods',
+      company: 'Studio Arc',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+    },
+    type: 'Hourly',
+    rate: '$50.00/hr',
+    totalEarned: '$4,200.00',
+    escrowLocked: '$0.00',
+    currentMilestone: 'All Deliverables Signed Off',
+    deadline: 'Oct 30, 2026',
+    status: 'Completed',
+    progress: 100,
+    milestonesCount: '5 of 5 approved',
+    thumbnail: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=400&q=80',
+  },
+];
+
+const FREELANCER_SUBMITTED_PROPOSALS = [
+  {
+    id: 'my-prop-1',
+    projectTitle: 'SaaS Dashboard Development',
+    clientName: 'Sarah Jenkins (CloudScale AI)',
+    clientAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
+    bidAmount: '$45.00/hr',
+    duration: '6 Weeks',
+    submittedDate: 'Oct 12, 2026',
+    status: 'Awarded & Active',
+    statusBadgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    coverLetter: 'Delivering interactive analytics widgets with React 19, Tailwind CSS, and Recharts. All milestone deliverables include comprehensive unit tests and automated escrow verification.',
+  },
+  {
+    id: 'my-prop-2',
+    projectTitle: 'Integrate AI Features into Existing Product',
+    clientName: 'David Zhang (TechPulse)',
+    clientAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80',
+    bidAmount: '$55.00/hr',
+    duration: 'Ongoing Sprint',
+    submittedDate: 'Nov 01, 2026',
+    status: 'Awarded & Active',
+    statusBadgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    coverLetter: 'Extensive background building streaming LLM interfaces, vector similarity search, and model fallback mechanisms with 99.9% uptime SLA.',
+  },
+  {
+    id: 'my-prop-3',
+    projectTitle: 'Realtime Collaborative Whiteboard Engine',
+    clientName: 'Alex Rivera (CollabStack)',
+    clientAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&q=80',
+    bidAmount: '$2,800.00',
+    duration: '2 Weeks',
+    submittedDate: 'Nov 06, 2026',
+    status: 'Interview Requested',
+    statusBadgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
+    coverLetter: 'Specialized in WebSockets and operational transforms for low-latency multi-user canvas synchronization.',
+  },
+  {
+    id: 'my-prop-4',
+    projectTitle: 'FinTech Mobile App UI Architecture',
+    clientName: 'Neha Sharma (Neobank Co)',
+    clientAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80',
+    bidAmount: '$1,100.00',
+    duration: '10 Days',
+    submittedDate: 'Nov 08, 2026',
+    status: 'Under Client Review',
+    statusBadgeColor: 'bg-slate-100 text-slate-700 border-slate-200',
+    coverLetter: 'Conducting comprehensive touch target audit, accessibility color contrast compliance, and biometric auth flows.',
+  },
+];
+
+export default function ProjectsHubPage({
+  setCurrentPage,
+  initialTab = 'projects',
+  userRole = 'client',
+  setUserRole,
+}) {
+  const [activeSidebarNav, setActiveSidebarNav] = useState(() => {
+    if (initialTab && initialTab !== 'projects') return initialTab;
+    return userRole === 'freelancer' ? 'contracts' : 'projects';
+  });
 
   useEffect(() => {
-    if (initialTab) {
+    if (initialTab && initialTab !== 'projects') {
       setActiveSidebarNav(initialTab);
+    } else {
+      setActiveSidebarNav(userRole === 'freelancer' ? 'contracts' : 'projects');
     }
-  }, [initialTab]); // 'projects' | 'kanban' | 'proposals' | 'messages' | 'files' | 'team' | 'payments' | 'settings'
+  }, [initialTab, userRole]);
+
+  // Freelancer Specific State
+  const [contractsFilter, setContractsFilter] = useState('All');
+  const [freelancerContracts, setFreelancerContracts] = useState(FREELANCER_CONTRACTS);
+  const [myProposalsFilter, setMyProposalsFilter] = useState('All');
+  const [myProposalsList, setMyProposalsList] = useState(FREELANCER_SUBMITTED_PROPOSALS);
+  const [freelancerBalance, setFreelancerBalance] = useState(4250.00);
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [withdrawAmountInput, setWithdrawAmountInput] = useState('4250.00');
+  const [withdrawMethod, setWithdrawMethod] = useState('stripe');
 
   // Toast Notification State
   const [toast, setToast] = useState(null);
@@ -488,56 +623,99 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[#FCE2D3] shadow-xs">
                 <span className="w-2 h-2 rounded-full bg-[#F36B21] animate-pulse" />
                 <span className="text-xs sm:text-sm font-semibold tracking-wide text-[#171717]">
-                  Unified Workspace Management
+                  {userRole === 'client' ? 'Client & Hiring Management Hub' : 'Freelancer Delivery & Earnings Hub'}
                 </span>
               </div>
 
               <h1 className="font-editorial text-4xl sm:text-6xl lg:text-[66px] leading-[1.06] tracking-tight text-[#171717]">
-                Projects <span className="text-[#F36B21] italic font-serif">Hub.</span>
+                {userRole === 'client' ? (
+                  <>Client Projects <span className="text-[#F36B21] italic font-serif">Hub.</span></>
+                ) : (
+                  <>Freelancer <span className="text-[#F36B21] italic font-serif">Workspace.</span></>
+                )}
               </h1>
 
               <p className="text-base sm:text-lg text-[#666666] max-w-xl font-normal leading-relaxed">
-                Track milestones, collaborate seamlessly with top independent talent, review proposals, and manage all contracts in one unified dashboard.
+                {userRole === 'client'
+                  ? 'Commission high-impact initiatives, review inbound freelancer proposals, manage active contractors, and release secure milestone escrow.'
+                  : 'Track active client contracts, clock in hours with the live milestone stopwatch, deliver sprint milestones, and withdraw instant escrow payouts.'}
               </p>
 
               {/* Stat Counters Row */}
               <div className="flex flex-wrap items-center gap-4 sm:gap-6 pt-2">
-                {/* Stat 1 */}
-                <div className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl border border-[#EAE2DC] shadow-xs hover:border-[#FCE2D3] transition-colors">
-                  <div className="w-10 h-10 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] flex items-center justify-center text-[#F36B21] shrink-0">
-                    <Layers className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-lg font-bold text-[#171717]">{projectList.length}</div>
-                    <div className="text-xs text-[#777777] font-medium">Total Projects</div>
-                  </div>
-                </div>
-
-                {/* Stat 2 */}
-                <div className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl border border-[#EAE2DC] shadow-xs hover:border-[#FCE2D3] transition-colors">
-                  <div className="w-10 h-10 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] flex items-center justify-center text-[#F36B21] shrink-0">
-                    <Activity className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-lg font-bold text-[#171717]">
-                      {projectList.filter((p) => p.status === 'In Progress').length}
+                {userRole === 'client' ? (
+                  <>
+                    {/* Client Stat 1 */}
+                    <div className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl border border-[#EAE2DC] shadow-xs hover:border-[#FCE2D3] transition-colors">
+                      <div className="w-10 h-10 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] flex items-center justify-center text-[#F36B21] shrink-0">
+                        <Layers className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-[#171717]">{projectList.length}</div>
+                        <div className="text-xs text-[#777777] font-medium">Total Initiatives</div>
+                      </div>
                     </div>
-                    <div className="text-xs text-[#777777] font-medium">In Progress</div>
-                  </div>
-                </div>
 
-                {/* Stat 3 */}
-                <div className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl border border-[#EAE2DC] shadow-xs hover:border-[#FCE2D3] transition-colors">
-                  <div className="w-10 h-10 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] flex items-center justify-center text-[#F36B21] shrink-0">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-lg font-bold text-[#171717]">
-                      {projectList.filter((p) => p.status === 'Completed').length}
+                    {/* Client Stat 2 */}
+                    <div className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl border border-[#EAE2DC] shadow-xs hover:border-[#FCE2D3] transition-colors">
+                      <div className="w-10 h-10 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] flex items-center justify-center text-[#F36B21] shrink-0">
+                        <Activity className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-[#171717]">
+                          {projectList.filter((p) => p.status === 'In Progress').length}
+                        </div>
+                        <div className="text-xs text-[#777777] font-medium">In Progress</div>
+                      </div>
                     </div>
-                    <div className="text-xs text-[#777777] font-medium">Completed</div>
-                  </div>
-                </div>
+
+                    {/* Client Stat 3 */}
+                    <div className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl border border-[#EAE2DC] shadow-xs hover:border-[#FCE2D3] transition-colors">
+                      <div className="w-10 h-10 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] flex items-center justify-center text-[#F36B21] shrink-0">
+                        <Users className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-[#171717]">{teamList.length}</div>
+                        <div className="text-xs text-[#777777] font-medium">Hired Talent</div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Freelancer Stat 1 */}
+                    <div className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl border border-[#EAE2DC] shadow-xs hover:border-[#FCE2D3] transition-colors">
+                      <div className="w-10 h-10 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] flex items-center justify-center text-[#F36B21] shrink-0">
+                        <Briefcase className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-[#171717]">{freelancerContracts.length}</div>
+                        <div className="text-xs text-[#777777] font-medium">Active Contracts</div>
+                      </div>
+                    </div>
+
+                    {/* Freelancer Stat 2 */}
+                    <div className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl border border-[#EAE2DC] shadow-xs hover:border-[#FCE2D3] transition-colors">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
+                        <Wallet className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-emerald-600">${freelancerBalance.toLocaleString()}</div>
+                        <div className="text-xs text-[#777777] font-medium">Available Payout</div>
+                      </div>
+                    </div>
+
+                    {/* Freelancer Stat 3 */}
+                    <div className="flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl border border-[#EAE2DC] shadow-xs hover:border-[#FCE2D3] transition-colors">
+                      <div className="w-10 h-10 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] flex items-center justify-center text-[#F36B21] shrink-0">
+                        <Clock className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-[#171717]">42.5 hrs</div>
+                        <div className="text-xs text-[#777777] font-medium">Logged This Week</div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -550,10 +728,14 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-lg font-extrabold text-[#171717] tracking-tight">99.4%</span>
+                    <span className="text-lg font-extrabold text-[#171717] tracking-tight">
+                      {userRole === 'client' ? '99.4%' : 'Top Rated Plus'}
+                    </span>
                     <CheckCircle2 className="w-4 h-4 text-[#F36B21] fill-[#FFF3EC]" />
                   </div>
-                  <span className="text-xs text-[#777777] font-medium">On-Time Sprint Velocity</span>
+                  <span className="text-xs text-[#777777] font-medium">
+                    {userRole === 'client' ? 'On-Time Sprint Velocity' : '99% Job Success Score'}
+                  </span>
                 </div>
               </div>
 
@@ -563,26 +745,32 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-lg font-extrabold text-[#171717] tracking-tight">$24,500 USD</div>
-                  <span className="text-xs text-[#777777] font-medium">Escrow Protected Funds</span>
+                  <div className="text-lg font-extrabold text-[#171717] tracking-tight">
+                    {userRole === 'client' ? '$32,400 USD' : '$8,900 USD'}
+                  </div>
+                  <span className="text-xs text-[#777777] font-medium">
+                    {userRole === 'client' ? 'Escrow Protected Funds' : 'Guaranteed Milestone Escrow'}
+                  </span>
                 </div>
               </div>
 
               {/* Telemetry Card 3 */}
               <div className="absolute bottom-4 right-0 sm:right-4 backdrop-blur-xl bg-white/90 rounded-2xl p-4 shadow-[0_12px_36px_rgba(0,0,0,0.08)] border border-white/90 flex items-center gap-3.5 transition-all hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(243,107,33,0.14)]">
                 <div className="w-11 h-11 rounded-xl bg-[#FFF3EC] flex items-center justify-center text-[#F36B21] border border-[#FCE2D3] shrink-0">
-                  <Users className="w-5 h-5" />
+                  {userRole === 'client' ? <Users className="w-5 h-5" /> : <DollarSign className="w-5 h-5" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-extrabold text-[#171717] tracking-tight">
-                      {teamList.length} Members
+                      {userRole === 'client' ? `${teamList.length} Members` : '$48,720 USD'}
                     </span>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Synchronized
+                      {userRole === 'client' ? 'Synchronized' : 'Lifetime Paid'}
                     </span>
                   </div>
-                  <span className="text-xs text-[#777777] font-medium">Active Freelance Squad</span>
+                  <span className="text-xs text-[#777777] font-medium">
+                    {userRole === 'client' ? 'Active Freelance Squad' : 'Direct Stripe Payouts'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -599,22 +787,72 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
       )}
 
       {/* ========================================================
+          PERSISTENT PERSONA BANNER / ROLE SWITCHER
+      ======================================================== */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <div className="bg-gradient-to-r from-[#FFF3EC] via-white to-[#FFF3EC] border border-[#FCE2D3] rounded-3xl p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-white border border-[#FCE2D3] flex items-center justify-center text-xl shadow-xs shrink-0">
+              {userRole === 'client' ? '👔' : '💻'}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#171717]">
+                  Active Persona: <strong className="text-[#F36B21]">{userRole === 'client' ? 'Client / Hiring Mode' : 'Freelancer / Talent Mode'}</strong>
+                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+              <p className="text-xs text-[#777777] mt-0.5">
+                {userRole === 'client'
+                  ? 'Showing Client Dashboard: manage RFP project postings, review incoming candidate bids, and release escrow.'
+                  : 'Showing Freelancer Dashboard: manage active contracts, log live billable hours, submit deliverables, and withdraw earnings.'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              const nextRole = userRole === 'client' ? 'freelancer' : 'client';
+              if (setUserRole) setUserRole(nextRole);
+              setActiveSidebarNav(nextRole === 'client' ? 'projects' : 'contracts');
+              triggerToast('Dashboard Switched', `Switched to ${nextRole === 'client' ? 'Client / Hiring' : 'Freelancer / Talent'} Workspace`);
+            }}
+            className="self-start sm:self-auto px-5 py-2.5 rounded-full bg-[#171717] hover:bg-[#F36B21] text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-2"
+          >
+            <span>Switch to {userRole === 'client' ? 'Freelancer Dashboard' : 'Client Dashboard'}</span>
+            <span>⇄</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ========================================================
           MAIN WORKSPACE DASHBOARD (EXPANSIVE WORKBENCH)
       ======================================================== */}
-      <section className={`mx-auto px-4 sm:px-6 lg:px-8 pt-8 transition-all duration-300 ${activeSidebarNav === 'kanban' ? 'max-w-[1720px]' : 'max-w-7xl'}`}>
+      <section className={`mx-auto px-4 sm:px-6 lg:px-8 pt-6 transition-all duration-300 ${activeSidebarNav === 'kanban' ? 'max-w-[1720px]' : 'max-w-7xl'}`}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* 1. Left Sidebar Navigation */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-3xl border border-[#EAE2DC] p-3 space-y-1 sticky top-28 shadow-xs">
-              {[
-                { id: 'projects', label: 'My Projects', icon: FolderKanban },
-                { id: 'kanban', label: 'Milestones Board', icon: Activity, badge: 'Live' },
-                { id: 'proposals', label: 'Proposals', icon: Send, badge: String(proposals.length) },
-                { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '1' },
-                { id: 'files', label: 'Files', icon: Folder, badge: String(filesList.length) },
-                { id: 'team', label: 'Team', icon: Users },
-                { id: 'payments', label: 'Payments', icon: CreditCard },
-              ].map((nav) => {
+              {(userRole === 'client'
+                ? [
+                    { id: 'projects', label: 'My Projects', icon: FolderKanban, badge: String(projectList.length) },
+                    { id: 'kanban', label: 'Milestones Review', icon: Activity, badge: 'Live' },
+                    { id: 'proposals', label: 'Candidate Bids', icon: Send, badge: String(proposals.length) },
+                    { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '1' },
+                    { id: 'files', label: 'Project Files', icon: Folder, badge: String(filesList.length) },
+                    { id: 'team', label: 'Hired Team', icon: Users },
+                    { id: 'payments', label: 'Escrow & Invoices', icon: CreditCard },
+                  ]
+                : [
+                    { id: 'contracts', label: 'My Contracts', icon: Briefcase, badge: String(freelancerContracts.length) },
+                    { id: 'kanban', label: 'Milestones & Timer', icon: Clock, badge: 'Live' },
+                    { id: 'my_proposals', label: 'My Submitted Bids', icon: Send, badge: String(myProposalsList.length) },
+                    { id: 'earnings', label: 'Earnings & Wallet', icon: Wallet, badge: `$${Math.round(freelancerBalance / 1000)}k` },
+                    { id: 'messages', label: 'Client Messages', icon: MessageSquare, badge: '1' },
+                    { id: 'files', label: 'Deliverables', icon: Folder, badge: String(filesList.length) },
+                    { id: 'profile', label: 'Public Profile', icon: User },
+                  ]
+              ).map((nav) => {
                 const Icon = nav.icon;
                 const isActive = activeSidebarNav === nav.id;
                 return (
@@ -799,6 +1037,159 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
                   })}
                 </div>
               </>
+            )}
+
+            {/* VIEW 1B: FREELANCER ACTIVE CONTRACTS */}
+            {activeSidebarNav === 'contracts' && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-[#171717]">My Active Contracts</h2>
+                    <p className="text-xs text-[#888888] mt-0.5">
+                      Showing {freelancerContracts.length} awarded contracts with guaranteed escrow backing
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {/* Status Filter Pills */}
+                    <div className="flex items-center gap-1 bg-white border border-[#EAE2DC] rounded-xl p-1 text-xs shadow-xs">
+                      {['All', 'Hourly', 'Fixed Price', 'Completed'].map((f) => (
+                        <button
+                          key={f}
+                          onClick={() => setContractsFilter(f)}
+                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
+                            contractsFilter === f
+                              ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
+                              : 'text-[#777777] hover:text-[#171717]'
+                          }`}
+                        >
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Find More Work */}
+                    <button
+                      onClick={() => setCurrentPage('work')}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-md shadow-orange-500/20 shrink-0 transition-transform active:scale-95 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Find More Gigs</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Contracts List */}
+                <div className="space-y-4">
+                  {freelancerContracts
+                    .filter((c) => {
+                      if (contractsFilter === 'All') return true;
+                      if (contractsFilter === 'Hourly') return c.type === 'Hourly';
+                      if (contractsFilter === 'Fixed Price') return c.type === 'Fixed Price';
+                      if (contractsFilter === 'Completed') return c.status === 'Completed';
+                      return true;
+                    })
+                    .map((contract) => (
+                      <div
+                        key={contract.id}
+                        className="group bg-white rounded-3xl border border-[#EAE2DC] hover:border-[#F36B21]/60 p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_16px_40px_rgba(243,107,33,0.1)] transition-all relative"
+                      >
+                        {/* Left: Thumbnail & Contract Info */}
+                        <div className="flex items-start sm:items-center gap-4 flex-1">
+                          <div className="w-20 h-16 sm:w-24 sm:h-20 rounded-2xl overflow-hidden shrink-0 border border-[#EAE2DC] bg-[#FFF3EC]">
+                            <img
+                              src={contract.thumbnail}
+                              alt={contract.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-sm sm:text-base font-bold text-[#171717] group-hover:text-[#F36B21] transition-colors">
+                                {contract.title}
+                              </h3>
+                              <span
+                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
+                                  contract.status === 'Completed'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : 'bg-[#FFF3EC] text-[#F36B21] border-[#FCE2D3]'
+                                }`}
+                              >
+                                ● {contract.status}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold">
+                                {contract.type}
+                              </span>
+                            </div>
+
+                            {/* Client Attribution */}
+                            <div className="flex items-center gap-2 text-xs text-[#777777]">
+                              <img
+                                src={contract.client.avatar}
+                                alt={contract.client.name}
+                                className="w-4 h-4 rounded-full object-cover"
+                              />
+                              <span>
+                                Client: <strong className="text-[#171717]">{contract.client.name}</strong> ({contract.client.company})
+                              </span>
+                            </div>
+
+                            {/* Current Milestone & Financials */}
+                            <div className="flex flex-wrap items-center gap-2.5 pt-1 text-[11px] text-[#888888]">
+                              <span className="font-semibold text-[#171717]">{contract.rate}</span>
+                              <span>•</span>
+                              <span className="text-emerald-600 font-semibold">Earned: {contract.totalEarned}</span>
+                              <span>•</span>
+                              <span className="text-amber-700 font-medium">Escrow: {contract.escrowLocked}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3 text-[#F36B21]" />
+                                Due {contract.deadline}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right: Milestone Progress & Tactile Action Buttons */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between md:justify-end gap-5 shrink-0 pt-3 md:pt-0 border-t md:border-t-0 border-[#F3ECE7]">
+                          <div className="w-32 space-y-1">
+                            <div className="flex items-center justify-between text-[11px] font-semibold text-[#171717]">
+                              <span>{contract.progress}%</span>
+                              <span className="text-[10px] text-[#888888] font-normal">{contract.milestonesCount}</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-[#FFF3EC] rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-[#F36B21] rounded-full transition-all duration-500"
+                                style={{ width: `${contract.progress}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setActiveSidebarNav('kanban');
+                                triggerToast('Stopwatch Ready', `Opened Milestones board for ${contract.title}`);
+                              }}
+                              className="px-3.5 py-2 rounded-xl bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                            >
+                              <Clock className="w-3.5 h-3.5" />
+                              <span>Track Hours</span>
+                            </button>
+                            <button
+                              onClick={() => setActiveSidebarNav('messages')}
+                              className="p-2 rounded-xl border border-[#EAE2DC] hover:border-[#F36B21] hover:bg-[#FFF3EC] text-[#777777] hover:text-[#171717] transition-colors cursor-pointer"
+                              title="Message Client"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
             )}
 
             {/* VIEW 2: MILESTONES KANBAN BOARD & LIVE TIME TRACKER */}
@@ -1291,6 +1682,258 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
               </div>
             )}
 
+            {/* VIEW 3B: FREELANCER SUBMITTED PROPOSALS */}
+            {activeSidebarNav === 'my_proposals' && (
+              <div className="space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-[#171717]">My Submitted Bids & Proposals</h2>
+                    <p className="text-xs text-[#888888] mt-0.5">
+                      Track your pitches, client interview requests, and awarded contracts
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setCurrentPage('work')}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-md shadow-orange-500/20 shrink-0 transition-transform active:scale-95 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Submit New Proposal</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {myProposalsList.map((myProp) => (
+                    <div
+                      key={myProp.id}
+                      className="bg-white rounded-3xl border border-[#EAE2DC] hover:border-[#F36B21]/50 p-5 sm:p-6 space-y-4 shadow-xs transition-all"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#F3ECE7]">
+                        <div className="flex items-center gap-3.5">
+                          <img
+                            src={myProp.clientAvatar}
+                            alt={myProp.clientName}
+                            className="w-12 h-12 rounded-2xl object-cover border border-[#EAE2DC]"
+                          />
+                          <div>
+                            <h3 className="text-sm sm:text-base font-bold text-[#171717]">{myProp.projectTitle}</h3>
+                            <p className="text-xs text-[#777777]">Client: {myProp.clientName}</p>
+                          </div>
+                        </div>
+
+                        <div className="text-left sm:text-right">
+                          <span className="text-base font-extrabold text-[#171717]">{myProp.bidAmount}</span>
+                          <span className="block text-[10px] text-[#888888]">Proposed Duration: {myProp.duration}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-[11px] font-bold text-[#777777] uppercase tracking-wider block">
+                          Submitted Pitch:
+                        </span>
+                        <p className="text-xs text-[#555555] leading-relaxed italic bg-[#FFF9F5] p-3 rounded-2xl border border-[#F3ECE7]">
+                          "{myProp.coverLetter}"
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${myProp.statusBadgeColor}`}>
+                            ● {myProp.status}
+                          </span>
+                          <span className="text-[11px] text-[#888888]">Submitted: {myProp.submittedDate}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setActiveSidebarNav('messages')}
+                            className="px-4 py-2 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] text-xs font-semibold text-[#171717] hover:text-[#F36B21] transition-colors flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>Message Client</span>
+                          </button>
+                          {myProp.status.includes('Active') && (
+                            <button
+                              onClick={() => setActiveSidebarNav('contracts')}
+                              className="px-4 py-2 rounded-full bg-[#171717] hover:bg-[#F36B21] text-white text-xs font-semibold transition-all shadow-xs cursor-pointer"
+                            >
+                              View Contract
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 4B: FREELANCER EARNINGS & WALLET */}
+            {activeSidebarNav === 'earnings' && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-[#171717]">Earnings & Escrow Wallet</h2>
+                    <p className="text-xs text-[#888888] mt-0.5">
+                      Protected milestone disbursements, withdrawable funds, and tax invoice history
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setIsWithdrawModalOpen(true)}
+                      className="flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold shadow-md shadow-orange-500/20 transition-transform active:scale-95 cursor-pointer"
+                    >
+                      <Wallet className="w-4 h-4" />
+                      <span>Withdraw Funds</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4 Financial Highlight Pods */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-3xl border border-emerald-200 p-5 space-y-1 shadow-xs bg-gradient-to-br from-white to-emerald-50/30">
+                    <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block">Available for Payout</span>
+                    <span className="text-2xl sm:text-3xl font-black text-emerald-600 block">${freelancerBalance.toFixed(2)}</span>
+                    <span className="text-[10px] text-emerald-700 font-medium">Ready for instant transfer</span>
+                  </div>
+
+                  <div className="bg-white rounded-3xl border border-amber-200 p-5 space-y-1 shadow-xs bg-gradient-to-br from-white to-amber-50/30">
+                    <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block">In Milestone Escrow</span>
+                    <span className="text-2xl sm:text-3xl font-black text-amber-600 block">$8,900.00</span>
+                    <span className="text-[10px] text-amber-700 font-medium">Locked in smart contract</span>
+                  </div>
+
+                  <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-1 shadow-xs">
+                    <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider block">2026 Total Earnings</span>
+                    <span className="text-2xl sm:text-3xl font-black text-[#171717] block">$48,720.00</span>
+                    <span className="text-[10px] text-emerald-600 font-medium">▲ +24% vs last year</span>
+                  </div>
+
+                  <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-1 shadow-xs">
+                    <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider block">Pending Clearance</span>
+                    <span className="text-2xl sm:text-3xl font-black text-slate-700 block">$1,450.00</span>
+                    <span className="text-[10px] text-[#777777] font-medium">Clearing in 24 hours</span>
+                  </div>
+                </div>
+
+                {/* Payout History Ledger */}
+                <div className="bg-white rounded-3xl border border-[#EAE2DC] p-6 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-[#F3ECE7]">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#171717]">Recent Payout Transactions</h3>
+                      <p className="text-xs text-[#888888]">Official escrow disbursements to your verified Stripe account</p>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        if (paymentsList && paymentsList.length > 0) {
+                          setActiveInvoicePayment(paymentsList[0]);
+                        }
+                      }}
+                      className="px-4 py-2 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] text-xs font-semibold text-[#171717] hover:text-[#F36B21] transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Generate Tax Statement</span>
+                    </button>
+                  </div>
+
+                  <div className="divide-y divide-[#F3ECE7] text-xs">
+                    {[
+                      { id: 'PAY-881', client: 'CloudScale AI', milestone: 'Sprint 03: Telemetry Engine', amount: '$1,650.00', date: 'Nov 05, 2026', method: 'Stripe Instant (•••• 4921)' },
+                      { id: 'PAY-842', client: 'Studio Arc', milestone: 'Final Milestone: Token Signoff', amount: '$2,800.00', date: 'Oct 28, 2026', method: 'Stripe Instant (•••• 4921)' },
+                      { id: 'PAY-799', client: 'FinTech Labs', milestone: 'Milestone 2: Postgres Schema', amount: '$1,200.00', date: 'Oct 15, 2026', method: 'Stripe Instant (•••• 4921)' },
+                    ].map((tx) => (
+                      <div key={tx.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FFF9F5] px-2 rounded-xl transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+                            <Check className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-[#171717] block">{tx.milestone}</span>
+                            <span className="text-[#777777] text-[11px]">Client: {tx.client} • Ref: {tx.id}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-5">
+                          <div className="text-left sm:text-right">
+                            <span className="font-bold text-emerald-600 block">{tx.amount}</span>
+                            <span className="text-[10px] text-[#888888]">{tx.date}</span>
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              setActiveInvoicePayment({
+                                id: tx.id,
+                                projectTitle: tx.milestone,
+                                contractor: { name: 'Arjun Mehta', title: 'Fullstack Lead' },
+                                milestone: tx.milestone,
+                                amount: tx.amount,
+                                status: 'Paid',
+                                date: tx.date,
+                                invoiceNumber: `INV-${tx.id}`,
+                              });
+                            }}
+                            className="px-3 py-1.5 rounded-lg border border-[#EAE2DC] hover:border-[#F36B21] text-[11px] font-semibold text-[#777777] hover:text-[#171717] hover:bg-[#FFF3EC] transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <FileText className="w-3 h-3 text-[#F36B21]" />
+                            <span>Invoice</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 5B: FREELANCER PUBLIC PROFILE SHORTCUT */}
+            {activeSidebarNav === 'profile' && (
+              <div className="bg-white rounded-3xl border border-[#EAE2DC] p-6 sm:p-8 shadow-xs space-y-6">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-[#171717]">My Public Profile & Reputation</h2>
+                  <p className="text-xs text-[#888888] mt-0.5">
+                    This is how top clients and hiring managers discover you on Workverse
+                  </p>
+                </div>
+
+                <div className="p-6 rounded-3xl bg-[#FFF9F5] border border-[#EAE2DC] flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                  <div className="flex items-center gap-4">
+                    <img
+                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
+                      alt="Arjun Mehta"
+                      className="w-18 h-18 rounded-2xl object-cover border-2 border-[#F36B21] shadow-md"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-bold text-[#171717]">Arjun Mehta</h3>
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#FFF3EC] text-[#F36B21] text-[10px] font-bold border border-[#FCE2D3]">
+                          Top Rated Plus
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#777777] mt-0.5">Lead Fullstack Architect & Cloud Specialist</p>
+                      <div className="flex items-center gap-3 pt-1 text-xs text-[#888888]">
+                        <span className="text-amber-500 font-bold">★ 4.9 (128 reviews)</span>
+                        <span>•</span>
+                        <span className="text-emerald-600 font-semibold">99% Job Success</span>
+                        <span>•</span>
+                        <span className="font-bold text-[#171717]">$45.00/hr</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage('profile')}
+                    className="px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold transition-all shadow-md shadow-orange-500/20 cursor-pointer self-start sm:self-auto"
+                  >
+                    View & Edit Full Profile →
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* VIEW 3: LIVE MESSAGING WORKSPACE */}
             {activeSidebarNav === 'messages' && (
               <div className="bg-white rounded-3xl border border-[#EAE2DC] shadow-xs overflow-hidden flex flex-col md:flex-row h-[600px]">
@@ -1720,135 +2363,240 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
             )}
           </div>
 
-          {/* 3. Right Sidebar: Project Overview Donut, Upcoming Deadlines, Boost Banner */}
+          {/* 3. Right Sidebar: Role-Specific Telemetry (Client vs Freelancer) */}
           {activeSidebarNav !== 'kanban' && (
             <div className="lg:col-span-3 space-y-5 animate-in fade-in duration-200">
-              {/* Card 1: Project Overview (Donut Chart & Legend) */}
-              <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-4 shadow-xs">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
-                  <Activity className="w-3.5 h-3.5 text-[#F36B21]" />
-                  <span>Project Overview</span>
-                </h3>
+              {userRole === 'client' ? (
+                <>
+                  {/* Client Card 1: Project Overview (Donut Chart & Legend) */}
+                  <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-4 shadow-xs">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-[#F36B21]" />
+                      <span>Project Overview</span>
+                    </h3>
 
-                {/* Ring / Donut Chart Visualization */}
-                <div className="flex items-center justify-center py-2">
-                  <div className="relative w-32 h-32 flex items-center justify-center">
-                    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        stroke="#FFF3EC"
-                        strokeWidth="10"
-                        fill="none"
-                      />
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        stroke="#F36B21"
-                        strokeWidth="10"
-                        strokeDasharray="251.2"
-                        strokeDashoffset="85"
-                        strokeLinecap="round"
-                        fill="none"
-                      />
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        stroke="#FBBF24"
-                        strokeWidth="10"
-                        strokeDasharray="251.2"
-                        strokeDashoffset="230"
-                        strokeLinecap="round"
-                        fill="none"
-                      />
-                    </svg>
-                    <div className="absolute text-center">
-                      <span className="text-2xl font-extrabold text-[#171717]">{projectList.length}</span>
-                      <p className="text-[10px] text-[#777777] font-medium">Projects</p>
+                    {/* Ring / Donut Chart Visualization */}
+                    <div className="flex items-center justify-center py-2">
+                      <div className="relative w-32 h-32 flex items-center justify-center">
+                        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="40"
+                            stroke="#FFF3EC"
+                            strokeWidth="10"
+                            fill="none"
+                          />
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="40"
+                            stroke="#F36B21"
+                            strokeWidth="10"
+                            strokeDasharray="251.2"
+                            strokeDashoffset="85"
+                            strokeLinecap="round"
+                            fill="none"
+                          />
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="40"
+                            stroke="#FBBF24"
+                            strokeWidth="10"
+                            strokeDasharray="251.2"
+                            strokeDashoffset="230"
+                            strokeLinecap="round"
+                            fill="none"
+                          />
+                        </svg>
+                        <div className="absolute text-center">
+                          <span className="text-2xl font-extrabold text-[#171717]">{projectList.length}</span>
+                          <p className="text-[10px] text-[#777777] font-medium">Projects</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Donut Legend */}
+                    <div className="space-y-2 pt-2 border-t border-[#F3ECE7] text-xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#F36B21]" />
+                          <span className="text-[#777777]">In Progress</span>
+                        </div>
+                        <span className="font-bold text-[#171717]">
+                          {projectList.filter((p) => p.status === 'In Progress').length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                          <span className="text-[#777777]">In Review</span>
+                        </div>
+                        <span className="font-bold text-[#171717]">
+                          {projectList.filter((p) => p.status === 'In Review').length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                          <span className="text-[#777777]">Completed</span>
+                        </div>
+                        <span className="font-bold text-[#171717]">
+                          {projectList.filter((p) => p.status === 'Completed').length}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Donut Legend */}
-                <div className="space-y-2 pt-2 border-t border-[#F3ECE7] text-xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#F36B21]" />
-                      <span className="text-[#777777]">In Progress</span>
-                    </div>
-                    <span className="font-bold text-[#171717]">
-                      {projectList.filter((p) => p.status === 'In Progress').length}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                      <span className="text-[#777777]">In Review</span>
-                    </div>
-                    <span className="font-bold text-[#171717]">
-                      {projectList.filter((p) => p.status === 'In Review').length}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-                      <span className="text-[#777777]">Completed</span>
-                    </div>
-                    <span className="font-bold text-[#171717]">
-                      {projectList.filter((p) => p.status === 'Completed').length}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                  {/* Client Card 2: Upcoming Deadlines */}
+                  <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-3 shadow-xs">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-[#F36B21]" />
+                      <span>Upcoming Deadlines</span>
+                    </h3>
 
-              {/* Card 2: Upcoming Deadlines */}
-              <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-3 shadow-xs">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-[#F36B21]" />
-                  <span>Upcoming Deadlines</span>
-                </h3>
+                    <div className="space-y-2.5 pt-1 text-xs">
+                      <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#F36B21]" />
+                          <span className="font-semibold text-[#171717]">SaaS Dashboard</span>
+                        </div>
+                        <span className="text-[10px] font-medium text-[#777777]">Nov 12, 2026</span>
+                      </div>
 
-                <div className="space-y-2.5 pt-1 text-xs">
-                  <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#F36B21]" />
-                      <span className="font-semibold text-[#171717]">SaaS Dashboard</span>
+                      <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                          <span className="font-semibold text-[#171717]">Brand Website</span>
+                        </div>
+                        <span className="text-[10px] font-medium text-[#777777]">Nov 18, 2026</span>
+                      </div>
                     </div>
-                    <span className="text-[10px] font-medium text-[#777777]">Nov 12, 2026</span>
                   </div>
 
-                  <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                      <span className="font-semibold text-[#171717]">Brand Website</span>
+                  {/* Client Card 3: Quick Workflow Boost */}
+                  <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#FFF3EC] to-[#FCE2D3] border border-[#FCE2D3] p-5 shadow-xs">
+                    <div className="space-y-2 relative z-10">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#F36B21]">
+                        <Zap className="w-4 h-4" />
+                        <span>Boost Your Workflow</span>
+                      </div>
+                      <p className="text-xs text-[#666666] leading-relaxed">
+                        Use advanced collaboration tools, automated milestone disbursements, and smart contract escrow.
+                      </p>
+                      <button
+                        onClick={() => setIsNewProjectModalOpen(true)}
+                        className="px-4 py-1.5 rounded-full bg-[#F36B21] text-white text-xs font-semibold hover:bg-[#e05e16] transition-colors shadow-xs mt-2 flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <span>Explore Tools</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                    <span className="text-[10px] font-medium text-[#777777]">Nov 18, 2026</span>
                   </div>
-                </div>
-              </div>
+                </>
+              ) : (
+                <>
+                  {/* Freelancer Card 1: Escrow & Available Funds Widget */}
+                  <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-4 shadow-xs">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
+                      <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Wallet & Escrow Balance</span>
+                    </h3>
 
-              {/* Card 3: Quick Workflow Boost */}
-              <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#FFF3EC] to-[#FCE2D3] border border-[#FCE2D3] p-5 shadow-xs">
-                <div className="space-y-2 relative z-10">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#F36B21]">
-                    <Zap className="w-4 h-4" />
-                    <span>Boost Your Workflow</span>
+                    {/* Ring Visualization */}
+                    <div className="flex items-center justify-center py-2">
+                      <div className="relative w-32 h-32 flex items-center justify-center">
+                        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                          <circle cx="50" cy="50" r="40" stroke="#FFF3EC" strokeWidth="10" fill="none" />
+                          <circle cx="50" cy="50" r="40" stroke="#10B981" strokeWidth="10" strokeDasharray="251.2" strokeDashoffset="90" strokeLinecap="round" fill="none" />
+                          <circle cx="50" cy="50" r="40" stroke="#F59E0B" strokeWidth="10" strokeDasharray="251.2" strokeDashoffset="180" strokeLinecap="round" fill="none" />
+                        </svg>
+                        <div className="absolute text-center">
+                          <span className="text-lg font-black text-emerald-600">${freelancerBalance.toFixed(0)}</span>
+                          <p className="text-[9px] text-[#777777] font-semibold uppercase">Available</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-[#F3ECE7] text-xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                          <span className="text-[#777777]">Ready for Payout</span>
+                        </div>
+                        <span className="font-bold text-emerald-600">${freelancerBalance.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                          <span className="text-[#777777]">Locked in Escrow</span>
+                        </div>
+                        <span className="font-bold text-amber-600">$8,900.00</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setIsWithdrawModalOpen(true)}
+                      className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Wallet className="w-3.5 h-3.5" />
+                      <span>Instant Withdrawal</span>
+                    </button>
                   </div>
-                  <p className="text-xs text-[#666666] leading-relaxed">
-                    Use advanced collaboration tools, automated milestone disbursements, and smart contract escrow.
-                  </p>
-                  <button
-                    onClick={() => setIsNewProjectModalOpen(true)}
-                    className="px-4 py-1.5 rounded-full bg-[#F36B21] text-white text-xs font-semibold hover:bg-[#e05e16] transition-colors shadow-xs mt-2 flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span>Explore Tools</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
+
+                  {/* Freelancer Card 2: Upcoming Contract Deadlines */}
+                  <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-3 shadow-xs">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-[#F36B21]" />
+                      <span>Contract Milestones Due</span>
+                    </h3>
+
+                    <div className="space-y-2.5 pt-1 text-xs">
+                      <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#F36B21]" />
+                          <span className="font-semibold text-[#171717]">SaaS Dashboard (P2)</span>
+                        </div>
+                        <span className="text-[10px] font-medium text-amber-600 font-bold">Nov 12</span>
+                      </div>
+
+                      <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                          <span className="font-semibold text-[#171717]">PostgreSQL Indexing</span>
+                        </div>
+                        <span className="text-[10px] font-medium text-[#777777]">Nov 20</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Freelancer Card 3: Reputation & Badges */}
+                  <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#171717] to-[#262626] text-white p-5 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2.5 py-0.5 rounded-full bg-white/10 text-[#FCE2D3] text-[10px] font-bold border border-white/15">
+                        Verified Talent
+                      </span>
+                      <span className="text-amber-400 font-bold text-xs">★ 4.9</span>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Top Rated Plus</h4>
+                      <p className="text-[11px] text-white/70 mt-0.5">
+                        Top 3% of architects on Workverse with 99% client satisfaction.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => setCurrentPage('profile')}
+                      className="w-full py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span>Public Profile</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -2499,6 +3247,105 @@ export default function ProjectsHubPage({ setCurrentPage, initialTab = 'projects
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: WITHDRAW FREELANCER FUNDS */}
+      {isWithdrawModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-150">
+          <div
+            className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#EAE2DC] p-6 sm:p-7 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between border-b border-[#F3ECE7] pb-4">
+              <div>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
+                  Escrow Wallet Payout
+                </span>
+                <h3 className="text-xl font-bold text-[#171717] mt-1.5">Withdraw Earnings</h3>
+              </div>
+              <button
+                onClick={() => setIsWithdrawModalOpen(false)}
+                className="p-1 rounded-full text-[#777777] hover:text-[#171717] hover:bg-[#FFF3EC] cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-[#FFF9F5] rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] text-[#777777] font-medium block">Available Balance</span>
+                <span className="text-2xl font-black text-emerald-600">${freelancerBalance.toFixed(2)}</span>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800">
+                Zero Fee Transfer
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#171717]">
+                Select Payout Destination
+              </label>
+              <div className="space-y-2">
+                <label className={`flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ${withdrawMethod === 'stripe' ? 'border-[#F36B21] bg-[#FFF3EC] shadow-xs' : 'border-[#EAE2DC] hover:border-gray-300'}`}>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="withdrawMethod"
+                      value="stripe"
+                      checked={withdrawMethod === 'stripe'}
+                      onChange={() => setWithdrawMethod('stripe')}
+                      className="accent-[#F36B21]"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-[#171717] block">Stripe Instant Payout (Bank Account)</span>
+                      <span className="text-[11px] text-[#777777]">Checking account ending in •••• 4921</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-[#F36B21] bg-white px-2 py-0.5 rounded-md border border-[#FCE2D3]">Instant</span>
+                </label>
+
+                <label className={`flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ${withdrawMethod === 'wire' ? 'border-[#F36B21] bg-[#FFF3EC] shadow-xs' : 'border-[#EAE2DC] hover:border-gray-300'}`}>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="withdrawMethod"
+                      value="wire"
+                      checked={withdrawMethod === 'wire'}
+                      onChange={() => setWithdrawMethod('wire')}
+                      className="accent-[#F36B21]"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-[#171717] block">International Wire Transfer (SWIFT)</span>
+                      <span className="text-[11px] text-[#777777]">1-2 business days</span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between gap-3 border-t border-[#F3ECE7]">
+              <button
+                type="button"
+                onClick={() => setIsWithdrawModalOpen(false)}
+                className="px-4 py-2.5 rounded-full text-xs font-semibold text-[#777777] hover:text-[#171717] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsWithdrawModalOpen(false);
+                  setFreelancerBalance(0);
+                  triggerToast('Withdrawal Initiated', `$${withdrawAmountInput} transferred to your Stripe account! Expected within minutes.`);
+                }}
+                className="px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold shadow-md shadow-orange-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>Confirm Withdrawal of ${withdrawAmountInput}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -27,10 +27,27 @@ export default function App() {
     }
   });
 
+  const [userRole, setUserRole] = useState(() => {
+    try {
+      return localStorage.getItem('wv_user_role') || 'client';
+    } catch {
+      return 'client';
+    }
+  });
+
   const handleSetIsLoggedIn = (val) => {
     setIsLoggedIn(val);
     try {
       localStorage.setItem('wv_is_logged_in', String(val));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleSetUserRole = (role) => {
+    setUserRole(role);
+    try {
+      localStorage.setItem('wv_user_role', role);
     } catch {
       // ignore
     }
@@ -93,6 +110,8 @@ export default function App() {
         setCurrentPage={navigateToPage}
         isLoggedIn={isLoggedIn}
         setIsLoggedIn={handleSetIsLoggedIn}
+        userRole={userRole}
+        setUserRole={handleSetUserRole}
         onOpenSearch={() => setIsSearchOpen(true)}
       />
 
@@ -124,6 +143,8 @@ export default function App() {
           <ProjectsHubPage
             setCurrentPage={navigateToPage}
             initialTab={projectsInitialTab}
+            userRole={userRole}
+            setUserRole={handleSetUserRole}
           />
         )}
 
@@ -143,6 +164,8 @@ export default function App() {
           <AuthPage
             setCurrentPage={navigateToPage}
             setIsLoggedIn={handleSetIsLoggedIn}
+            userRole={userRole}
+            setUserRole={handleSetUserRole}
           />
         )}
 
