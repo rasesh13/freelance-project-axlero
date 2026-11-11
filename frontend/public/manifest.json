@@ -1,0 +1,10 @@
+{
+  "short_name": "Workverse",
+  "name": "Workverse - Modern Freelance Marketplace",
+  "icons": [],
+  "start_url": "/",
+  "background_color": "#FFF9F5",
+  "theme_color": "#F36B21",
+  "display": "standalone"
+}
+
