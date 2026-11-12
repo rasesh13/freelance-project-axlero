@@ -1,16 +1,54 @@
 import React, { useState } from 'react';
-import { ArrowRight, Check, Heart, Shield, Globe } from 'lucide-react';
+import { ArrowRight, Check, Heart, Shield, Globe, X } from 'lucide-react';
+import { subscribeNewsletter } from '../api/client';
+
+const LEGAL_MODAL_CONTENT = {
+  escrow: {
+    title: 'Bank-Grade Milestone Escrow Protection',
+    body: 'Every contract commissioned on Workverse is protected by regulated milestone escrow. Funds are securely held before engineering begins and disbursed only when deliverables pass client acceptance verification.',
+  },
+  enterprise: {
+    title: 'Workverse Enterprise & Team Solutions',
+    body: 'Scale engineering squads with consolidated invoicing, custom MSA contracts, SSO security, role-based workspace controls, and dedicated talent advisors.',
+  },
+  assurance: {
+    title: 'Contractor Payment Assurance',
+    body: 'Verified builders on Workverse never chase invoices. Funded milestones and hourly stopwatch logs with escrow audit trails ensure deterministic, on-time payouts via Stripe Instant or Wire.',
+  },
+  guilds: {
+    title: 'Workverse Community Guilds',
+    body: 'Collaborate in domain guilds across Full Stack Architecture, Design Systems, and AI Engineering with peer code reviews, benchmarks, and curated resources.',
+  },
+  security: {
+    title: 'Security & Trust Compliance',
+    body: 'Workverse enforces bcrypt credential hashing, signed JWT authentication, encrypted TLS transport, strict role isolation, and SOC-2 aligned audit trails across project workspaces.',
+  },
+  privacy: {
+    title: 'Privacy Policy',
+    body: 'We collect only the account, contract, and telemetry data needed to deliver your workspace and protect escrow settlements. Workverse never sells workspace data or client IP to third parties.',
+  },
+  terms: {
+    title: 'Terms of Service',
+    body: 'By commissioning or delivering projects on Workverse, clients retain 100% ownership of paid deliverables upon milestone release, and both parties agree to transparent milestone arbitration standards.',
+  },
+};
 
 export default function Footer({ setCurrentPage }) {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [infoModalKey, setInfoModalKey] = useState(null);
 
-  const handleSubscribe = (e) => {
+  const handleSubscribe = async (e) => {
     e.preventDefault();
     if (email.trim()) {
-      setSubscribed(true);
-      setEmail('');
-      setTimeout(() => setSubscribed(false), 5000);
+      try {
+        await subscribeNewsletter(email.trim());
+        setSubscribed(true);
+        setEmail('');
+        setTimeout(() => setSubscribed(false), 5000);
+      } catch (err) {
+        console.error('Newsletter error:', err);
+      }
     }
   };
 
@@ -115,14 +153,20 @@ export default function Footer({ setCurrentPage }) {
                 </button>
               </li>
               <li>
-                <span className="hover:text-[#F36B21] cursor-pointer">
+                <button
+                  onClick={() => setInfoModalKey('escrow')}
+                  className="hover:text-[#F36B21] transition-colors cursor-pointer"
+                >
                   Escrow Protection
-                </span>
+                </button>
               </li>
               <li>
-                <span className="hover:text-[#F36B21] cursor-pointer">
+                <button
+                  onClick={() => setInfoModalKey('enterprise')}
+                  className="hover:text-[#F36B21] transition-colors cursor-pointer"
+                >
                   Enterprise Solutions
-                </span>
+                </button>
               </li>
             </ul>
           </div>
@@ -158,14 +202,20 @@ export default function Footer({ setCurrentPage }) {
                 </button>
               </li>
               <li>
-                <span className="hover:text-[#F36B21] cursor-pointer">
+                <button
+                  onClick={() => setInfoModalKey('assurance')}
+                  className="hover:text-[#F36B21] transition-colors cursor-pointer"
+                >
                   Payment Assurance
-                </span>
+                </button>
               </li>
               <li>
-                <span className="hover:text-[#F36B21] cursor-pointer">
+                <button
+                  onClick={() => setInfoModalKey('guilds')}
+                  className="hover:text-[#F36B21] transition-colors cursor-pointer"
+                >
                   Community Guilds
-                </span>
+                </button>
               </li>
             </ul>
           </div>
@@ -193,19 +243,28 @@ export default function Footer({ setCurrentPage }) {
                 </button>
               </li>
               <li>
-                <span className="hover:text-[#F36B21] cursor-pointer">
+                <button
+                  onClick={() => setInfoModalKey('security')}
+                  className="hover:text-[#F36B21] transition-colors cursor-pointer"
+                >
                   Security & Trust
-                </span>
+                </button>
               </li>
               <li>
-                <span className="hover:text-[#F36B21] cursor-pointer">
+                <button
+                  onClick={() => setInfoModalKey('privacy')}
+                  className="hover:text-[#F36B21] transition-colors cursor-pointer"
+                >
                   Privacy Policy
-                </span>
+                </button>
               </li>
               <li>
-                <span className="hover:text-[#F36B21] cursor-pointer">
+                <button
+                  onClick={() => setInfoModalKey('terms')}
+                  className="hover:text-[#F36B21] transition-colors cursor-pointer"
+                >
                   Terms of Service
-                </span>
+                </button>
               </li>
             </ul>
           </div>
@@ -216,16 +275,19 @@ export default function Footer({ setCurrentPage }) {
           <div className="flex items-center gap-2">
             <span>© 2026 Workverse Inc. All rights reserved.</span>
             <span className="text-[#EAE2DC]">•</span>
-            <span className="flex items-center gap-1 text-[#F36B21]">
+            <button
+              onClick={() => setInfoModalKey('escrow')}
+              className="flex items-center gap-1 text-[#F36B21] hover:underline cursor-pointer"
+            >
               <Shield className="w-3.5 h-3.5" />
               Bank-grade Escrow
-            </span>
+            </button>
           </div>
 
           <div className="flex items-center gap-6">
-            <span className="hover:text-[#171717] cursor-pointer">Privacy</span>
-            <span className="hover:text-[#171717] cursor-pointer">Terms</span>
-            <span className="hover:text-[#171717] cursor-pointer">Security</span>
+            <button onClick={() => setInfoModalKey('privacy')} className="hover:text-[#171717] cursor-pointer">Privacy</button>
+            <button onClick={() => setInfoModalKey('terms')} className="hover:text-[#171717] cursor-pointer">Terms</button>
+            <button onClick={() => setInfoModalKey('security')} className="hover:text-[#171717] cursor-pointer">Security</button>
             <div className="flex items-center gap-1">
               <Globe className="w-3.5 h-3.5" />
               <span>English (US)</span>
@@ -233,6 +295,52 @@ export default function Footer({ setCurrentPage }) {
           </div>
         </div>
       </div>
+
+      {/* Info Modal for Footer Policies & Trust Assurance */}
+      {infoModalKey && LEGAL_MODAL_CONTENT[infoModalKey] && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setInfoModalKey(null)}
+        >
+          <div
+            className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-[#EAE2DC] p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setInfoModalKey(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full text-[#777777] hover:text-[#171717] hover:bg-[#FFF3EC]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FFF3EC] text-[#F36B21] text-[11px] font-bold">
+              <Shield className="w-3.5 h-3.5" />
+              <span>Workverse Trust Center</span>
+            </div>
+            <h3 className="text-lg font-bold text-[#171717]">{LEGAL_MODAL_CONTENT[infoModalKey].title}</h3>
+            <p className="text-xs sm:text-sm text-[#555555] leading-relaxed">
+              {LEGAL_MODAL_CONTENT[infoModalKey].body}
+            </p>
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                onClick={() => {
+                  const key = infoModalKey;
+                  setInfoModalKey(null);
+                  navigateTo(key === 'enterprise' ? 'pricing' : 'resources');
+                }}
+                className="px-4 py-2 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] text-xs font-semibold text-[#171717]"
+              >
+                {infoModalKey === 'enterprise' ? 'View Enterprise Plans' : 'Browse Guides'}
+              </button>
+              <button
+                onClick={() => setInfoModalKey(null)}
+                className="px-5 py-2 rounded-full bg-[#171717] hover:bg-[#F36B21] text-white text-xs font-semibold"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </footer>
   );
 }
