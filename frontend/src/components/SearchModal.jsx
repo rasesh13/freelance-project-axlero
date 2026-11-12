@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X, User, Briefcase, FileText, ArrowRight } from 'lucide-react';
-import { FREELANCERS, PROJECTS, RESOURCES_ARTICLES } from '../data/mockData';
+import { globalSearch } from '../api/client';
 
 export default function SearchModal({ isOpen, onClose, onSelectResult }) {
   const [query, setQuery] = useState('');
+  const [filteredTalents, setFilteredTalents] = useState([]);
+  const [filteredProjects, setFilteredProjects] = useState([]);
+  const [filteredArticles, setFilteredArticles] = useState([]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        // toggle modal
-      }
     };
     if (isOpen) {
       window.addEventListener('keydown', handleKeyDown);
@@ -19,27 +18,27 @@ export default function SearchModal({ isOpen, onClose, onSelectResult }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      globalSearch(query)
+        .then((res) => {
+          if (cancelled) return;
+          setFilteredTalents(res?.talents || []);
+          setFilteredProjects(res?.projects || []);
+          setFilteredArticles(res?.articles || []);
+        })
+        .catch(() => {});
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isOpen, query]);
+
   if (!isOpen) return null;
-
-  const filteredTalents = FREELANCERS.filter(
-    (t) =>
-      t.name.toLowerCase().includes(query.toLowerCase()) ||
-      t.title.toLowerCase().includes(query.toLowerCase()) ||
-      t.skills.some((s) => s.toLowerCase().includes(query.toLowerCase()))
-  );
-
-  const filteredProjects = PROJECTS.filter(
-    (p) =>
-      p.title.toLowerCase().includes(query.toLowerCase()) ||
-      p.description.toLowerCase().includes(query.toLowerCase()) ||
-      p.skills.some((s) => s.toLowerCase().includes(query.toLowerCase()))
-  );
-
-  const filteredArticles = RESOURCES_ARTICLES.filter(
-    (a) =>
-      a.title.toLowerCase().includes(query.toLowerCase()) ||
-      a.category.toLowerCase().includes(query.toLowerCase())
-  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-150">
