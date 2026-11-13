@@ -3296,10 +3296,15 @@ export default function ProjectsHubPage({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setIsWithdrawModalOpen(false);
-                  setFreelancerBalance(0);
-                  triggerToast('Withdrawal Initiated', `$${withdrawAmountInput} transferred to your Stripe account! Expected within minutes.`);
+                onClick={() => {const amount = Number(withdrawAmountInput);
+                if (!amount || amount <= 0) {triggerToast('Invalid Amount', 'Please enter a valid withdrawal amount.');
+                 return;}
+                if (amount > freelancerBalance) {triggerToast('Insufficient Balance', 'You do not have enough available balance.');
+                 return;}
+
+                setFreelancerBalance((prev) => prev - amount);
+                setIsWithdrawModalOpen(false);
+                triggerToast('Withdrawal Initiated', `$${amount.toFixed(2)} withdrawal request submitted successfully!`);
                 }}
                 className="px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold shadow-md shadow-orange-500/20 transition-all cursor-pointer flex items-center gap-1.5"
               >
