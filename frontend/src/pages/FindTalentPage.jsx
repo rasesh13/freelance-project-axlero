@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Sparkles,
@@ -22,9 +22,10 @@ import {
   Briefcase,
   Check,
 } from 'lucide-react';
-import { FREELANCERS } from '../data/mockData';
+import { fetchTalents, fetchBookmarks, toggleBookmark, sendMessage, getAuthToken } from '../api/client';
 
-export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }) {
+export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, isLoggedIn = false }) {
+  const [talentsList, setTalentsList] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedExperience, setSelectedExperience] = useState('All');
@@ -35,9 +36,29 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
   const [topRatedOnly, setTopRatedOnly] = useState(false);
   const [sortBy, setSortBy] = useState('Top Rated');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
-  const [savedTalents, setSavedTalents] = useState(['arjun-mehta']);
+  const [savedTalents, setSavedTalents] = useState([]);
   const [visibleCount, setVisibleCount] = useState(6);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  useEffect(() => {
+    fetchTalents()
+      .then((data) => {
+        if (Array.isArray(data)) setTalentsList(data);
+      })
+      .catch((err) => console.error('Failed to load talents:', err));
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !getAuthToken()) {
+      setSavedTalents([]);
+      return;
+    }
+    fetchBookmarks('talent')
+      .then((rows) => {
+        if (Array.isArray(rows)) setSavedTalents(rows.map((r) => r.itemId));
+      })
+      .catch(() => {});
+  }, [isLoggedIn]);
 
   // Quick Direct Message Modal State
   const [contactModalTalent, setContactModalTalent] = useState(null);
@@ -56,11 +77,21 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
     setOpenSections((prev) => ({ ...prev, [sec]: !prev[sec] }));
   };
 
-  const toggleSave = (id, e) => {
+  const toggleSave = async (id, e) => {
     e.stopPropagation();
+    if (!isLoggedIn || !getAuthToken()) {
+      setCurrentPage('auth', { notice: 'Sign in to bookmark verified freelancers.', returnTo: 'talent' });
+      return;
+    }
     setSavedTalents((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
+    try {
+      const res = await toggleBookmark('talent', id);
+      if (res?.ids) setSavedTalents(res.ids);
+    } catch (err) {
+      console.error('Failed to toggle talent bookmark:', err);
+    }
   };
 
   const clearAllFilters = () => {
@@ -80,30 +111,45 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
     setTimeout(() => {
       setVisibleCount((prev) => prev + 6);
       setIsLoadingMore(false);
-    }, 400);
+    }, 300);
   };
 
   const handleOpenContact = (talent, e) => {
     e.stopPropagation();
+    if (!isLoggedIn || !getAuthToken()) {
+      setCurrentPage('auth', { notice: `Sign in to send a direct message to ${talent.name}.`, returnTo: 'talent' });
+      return;
+    }
     setContactModalTalent(talent);
     setMessageText(`Hi ${talent.name.split(' ')[0]}! I reviewed your portfolio on Workverse and would like to discuss an upcoming project with you.`);
     setMessageSentSuccess(false);
   };
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (messageText.trim()) {
+    if (messageText.trim() && contactModalTalent) {
+      try {
+        await sendMessage({
+          recipientName: contactModalTalent.name,
+          recipientRole: contactModalTalent.title,
+          recipientAvatar: contactModalTalent.avatar,
+          project: 'Direct Talent Inquiry',
+          text: messageText.trim(),
+        });
+      } catch (err) {
+        console.error('Failed to send direct message:', err);
+      }
       setMessageSentSuccess(true);
       setTimeout(() => {
         setMessageSentSuccess(false);
         setContactModalTalent(null);
         setMessageText('');
-      }, 1600);
+      }, 1400);
     }
   };
 
   // Filter & sort talents
-  const filteredTalents = FREELANCERS.filter((t) => {
+  const filteredTalents = talentsList.filter((t) => {
     const matchesSearch =
       searchQuery === '' ||
       t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -215,6 +261,9 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') document.getElementById('talent-results-grid')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
                   placeholder='Search by role, skill (e.g. "React", "UI/UX", "Python")...'
                   className="w-full px-3 py-2 text-sm sm:text-base text-[#171717] placeholder:text-[#999999] focus:outline-none bg-transparent"
                 />
@@ -228,7 +277,8 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
                 )}
                 <button
                   type="button"
-                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white flex items-center justify-center shrink-0 transition-transform active:scale-95 shadow-md shadow-orange-500/25"
+                  onClick={() => document.getElementById('talent-results-grid')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white flex items-center justify-center shrink-0 transition-transform active:scale-95 shadow-md shadow-orange-500/25 cursor-pointer"
                   title="Search"
                 >
                   <ArrowRight className="w-5 h-5" />
@@ -666,6 +716,7 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer }
 
             {/* Talent Cards Grid */}
             <div
+              id="talent-results-grid"
               className={
                 viewMode === 'grid'
                   ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'

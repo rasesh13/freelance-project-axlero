@@ -2,12 +2,49 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Users, Layers, Star, CheckCircle2, Shield, Sparkles, Code2, Palette, Cpu, Cloud, Smartphone, TrendingUp, Briefcase, FolderKanban } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { FREELANCERS, PROJECTS } from '../data/mockData';
+import { fetchTalents, fetchProjects, fetchBookmarks, toggleBookmark, getAuthToken } from '../api/client';
 
 gsap.registerPlugin(ScrollTrigger);
 
-export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSelectedProject }) {
+export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSelectedProject, isLoggedIn = false }) {
   const rootRef = useRef(null);
+  const [featuredTalents, setFeaturedTalents] = useState([]);
+  const [featuredProjects, setFeaturedProjects] = useState([]);
+  const [savedTalentIds, setSavedTalentIds] = useState([]);
+
+  useEffect(() => {
+    fetchTalents().then((data) => {
+      if (Array.isArray(data)) setFeaturedTalents(data.slice(0, 3));
+    }).catch(() => {});
+    fetchProjects().then((data) => {
+      if (Array.isArray(data)) setFeaturedProjects(data.slice(0, 3));
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !getAuthToken()) {
+      setSavedTalentIds([]);
+      return;
+    }
+    fetchBookmarks('talent').then((rows) => {
+      if (Array.isArray(rows)) setSavedTalentIds(rows.map((r) => r.itemId));
+    }).catch(() => {});
+  }, [isLoggedIn]);
+
+  const handleToggleTalentBookmark = async (id, e) => {
+    e.stopPropagation();
+    if (!isLoggedIn || !getAuthToken()) {
+      setCurrentPage('auth', { notice: 'Sign in to bookmark freelancers.', returnTo: 'home' });
+      return;
+    }
+    setSavedTalentIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    try {
+      const res = await toggleBookmark('talent', id);
+      if (res?.ids) setSavedTalentIds(res.ids);
+    } catch (err) {
+      console.error('Failed to toggle talent bookmark:', err);
+    }
+  };
 
   const navigateTo = (page, data = null) => {
     if (page === 'profile' && data) {
@@ -486,7 +523,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {FREELANCERS.slice(0, 3).map((f) => (
+            {featuredTalents.map((f) => (
               <div
                 key={f.id}
                 className="wv-card bg-white p-6 flex flex-col justify-between hover:shadow-lg transition-all"
@@ -497,8 +534,12 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
                       <span className="w-2 h-2 rounded-full bg-emerald-500" />
                       Available
                     </span>
-                    <button className="text-[#777777] hover:text-[#F36B21]">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button
+                      onClick={(e) => handleToggleTalentBookmark(f.id, e)}
+                      title={savedTalentIds.includes(f.id) ? 'Saved' : 'Save Specialist'}
+                      className={`transition-colors cursor-pointer ${savedTalentIds.includes(f.id) ? 'text-[#F36B21]' : 'text-[#777777] hover:text-[#F36B21]'}`}
+                    >
+                      <svg className="w-5 h-5" fill={savedTalentIds.includes(f.id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                       </svg>
                     </button>
@@ -630,7 +671,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
           </div>
 
           <div className="space-y-4">
-            {PROJECTS.slice(0, 3).map((p) => (
+            {featuredProjects.map((p) => (
               <div
                 key={p.id}
                 className="wv-card p-6 bg-white flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-[#F36B21]/50 transition-all"
