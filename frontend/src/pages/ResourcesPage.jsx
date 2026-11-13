@@ -1,27 +1,76 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, BookOpen, Sparkles, Clock, ArrowRight, ChevronDown, ChevronUp, FileText, CheckCircle2, Share2, Bookmark, X } from 'lucide-react';
-import { RESOURCES_ARTICLES } from '../data/mockData';
+import { fetchResources, fetchBookmarks, toggleBookmark, getAuthToken } from '../api/client';
 
-export default function ResourcesPage() {
+export default function ResourcesPage({ setCurrentPage, isLoggedIn = false }) {
+  const [articles, setArticles] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [activeArticleModal, setActiveArticleModal] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
+  const [savedArticleIds, setSavedArticleIds] = useState([]);
+  const [copiedShare, setCopiedShare] = useState(false);
+
+  useEffect(() => {
+    fetchResources()
+      .then((data) => {
+        if (Array.isArray(data)) setArticles(data);
+      })
+      .catch((err) => console.error('Failed to load resources:', err));
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !getAuthToken()) {
+      setSavedArticleIds([]);
+      return;
+    }
+    fetchBookmarks('resource')
+      .then((rows) => {
+        if (Array.isArray(rows)) setSavedArticleIds(rows.map((r) => r.itemId));
+      })
+      .catch(() => {});
+  }, [isLoggedIn]);
+
+  const handleToggleSaveArticle = async (id) => {
+    if (!isLoggedIn || !getAuthToken()) {
+      setActiveArticleModal(null);
+      if (setCurrentPage) {
+        setCurrentPage('auth', { notice: 'Sign in to bookmark articles and guides.', returnTo: 'resources' });
+      }
+      return;
+    }
+    setSavedArticleIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    try {
+      const res = await toggleBookmark('resource', id);
+      if (res?.ids) setSavedArticleIds(res.ids);
+    } catch (err) {
+      console.error('Failed to toggle bookmark:', err);
+    }
+  };
+
+  const handleShareArticle = (article) => {
+    const shareText = `${article.title} — ${window.location.href}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareText).catch(() => {});
+    }
+    setCopiedShare(true);
+    setTimeout(() => setCopiedShare(false), 2000);
+  };
 
   const categories = ['All', 'Getting Started', 'Tutorials', 'Guides', 'Best Practices', 'FAQs'];
 
-  const filteredArticles = RESOURCES_ARTICLES.filter((a) => {
+  const filteredArticles = articles.filter((a) => {
     const matchesSearch =
       a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      (a.tags || []).some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesCat = selectedCategory === 'All' || a.category === selectedCategory;
 
     return matchesSearch && matchesCat;
   });
 
-  const featuredArticle = RESOURCES_ARTICLES.find((a) => a.featured) || RESOURCES_ARTICLES[0];
+  const featuredArticle = articles.find((a) => a.featured) || articles[0];
 
   const faqs = [
     {
@@ -103,7 +152,7 @@ export default function ResourcesPage() {
       {/* ========================================================
           FEATURED RESOURCE BANNER
       ======================================================== */}
-      {selectedCategory === 'All' && !searchQuery && (
+      {selectedCategory === 'All' && !searchQuery && featuredArticle && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
           <div
             onClick={() => setActiveArticleModal(featuredArticle)}
@@ -328,13 +377,23 @@ export default function ResourcesPage() {
 
             <div className="pt-6 border-t border-[#EAE2DC] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#EAE2DC] text-xs text-[#777777] hover:text-[#171717]">
-                  <Bookmark className="w-3.5 h-3.5" />
-                  <span>Save for Later</span>
+                <button
+                  onClick={() => handleToggleSaveArticle(activeArticleModal.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs transition-colors cursor-pointer ${
+                    savedArticleIds.includes(activeArticleModal.id)
+                      ? 'border-[#F36B21] bg-[#FFF3EC] text-[#F36B21] font-semibold'
+                      : 'border-[#EAE2DC] text-[#777777] hover:text-[#171717]'
+                  }`}
+                >
+                  <Bookmark className={`w-3.5 h-3.5 ${savedArticleIds.includes(activeArticleModal.id) ? 'fill-[#F36B21]' : ''}`} />
+                  <span>{savedArticleIds.includes(activeArticleModal.id) ? 'Saved' : 'Save for Later'}</span>
                 </button>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#EAE2DC] text-xs text-[#777777] hover:text-[#171717]">
+                <button
+                  onClick={() => handleShareArticle(activeArticleModal)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#EAE2DC] text-xs text-[#777777] hover:text-[#171717] cursor-pointer"
+                >
                   <Share2 className="w-3.5 h-3.5" />
-                  <span>Share</span>
+                  <span>{copiedShare ? 'Link Copied!' : 'Share'}</span>
                 </button>
               </div>
 
