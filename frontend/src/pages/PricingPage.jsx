@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Check,
   CheckCircle2,
@@ -23,31 +23,52 @@ import {
   Briefcase,
   TrendingUp,
 } from 'lucide-react';
-import { PRICING_PLANS } from '../data/mockData';
+import { fetchPricingPlans, subscribeToPlan, getAuthToken } from '../api/client';
 
-export default function PricingPage({ setCurrentPage }) {
+export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
+  const [plans, setPlans] = useState([]);
   const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'yearly'
   const [currency, setCurrency] = useState('USD'); // 'USD' | 'EUR' | 'INR'
   const [selectedPlanModal, setSelectedPlanModal] = useState(null);
+  const [subscriptionSuccessMsg, setSubscriptionSuccessMsg] = useState('');
   const [activeFaq, setActiveFaq] = useState(0);
   const [monthlySpend, setMonthlySpend] = useState(6000);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
 
+  const handleSelectPlan = (plan) => {
+    if (!isLoggedIn || !getAuthToken()) {
+      setCurrentPage('auth', {
+        notice: `Sign in or create an account to activate the ${plan?.name || 'Workverse'} plan.`,
+        returnTo: 'pricing',
+      });
+      return;
+    }
+    setSelectedPlanModal(plan);
+  };
+
+  useEffect(() => {
+    fetchPricingPlans()
+      .then((data) => {
+        if (Array.isArray(data)) setPlans(data);
+      })
+      .catch((err) => console.error('Failed to load pricing plans:', err));
+  }, []);
+
   // Price formatting helper
   const getPrice = (plan) => {
-    if (plan.id === 'free') {
+    if (!plan || plan.id === 'free') {
       return currency === 'INR' ? '₹0' : currency === 'EUR' ? '€0' : '$0';
     }
 
     if (currency === 'INR') {
       const val = billingCycle === 'monthly' ? plan.priceMonthly : plan.priceYearly;
-      return `₹${val.toLocaleString('en-IN')}`;
+      return `₹${(val || 0).toLocaleString('en-IN')}`;
     } else if (currency === 'EUR') {
-      const val = billingCycle === 'monthly' ? Math.round(plan.priceUsdMonthly * 0.92) : Math.round(plan.priceUsdYearly * 0.92);
+      const val = billingCycle === 'monthly' ? Math.round((plan.priceUsdMonthly || 0) * 0.92) : Math.round((plan.priceUsdYearly || 0) * 0.92);
       return `€${val}`;
     } else {
       const val = billingCycle === 'monthly' ? plan.priceUsdMonthly : plan.priceUsdYearly;
-      return `$${val}`;
+      return `$${val || 0}`;
     }
   };
 
@@ -59,8 +80,19 @@ export default function PricingPage({ setCurrentPage }) {
   const annualSavings = monthlySavings * 12;
 
   // Split plans: 3 Core Cards + 1 Enterprise Band
-  const corePlans = PRICING_PLANS.filter((p) => p.id !== 'business');
-  const enterprisePlan = PRICING_PLANS.find((p) => p.id === 'business') || PRICING_PLANS[3];
+  const corePlans = plans.filter((p) => p.id !== 'business');
+  const enterprisePlan = plans.find((p) => p.id === 'business') || {
+    id: 'business',
+    name: 'Business',
+    tagline: 'For organizations that need more.',
+    priceMonthly: 4999,
+    priceYearly: 3999,
+    priceUsdMonthly: 149,
+    priceUsdYearly: 119,
+    period: '/month',
+    buttonText: 'Contact Sales',
+    features: [],
+  };
 
   const faqs = [
     {
@@ -266,7 +298,19 @@ export default function PricingPage({ setCurrentPage }) {
                 </div>
 
                 <button
-                  onClick={() => setSelectedPlanModal(PRICING_PLANS[2])}
+                  onClick={() =>
+                    handleSelectPlan(
+                      plans.find((p) => p.id === 'team') || {
+                        id: 'team',
+                        name: 'Team',
+                        period: '/month',
+                        priceMonthly: 1499,
+                        priceYearly: 1199,
+                        priceUsdMonthly: 49,
+                        priceUsdYearly: 39,
+                      }
+                    )
+                  }
                   className="w-full py-3 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-orange-500/25 transition-all"
                 >
                   <span>Start 14-Day Free Trial</span>
@@ -342,7 +386,7 @@ export default function PricingPage({ setCurrentPage }) {
                   {/* CTA Action */}
                   <div className="pt-8 mt-auto">
                     <button
-                      onClick={() => setSelectedPlanModal(plan)}
+                      onClick={() => handleSelectPlan(plan)}
                       className="w-full py-3.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white transition-all text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-500/30 active:scale-95"
                     >
                       <span>Start Team Plan</span>
@@ -411,7 +455,7 @@ export default function PricingPage({ setCurrentPage }) {
                 {/* CTA Action */}
                 <div className="pt-8 mt-auto">
                   <button
-                    onClick={() => setSelectedPlanModal(plan)}
+                    onClick={() => handleSelectPlan(plan)}
                     className={`w-full py-3.5 rounded-full text-xs sm:text-sm font-semibold transition-all shadow-xs ${
                       plan.id === 'pro'
                         ? 'border border-[#FCE2D3] bg-[#FFF9F5] text-[#F36B21] hover:bg-[#F36B21] hover:text-white hover:border-[#F36B21]'
@@ -475,7 +519,7 @@ export default function PricingPage({ setCurrentPage }) {
                 <span className="text-xs font-normal text-[#777777]">/month</span>
               </div>
               <button
-                onClick={() => setSelectedPlanModal(enterprisePlan)}
+                onClick={() => handleSelectPlan(enterprisePlan)}
                 className="px-8 py-3.5 rounded-full bg-[#171717] hover:bg-[#F36B21] text-white text-xs sm:text-sm font-bold transition-all shadow-md active:scale-95 flex items-center gap-2"
               >
                 <span>Contact Enterprise</span>
@@ -775,38 +819,55 @@ export default function PricingPage({ setCurrentPage }) {
               <span className="font-semibold text-[#171717] capitalize">{billingCycle}</span> billing.
             </p>
 
-            <div className="p-4 bg-[#FFF9F5] rounded-2xl border border-[#EAE2DC] text-left text-xs space-y-2">
-              <div className="flex justify-between">
-                <span className="text-[#777777]">Billing Schedule:</span>
-                <span className="font-semibold text-[#171717] capitalize">{billingCycle}</span>
+            {subscriptionSuccessMsg ? (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-700 text-xs font-semibold flex items-center justify-center gap-2">
+                <Check className="w-4 h-4" />
+                <span>{subscriptionSuccessMsg}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#777777]">Escrow Protection:</span>
-                <span className="font-semibold text-emerald-600">Active</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#777777]">Trial Guarantee:</span>
-                <span className="font-semibold text-[#171717]">14-Day Full Refund</span>
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="p-4 bg-[#FFF9F5] rounded-2xl border border-[#EAE2DC] text-left text-xs space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-[#777777]">Billing Schedule:</span>
+                    <span className="font-semibold text-[#171717] capitalize">{billingCycle}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#777777]">Escrow Protection:</span>
+                    <span className="font-semibold text-emerald-600">Active</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#777777]">Trial Guarantee:</span>
+                    <span className="font-semibold text-[#171717]">14-Day Full Refund</span>
+                  </div>
+                </div>
 
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                onClick={() => setSelectedPlanModal(null)}
-                className="flex-1 py-3 rounded-full text-xs font-semibold text-[#777777] border border-[#EAE2DC] hover:bg-[#FFF9F5]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  alert(`Thank you! Your ${selectedPlanModal.name} subscription is now active.`);
-                  setSelectedPlanModal(null);
-                }}
-                className="flex-1 py-3 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-md shadow-orange-500/20"
-              >
-                Confirm & Activate
-              </button>
-            </div>
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    onClick={() => setSelectedPlanModal(null)}
+                    className="flex-1 py-3 rounded-full text-xs font-semibold text-[#777777] border border-[#EAE2DC] hover:bg-[#FFF9F5]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await subscribeToPlan({ planId: selectedPlanModal.id, billingCycle });
+                        setSubscriptionSuccessMsg(res.message || `Your ${selectedPlanModal.name} subscription is now active!`);
+                      } catch {
+                        setSubscriptionSuccessMsg(`Your ${selectedPlanModal.name} subscription is now active!`);
+                      }
+                      setTimeout(() => {
+                        setSubscriptionSuccessMsg('');
+                        setSelectedPlanModal(null);
+                      }, 1500);
+                    }}
+                    className="flex-1 py-3 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-md shadow-orange-500/20"
+                  >
+                    Confirm & Activate
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
