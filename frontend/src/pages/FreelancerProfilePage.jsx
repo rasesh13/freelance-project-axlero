@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Star, MapPin, Briefcase, Award, Heart, Share2, Send, ExternalLink, Calendar, MessageSquare, Shield, Clock, ChevronRight, X } from 'lucide-react';
-import { FREELANCERS } from '../data/mockData';
+import { fetchTalentById, createContract, sendMessage, toggleBookmark, fetchBookmarks, getAuthToken } from '../api/client';
 
-export default function FreelancerProfilePage({ freelancer, setCurrentPage }) {
-  const currentFreelancer = freelancer || FREELANCERS[0];
+export default function FreelancerProfilePage({ freelancer, setCurrentPage, isLoggedIn = false }) {
+  const [fallbackTalent, setFallbackTalent] = useState(null);
+  const currentFreelancer = freelancer || fallbackTalent;
+
+  useEffect(() => {
+    if (!freelancer) {
+      fetchTalentById('arjun-mehta')
+        .then((t) => setFallbackTalent(t))
+        .catch(() => { });
+    }
+  }, [freelancer]);
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'portfolio' | 'history' | 'reviews'
   const [isSaved, setIsSaved] = useState(false);
@@ -15,42 +24,117 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage }) {
   // Direct Message Modal State
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [messageSubject, setMessageSubject] = useState('Project Collaboration Opportunity');
-  const [messageBody, setMessageBody] = useState(
-    `Hi ${currentFreelancer.name}, I came across your Workverse profile and would love to discuss an upcoming project with you. Are you available for a quick chat?`
-  );
+  const [messageBody, setMessageBody] = useState('');
   const [messageSentSuccess, setMessageSentSuccess] = useState(false);
 
   // Quick Inquiry Form State
   const [inquiryText, setInquiryText] = useState('');
   const [inquirySentSuccess, setInquirySentSuccess] = useState(false);
 
-  const handleHireSubmit = (e) => {
+  useEffect(() => {
+    if (currentFreelancer) {
+      setMessageBody(
+        `Hi ${currentFreelancer.name}, I came across your Workverse profile and would love to discuss an upcoming project with you. Are you available for a quick chat?`
+      );
+      if (!isLoggedIn || !getAuthToken()) {
+        setIsSaved(false);
+        return;
+      }
+      fetchBookmarks('talent')
+        .then((rows) => {
+          if (Array.isArray(rows)) {
+            setIsSaved(rows.some((r) => r.itemId === currentFreelancer.id));
+          }
+        })
+        .catch(() => { });
+    }
+  }, [currentFreelancer?.id, isLoggedIn]);
+
+  if (!currentFreelancer) {
+    return (
+      <div className="w-full min-h-screen bg-[#FFF9F5] flex items-center justify-center p-8">
+        <div className="w-8 h-8 border-2 border-[#EAE2DC] border-t-[#F36B21] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const handleToggleSave = async () => {
+    if (!isLoggedIn || !getAuthToken()) {
+      setCurrentPage('auth', { notice: 'Sign in to save freelancer profiles.', returnTo: 'profile' });
+      return;
+    }
+    setIsSaved((prev) => !prev);
+    try {
+      const res = await toggleBookmark('talent', currentFreelancer.id);
+      if (typeof res?.saved === 'boolean') setIsSaved(res.saved);
+    } catch (err) {
+      console.error('Failed to toggle bookmark:', err);
+    }
+  };
+
+  const handleHireSubmit = async (e) => {
     e.preventDefault();
+    try {
+      await createContract({
+        title: hireMilestone,
+        freelancerId: currentFreelancer.userId || currentFreelancer.id,
+        freelancerName: currentFreelancer.name,
+        budget: hireBudget,
+      });
+    } catch (err) {
+      console.error('Failed to create contract:', err);
+    }
     setHireHiredSuccess(true);
     setTimeout(() => {
       setHireHiredSuccess(false);
       setIsHireModalOpen(false);
       setCurrentPage('projects');
-    }, 2000);
+    }, 1500);
   };
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
+    try {
+      await sendMessage({
+        recipientName: currentFreelancer.name,
+        recipientRole: currentFreelancer.title,
+        recipientAvatar: currentFreelancer.avatar,
+        project: messageSubject || 'Direct Message',
+        text: messageBody,
+      });
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    }
     setMessageSentSuccess(true);
     setTimeout(() => {
       setMessageSentSuccess(false);
       setIsMessageModalOpen(false);
-    }, 1800);
+    }, 1400);
   };
 
-  const handleSendInquiry = (e) => {
+  const handleSendInquiry = async (e) => {
     e.preventDefault();
+    if (!isLoggedIn || !getAuthToken()) {
+      setCurrentPage('auth', { notice: `Sign in to send an inquiry to ${currentFreelancer.name}.`, returnTo: 'profile' });
+      return;
+    }
     if (inquiryText.trim()) {
+      try {
+        await sendMessage({
+          recipientName: currentFreelancer.name,
+          recipientRole: currentFreelancer.title,
+          recipientAvatar: currentFreelancer.avatar,
+          project: 'Quick Inquiry',
+          text: inquiryText.trim(),
+        });
+      } catch (err) {
+        console.error('Failed to send inquiry:', err);
+      }
       setInquirySentSuccess(true);
       setTimeout(() => {
         setInquirySentSuccess(false);
         setInquiryText('');
-      }, 3000);
+      }, 2500);
     }
   };
 
@@ -124,17 +208,25 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage }) {
             {/* Action Buttons: Hire Me, Message, Bookmark */}
             <div className="flex items-center justify-center sm:justify-end gap-3 pt-4 md:pt-0 border-t md:border-t-0 border-[#EAE2DC]">
               <button
-                onClick={() => setIsSaved(!isSaved)}
-                className={`w-11 h-11 rounded-full border border-[#EAE2DC] flex items-center justify-center hover:bg-[#FFF3EC] transition-colors ${
-                  isSaved ? 'text-[#F36B21] border-[#F36B21]' : 'text-[#777777]'
-                }`}
+                onClick={handleToggleSave}
+                className={`w-11 h-11 rounded-full border border-[#EAE2DC] flex items-center justify-center hover:bg-[#FFF3EC] transition-colors ${isSaved ? 'text-[#F36B21] border-[#F36B21]' : 'text-[#777777]'
+                  }`}
                 title="Save Profile"
               >
                 <Heart className={`w-4 h-4 ${isSaved ? 'fill-[#F36B21]' : 'stroke-current'}`} />
               </button>
 
               <button
-                onClick={() => setIsMessageModalOpen(true)}
+                onClick={() => {
+                  if (!isLoggedIn || !getAuthToken()) {
+                    setCurrentPage('auth', {
+                      notice: `Sign in to send a direct message to ${currentFreelancer.name}.`,
+                      returnTo: 'profile',
+                    });
+                    return;
+                  }
+                  setIsMessageModalOpen(true);
+                }}
                 className="px-5 py-3 rounded-full border border-[#EAE2DC] text-[#171717] hover:bg-[#FFF3EC] hover:border-[#F36B21] transition-all text-xs font-semibold flex items-center gap-1.5"
               >
                 <MessageSquare className="w-4 h-4 text-[#777777]" />
@@ -142,7 +234,16 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage }) {
               </button>
 
               <button
-                onClick={() => setIsHireModalOpen(true)}
+                onClick={() => {
+                  if (!isLoggedIn || !getAuthToken()) {
+                    setCurrentPage('auth', {
+                      notice: `Sign in as a client to hire or fund a contract with ${currentFreelancer.name}.`,
+                      returnTo: 'profile',
+                    });
+                    return;
+                  }
+                  setIsHireModalOpen(true);
+                }}
                 className="px-7 py-3 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs sm:text-sm font-bold shadow-lg shadow-orange-500/25 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
               >
                 <span>Hire Me</span>
@@ -171,11 +272,10 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage }) {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-2 rounded-full transition-all ${
-                    activeTab === tab.id
+                  className={`px-4 py-2 rounded-full transition-all ${activeTab === tab.id
                       ? 'bg-[#FCE2D3] text-[#171717] font-bold'
                       : 'text-[#777777] hover:text-[#171717]'
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -519,11 +619,10 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage }) {
                         key={topic}
                         type="button"
                         onClick={() => setMessageSubject(topic)}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
-                          messageSubject === topic
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${messageSubject === topic
                             ? 'bg-[#FCE2D3] text-[#F36B21] border border-[#F36B21]'
                             : 'bg-[#FFF9F5] text-[#777777] border border-[#EAE2DC] hover:text-[#171717]'
-                        }`}
+                          }`}
                       >
                         {topic}
                       </button>

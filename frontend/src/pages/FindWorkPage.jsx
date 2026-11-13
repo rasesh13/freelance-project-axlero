@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Briefcase,
   Users,
@@ -27,9 +27,16 @@ import {
   Building,
   Check,
 } from 'lucide-react';
-import { PROJECTS } from '../data/mockData';
+import {
+  fetchProjects,
+  submitProposal,
+  fetchProposals,
+  fetchBookmarks,
+  toggleBookmark as toggleBookmarkApi,
+  getAuthToken,
+} from '../api/client';
 
-export default function FindWorkPage({ setCurrentPage, setSelectedProject }) {
+export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLoggedIn = false }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'saved' | 'applied' | 'recommended'
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
@@ -39,9 +46,41 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject }) {
   const [featuredOnly, setFeaturedOnly] = useState(false);
   const [sortBy, setSortBy] = useState('Newest');
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
-  const [savedProjectIds, setSavedProjectIds] = useState(['proj-1', 'proj-3', 'proj-5']);
-  const [appliedProjectIds, setAppliedProjectIds] = useState(['proj-2', 'proj-5']);
+  const [savedProjectIds, setSavedProjectIds] = useState([]);
+  const [appliedProjectIds, setAppliedProjectIds] = useState([]);
   const [selectedDetailProject, setSelectedDetailProject] = useState(null);
+  const [projectList, setProjectList] = useState([]);
+
+  useEffect(() => {
+    fetchProjects()
+      .then((data) => {
+        if (Array.isArray(data)) setProjectList(data);
+      })
+      .catch((err) => console.error('Failed to fetch projects for work page:', err));
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !getAuthToken()) {
+      setSavedProjectIds([]);
+      setAppliedProjectIds([]);
+      return;
+    }
+
+    fetchBookmarks('project')
+      .then((rows) => {
+        if (Array.isArray(rows)) setSavedProjectIds(rows.map((r) => r.itemId));
+      })
+      .catch(() => {});
+
+    fetchProposals()
+      .then((props) => {
+        if (Array.isArray(props)) {
+          const ids = props.map((p) => p.project_id).filter(Boolean);
+          setAppliedProjectIds(ids);
+        }
+      })
+      .catch(() => {});
+  }, [isLoggedIn]);
 
   // Apply Modal state
   const [applyModalProject, setApplyModalProject] = useState(null);
@@ -60,30 +99,59 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject }) {
     setOpenSections((prev) => ({ ...prev, [sec]: !prev[sec] }));
   };
 
-  const toggleBookmark = (id, e) => {
+  const toggleBookmark = async (id, e) => {
     e.stopPropagation();
+    if (!isLoggedIn || !getAuthToken()) {
+      setCurrentPage('auth', { notice: 'Sign in to bookmark projects.', returnTo: 'work' });
+      return;
+    }
     setSavedProjectIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
+    try {
+      const res = await toggleBookmarkApi('project', id);
+      if (res?.ids) setSavedProjectIds(res.ids);
+    } catch (err) {
+      console.error('Failed to persist bookmark:', err);
+    }
   };
 
   const handleOpenApply = (project, e) => {
     e.stopPropagation();
+    if (!isLoggedIn || !getAuthToken()) {
+      setCurrentPage('auth', {
+        notice: 'Sign in as a freelancer to submit project proposals.',
+        returnTo: 'work',
+      });
+      return;
+    }
     setApplyModalProject(project);
     setBidAmount(project.budgetMin ? String(project.budgetMin) : '1200');
     setCoverLetter(
-      `Hi! I have extensive experience building scalable solutions with ${project.skills.slice(0, 3).join(', ')}. I would love to deliver ${project.title} with clean code, robust testing, and smooth milestone communication.`
+      `Hi! I have extensive experience building scalable solutions with ${(project.skills || []).slice(0, 3).join(', ')}. I would love to deliver ${project.title} with clean code, robust testing, and smooth milestone communication.`
     );
     setAppliedSuccess(false);
   };
 
-  const handleSubmitProposal = (e) => {
+  const handleSubmitProposal = async (e) => {
     e.preventDefault();
     if (applyModalProject) {
       if (!appliedProjectIds.includes(applyModalProject.id)) {
         setAppliedProjectIds((prev) => [...prev, applyModalProject.id]);
       }
       setAppliedSuccess(true);
+      try {
+        await submitProposal({
+          project_id: applyModalProject.id,
+          project_title: applyModalProject.title,
+          bid_amount: `$${bidAmount}`,
+          duration: applyModalProject.duration || '2 - 3 Weeks',
+          pitch: coverLetter,
+          cover_letter: coverLetter,
+        });
+      } catch (err) {
+        console.error('Failed to submit proposal to backend:', err);
+      }
       setTimeout(() => {
         setApplyModalProject(null);
         setAppliedSuccess(false);
@@ -102,7 +170,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject }) {
   };
 
   // Filter projects
-  const filteredProjects = PROJECTS.filter((p) => {
+  const filteredProjects = projectList.filter((p) => {
     // Tab filter
     if (activeTab === 'saved' && !savedProjectIds.includes(p.id)) return false;
     if (activeTab === 'applied' && !appliedProjectIds.includes(p.id)) return false;
@@ -218,6 +286,9 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject }) {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') document.getElementById('work-results-feed')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
                   placeholder='Search projects, tech stack (e.g. "Next.js", "Figma", "AI")...'
                   className="w-full px-3 py-2 text-sm sm:text-base text-[#171717] placeholder:text-[#999999] focus:outline-none bg-transparent"
                 />
@@ -231,7 +302,8 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject }) {
                 )}
                 <button
                   type="button"
-                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white flex items-center justify-center shrink-0 transition-transform active:scale-95 shadow-md shadow-orange-500/25"
+                  onClick={() => document.getElementById('work-results-feed')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white flex items-center justify-center shrink-0 transition-transform active:scale-95 shadow-md shadow-orange-500/25 cursor-pointer"
                   title="Search"
                 >
                   <ArrowRight className="w-5 h-5" />
@@ -339,7 +411,18 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject }) {
                       <p className="text-[10px] text-[#888888]">Fixed Price • 3-4 Weeks</p>
                     </div>
                     <button
-                      onClick={(e) => handleOpenApply(PROJECTS[0], e)}
+                      onClick={(e) =>
+                        handleOpenApply(
+                          projectList[0] || {
+                            id: 'proj-1',
+                            title: 'SaaS Dashboard UI/UX & Full Stack',
+                            budgetMin: 1200,
+                            skills: ['React', 'Node.js', 'Figma'],
+                            duration: '3-4 Weeks',
+                          },
+                          e
+                        )
+                      }
                       className="w-10 h-10 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-md shadow-orange-500/25"
                       title="Apply Now"
                     >
@@ -380,7 +463,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject }) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#EAE2DC]">
           <div className="flex flex-wrap items-center gap-2">
             {[
-              { id: 'all', label: 'All Projects', count: PROJECTS.length, icon: Briefcase },
+              { id: 'all', label: 'All Projects', count: projectList.length, icon: Briefcase },
               { id: 'saved', label: 'Saved', count: savedProjectIds.length, icon: Bookmark },
               { id: 'applied', label: 'Applied', count: appliedProjectIds.length, icon: CheckCircle2 },
               { id: 'recommended', label: 'Recommended', count: 4, icon: Sparkles },
@@ -390,7 +473,16 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject }) {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    if ((tab.id === 'saved' || tab.id === 'applied') && (!isLoggedIn || !getAuthToken())) {
+                      setCurrentPage('auth', {
+                        notice: 'Sign in to view your saved projects and submitted proposals.',
+                        returnTo: 'work',
+                      });
+                      return;
+                    }
+                    setActiveTab(tab.id);
+                  }}
                   className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all shadow-xs ${
                     isActive
                       ? 'bg-[#171717] text-white shadow-md'
@@ -695,7 +787,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject }) {
           </div>
 
           {/* Right Column: Project Listings */}
-          <div className="lg:col-span-9 space-y-4">
+          <div id="work-results-feed" className="lg:col-span-9 space-y-4">
             {/* Results Counter Header */}
             <div className="flex items-center justify-between pb-2">
               <h2 className="text-xl sm:text-2xl font-bold text-[#171717] flex items-center gap-2">
