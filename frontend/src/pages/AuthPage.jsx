@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
-import { ArrowRight, Eye, EyeOff, Check, Sparkles, Shield, ArrowLeft } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Check, Sparkles, Shield, ArrowLeft, KeyRound, Lock } from 'lucide-react';
+import { authLogin, authRegister, forgotPasswordRequest } from '../api/client';
 
-export default function AuthPage({ setCurrentPage, setIsLoggedIn, userRole, setUserRole }) {
+export default function AuthPage({
+  setCurrentPage,
+  setIsLoggedIn,
+  userRole,
+  setUserRole,
+  setCurrentUser,
+  authNotice = '',
+  onAuthSuccess,
+}) {
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -16,7 +25,7 @@ export default function AuthPage({ setCurrentPage, setIsLoggedIn, userRole, setU
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
 
@@ -32,28 +41,69 @@ export default function AuthPage({ setCurrentPage, setIsLoggedIn, userRole, setU
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
-      if (setUserRole) {
-        setUserRole(role);
+    try {
+      let res;
+      if (authMode === 'login') {
+        res = await authLogin({ email, password, role });
+      } else {
+        res = await authRegister({ name, email, password, role });
       }
-      setIsLoggedIn(true);
-      setCurrentPage('projects');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 700);
+
+      if (res && res.user) {
+        if (onAuthSuccess) {
+          onAuthSuccess(res.user, role);
+        } else {
+          if (setCurrentUser) setCurrentUser(res.user);
+          if (setUserRole) setUserRole(res.user.role || role);
+          setIsLoggedIn(true);
+          setCurrentPage('projects');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    } catch (err) {
+      console.error('Auth error:', err);
+      setErrorMessage(err.message || 'Authentication failed. Please verify credentials.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSocialAuth = (provider) => {
+  const handleSocialAuth = async (provider) => {
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      if (setUserRole) {
-        setUserRole(role);
+    setErrorMessage('');
+    try {
+      // Authenticate with default role account
+      const demoEmail = role === 'freelancer' ? 'arjun@workverse.io' : 'sarah@cloudscale.ai';
+      const res = await authLogin({ email: demoEmail, password: 'password123', role });
+      if (res && res.user) {
+        if (onAuthSuccess) {
+          onAuthSuccess(res.user, role);
+        } else {
+          if (setCurrentUser) setCurrentUser(res.user);
+          if (setUserRole) setUserRole(res.user.role || role);
+          setIsLoggedIn(true);
+          setCurrentPage('projects');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       }
-      setIsLoggedIn(true);
-      setCurrentPage('projects');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 600);
+    } catch (err) {
+      setErrorMessage(err.message || 'Social sign-in failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleQuickFill = (targetRole) => {
+    setRole(targetRole);
+    setAuthMode('login');
+    setErrorMessage('');
+    if (targetRole === 'freelancer') {
+      setEmail('arjun@workverse.io');
+      setPassword('password123');
+    } else {
+      setEmail('sarah@cloudscale.ai');
+      setPassword('password123');
+    }
   };
 
   return (
@@ -175,6 +225,14 @@ export default function AuthPage({ setCurrentPage, setIsLoggedIn, userRole, setU
                 </button>
               </div>
             </div>
+
+            {/* Protected Route Redirect Notice */}
+            {authNotice && (
+              <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-[#FFF3EC] border border-[#FCE2D3] text-xs font-semibold text-[#171717]">
+                <Lock className="w-4 h-4 text-[#F36B21] shrink-0 mt-0.5" />
+                <span>{authNotice}</span>
+              </div>
+            )}
 
             {/* Header Text */}
             <div>
@@ -399,6 +457,30 @@ export default function AuthPage({ setCurrentPage, setIsLoggedIn, userRole, setU
                   </>
                 )}
               </button>
+
+              {/* Quick Login Shortcut Badges */}
+              <div className="pt-2 border-t border-[#F3ECE7]">
+                <p className="text-[11px] font-semibold text-[#888888] mb-2 flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-[#F36B21]" />
+                  <span>Real Seeded User Accounts (password: password123):</span>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickFill('freelancer')}
+                    className="px-3 py-1.5 rounded-full bg-[#FFF3EC] hover:bg-[#FCE2D3] border border-[#FCE2D3] text-[11px] font-medium text-[#F36B21] transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <span>💻 Arjun Mehta (Freelancer)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickFill('client')}
+                    className="px-3 py-1.5 rounded-full bg-[#F5F5F5] hover:bg-[#EAEAEA] border border-[#E0E0E0] text-[11px] font-medium text-[#171717] transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <span>👔 Sarah Jenkins (Client)</span>
+                  </button>
+                </div>
+              </div>
             </form>
           </div>
         </div>
@@ -428,7 +510,14 @@ export default function AuthPage({ setCurrentPage, setIsLoggedIn, userRole, setU
                 />
                 <button
                   type="button"
-                  onClick={() => setForgotSent(true)}
+                  onClick={async () => {
+                    try {
+                      await forgotPasswordRequest(forgotEmail);
+                      setForgotSent(true);
+                    } catch (err) {
+                      setErrorMessage(err.message);
+                    }
+                  }}
                   className="w-full py-2.5 rounded-full bg-[#F36B21] text-white text-xs font-semibold"
                 >
                   Send Reset Link
