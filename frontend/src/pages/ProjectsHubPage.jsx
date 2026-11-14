@@ -427,38 +427,63 @@ export default function ProjectsHubPage({
   const [settingsSuccess, setSettingsSuccess] = useState(false);
 
   // Handle Create New Project
-  const handleCreateProject = (e) => {
-    e.preventDefault();
-    if (newTitle.trim()) {
-      const createdProj = {
-        id: `proj-${Date.now()}`,
-        title: newTitle,
-        category: newCategory,
-        description: newDesc || 'Custom freelance milestone deliverables and engineering.',
-        budget: newBudget,
-        budgetType: 'Fixed Price',
-        duration: '2 - 3 Weeks',
-        skills: ['React', 'Next.js', 'Tailwind'],
-        featured: false,
-        saved: false,
-        applied: false,
-        progress: 10,
-        status: 'In Progress',
-        deadline: newDeadline,
-        team: [
-          { name: 'You', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' },
-        ],
-        teamExtra: 0,
-        thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80',
-        type: 'dev',
-      };
-      setProjectList((prev) => [createdProj, ...prev]);
-      setIsNewProjectModalOpen(false);
-      setNewTitle('');
-      setNewDesc('');
-    }
+const handleCreateProject = (e) => {
+  e.preventDefault();
+
+  const budgetValue = Number(
+    String(newBudget).replace(/[$,]/g, '')
+  );
+
+  if (!newTitle.trim()) {
+    triggerToast('Validation Error', 'Please enter a project title.');
+    return;
+  }
+
+  if (!Number.isFinite(budgetValue) || budgetValue <= 0) {
+    triggerToast('Invalid Budget', 'Please enter a valid project budget.');
+    return;
+  }
+
+  const createdProj = {
+    id: `proj-${Date.now()}`,
+    title: newTitle.trim(),
+    category: newCategory,
+    description: newDesc.trim() || 'Custom freelance project.',
+    budget: `$${budgetValue.toLocaleString('en-US')}`,
+    budgetType: 'Fixed Price',
+    duration: '2 - 3 Weeks',
+    skills: ['React', 'Next.js', 'Tailwind'],
+    featured: false,
+    saved: false,
+    applied: false,
+    progress: 0,
+    status: 'In Progress',
+    deadline: newDeadline,
+    team: [
+      {
+        name: 'You',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'
+      }
+    ],
+    teamExtra: 0,
+    thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80',
+    type: 'dev',
   };
 
+  setProjectList((prev) => [createdProj, ...prev]);
+
+  setIsNewProjectModalOpen(false);
+  setWizardStep(1);
+  setNewTitle('');
+  setNewDesc('');
+  setNewBudget('$1,500');
+  setNewCategory('Web Development');
+
+  triggerToast(
+    'Project Created Successfully',
+    `${createdProj.title} has been added to your dashboard.`
+  );
+};
   // Handle Proposals Status Action
   const handleUpdateProposalStatus = (id, newStatus) => {
     setProposals((prev) =>
