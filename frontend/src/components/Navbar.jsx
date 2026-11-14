@@ -1,5 +1,60 @@
-import React, { useState } from 'react';
-import { Search, Bell, Menu, X, ChevronDown, ArrowRight, User, Briefcase, FileText, Settings, LogOut } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Search,
+  Bell,
+  Menu,
+  X,
+  ChevronDown,
+  ArrowRight,
+  User,
+  Briefcase,
+  FileText,
+  Settings,
+  LogOut,
+  DollarSign,
+  MessageSquare,
+  CheckCircle2,
+  Check,
+  BellOff,
+  Sparkles,
+} from 'lucide-react';
+import {
+  fetchNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteNotification,
+  getAuthToken,
+} from '../api/client';
+
+function formatRelativeTime(isoOrSqlDate) {
+  if (!isoOrSqlDate) return 'Just now';
+  const normalized = isoOrSqlDate.includes('T')
+    ? isoOrSqlDate
+    : `${isoOrSqlDate.replace(' ', 'T')}Z`;
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return 'Recent';
+  const diffSec = Math.max(0, Math.floor((Date.now() - parsed.getTime()) / 1000));
+  if (diffSec < 60) return 'Just now';
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function getNotificationBadgeMeta(type) {
+  switch (type) {
+    case 'payment':
+      return { Icon: DollarSign, badgeClass: 'bg-emerald-50 border-emerald-200 text-emerald-600' };
+    case 'message':
+      return { Icon: MessageSquare, badgeClass: 'bg-blue-50 border-blue-200 text-blue-600' };
+    case 'proposal':
+      return { Icon: Briefcase, badgeClass: 'bg-[#FFF3EC] border-[#FCE2D3] text-[#F36B21]' };
+    case 'milestone':
+    case 'contract':
+      return { Icon: CheckCircle2, badgeClass: 'bg-purple-50 border-purple-200 text-purple-600' };
+    default:
+      return { Icon: Sparkles, badgeClass: 'bg-amber-50 border-amber-200 text-amber-600' };
+  }
+}
 
 export default function Navbar({
   currentPage,
@@ -8,24 +63,32 @@ export default function Navbar({
   setIsLoggedIn,
   userRole = 'client',
   setUserRole,
+  currentUser,
+  onLogout,
   onOpenSearch,
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [resourcesDropdownOpen, setResourcesDropdownOpen] = useState(false);
 
+  const notificationsRef = useRef(null);
+  const userDropdownRef = useRef(null);
+
   const navItems = [
     { id: 'talent', label: 'Find Talent' },
     { id: 'work', label: 'Find Work' },
-    { id: 'projects', label: isLoggedIn && userRole === 'freelancer' ? 'My Workspace' : 'Projects' },
+    ...(isLoggedIn
+      ? [{ id: 'projects', label: userRole === 'freelancer' ? 'My Workspace' : 'Projects' }]
+      : []),
     { id: 'pricing', label: 'Pricing' },
     { id: 'resources', label: 'Resources', hasDropdown: true },
   ];
 
-  const handleNavClick = (pageId) => {
-    setCurrentPage(pageId);
+  const handleNavClick = (pageId, options = {}) => {
+    setCurrentPage(pageId, options);
     setMobileMenuOpen(false);
     setResourcesDropdownOpen(false);
+    setUserDropdownOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -136,14 +199,11 @@ export default function Navbar({
           {isLoggedIn ? (
             /* Logged-In User Controls */
             <div className="flex items-center gap-2.5 sm:gap-3 relative">
-              {/* Notification Bell with Badge */}
               <button
-                onClick={() => handleNavClick('projects')}
-                className="relative w-10 h-10 rounded-full flex items-center justify-center text-[#171717] hover:bg-[#FFF3EC] border border-[#EAE2DC] transition-colors"
+                className="w-10 h-10 rounded-full flex items-center justify-center text-[#171717] hover:bg-[#FFF3EC] border border-[#EAE2DC] transition-colors"
                 title="Notifications"
               >
                 <Bell className="w-4 h-4" />
-                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#F36B21] ring-2 ring-[#FFF9F5]" />
               </button>
 
               {/* User Avatar with Status Indicator */}
@@ -328,4 +388,3 @@ export default function Navbar({
     </header>
   );
 }
-
