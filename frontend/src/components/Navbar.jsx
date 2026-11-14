@@ -74,6 +74,25 @@ export default function Navbar({
   const notificationsRef = useRef(null);
   const userDropdownRef = useRef(null);
 
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   const navItems = [
     { id: 'talent', label: 'Find Talent' },
     { id: 'work', label: 'Find Work' },
@@ -207,18 +226,19 @@ export default function Navbar({
               </button>
 
               {/* User Avatar with Status Indicator */}
-              <div className="relative">
+              <div ref={userDropdownRef} className="relative">
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                   className="flex items-center gap-2 p-1 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] transition-all bg-white cursor-pointer"
                 >
                   <img
                     src={
-                      userRole === 'client'
+                      currentUser?.avatar ||
+                      (userRole === 'client'
                         ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80'
-                        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80'
+                        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80')
                     }
-                    alt={userRole === 'client' ? 'Sarah Jenkins' : 'Arjun Mehta'}
+                    alt={currentUser?.name || (userRole === 'client' ? 'Sarah Jenkins' : 'Arjun Mehta')}
                     className="w-8 h-8 rounded-full object-cover"
                   />
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white absolute -bottom-0.5 right-1" />
@@ -227,19 +247,19 @@ export default function Navbar({
                 {userDropdownOpen && (
                   <div
                     onMouseLeave={() => setUserDropdownOpen(false)}
-                    className="absolute right-0 top-full mt-2 w-60 bg-white rounded-2xl shadow-xl border border-[#EAE2DC] p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                    className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#EAE2DC] p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
                   >
                     <div className="px-3 py-2 border-b border-[#EAE2DC]">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold text-[#171717]">
-                          {userRole === 'client' ? 'Sarah Jenkins' : 'Arjun Mehta'}
+                        <p className="text-sm font-semibold text-[#171717] truncate max-w-[150px]">
+                          {currentUser?.name || (userRole === 'client' ? 'Sarah Jenkins' : 'Arjun Mehta')}
                         </p>
                         <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#FFF3EC] text-[#F36B21] border border-[#FCE2D3] uppercase">
                           {userRole === 'client' ? 'Client' : 'Freelancer'}
                         </span>
                       </div>
-                      <p className="text-xs text-[#777777]">
-                        {userRole === 'client' ? 'sarah@cloudscale.ai' : 'arjun@workverse.io'}
+                      <p className="text-xs text-[#777777] truncate">
+                        {currentUser?.email || (userRole === 'client' ? 'sarah@cloudscale.ai' : 'arjun@workverse.io')}
                       </p>
                     </div>
 
@@ -282,7 +302,11 @@ export default function Navbar({
                       <button
                         onClick={() => {
                           setUserDropdownOpen(false);
-                          setIsLoggedIn(false);
+                          if (onLogout) {
+                            onLogout();
+                          } else {
+                            setIsLoggedIn(false);
+                          }
                           handleNavClick('home');
                         }}
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
@@ -356,7 +380,11 @@ export default function Navbar({
                 </button>
                 <button
                   onClick={() => {
-                    setIsLoggedIn(false);
+                    if (onLogout) {
+                      onLogout();
+                    } else {
+                      setIsLoggedIn(false);
+                    }
                     handleNavClick('home');
                   }}
                   className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-red-50 text-red-600 font-medium text-sm"
