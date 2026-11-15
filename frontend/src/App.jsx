@@ -10,23 +10,24 @@ import PricingPage from './pages/PricingPage';
 import ResourcesPage from './pages/ResourcesPage';
 import AuthPage from './pages/AuthPage';
 import FreelancerProfilePage from './pages/FreelancerProfilePage';
-import { FREELANCERS, PROJECTS } from './data/mockData';
-import { getAuthToken } from './api/client';
+import { getStoredUser, authGetMe, authLogout, getAuthToken, fetchTalentById, fetchProjects } from './api/client';
 
 const PROTECTED_PAGES = new Set(['projects']);
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
-  const [selectedFreelancer, setSelectedFreelancer] = useState(FREELANCERS[0]);
-  const [selectedProject, setSelectedProject] = useState(PROJECTS[0]);
+  const [selectedFreelancer, setSelectedFreelancer] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
   const [projectsInitialTab, setProjectsInitialTab] = useState('projects');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState(null);
   const [authNotice, setAuthNotice] = useState('');
 
+  const [currentUser, setCurrentUser] = useState(() => getStoredUser());
+
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     try {
-      return localStorage.getItem('wv_is_logged_in') === 'true';
+      return !!getAuthToken();
     } catch {
       return false;
     }
@@ -34,11 +35,52 @@ export default function App() {
 
   const [userRole, setUserRole] = useState(() => {
     try {
+      const stored = getStoredUser();
+      if (stored && stored.role) return stored.role;
       return localStorage.getItem('wv_user_role') || 'client';
     } catch {
       return 'client';
     }
   });
+
+  // Verify session and hydrate initial defaults from live backend on mount
+  useEffect(() => {
+    const token = getAuthToken();
+    if (token) {
+      authGetMe()
+        .then((user) => {
+          if (user) {
+            setCurrentUser(user);
+            setIsLoggedIn(true);
+            if (user.role) setUserRole(user.role);
+          }
+        })
+        .catch(() => {
+          console.warn('Session expired, logging out');
+          authLogout();
+          setCurrentUser(null);
+          setIsLoggedIn(false);
+          if (window.location.hash === '#projects') {
+            setAuthNotice('Your session expired. Please sign in to access your Workspace.');
+            setPendingRedirect({ page: 'projects', options: {} });
+            setCurrentPage('auth');
+            window.location.hash = 'auth';
+          }
+        });
+    }
+
+    fetchTalentById('arjun-mehta')
+      .then((t) => setSelectedFreelancer((prev) => prev || t))
+      .catch(() => {});
+
+    fetchProjects()
+      .then((list) => {
+        if (Array.isArray(list) && list.length) {
+          setSelectedProject((prev) => prev || list[0]);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSetIsLoggedIn = (val) => {
     setIsLoggedIn(val);
