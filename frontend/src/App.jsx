@@ -19,6 +19,7 @@ export default function App() {
   const [selectedFreelancer, setSelectedFreelancer] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const [projectsInitialTab, setProjectsInitialTab] = useState('projects');
+  const [projectsTabNonce, setProjectsTabNonce] = useState(0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState(null);
   const [authNotice, setAuthNotice] = useState('');
@@ -100,6 +101,19 @@ export default function App() {
     }
   };
 
+  const handleLogout = () => {
+    authLogout();
+    setCurrentUser(null);
+    setIsLoggedIn(false);
+    setUserRole('client');
+    setPendingRedirect(null);
+    setAuthNotice('');
+    if (currentPage === 'projects' || window.location.hash === '#projects') {
+      setCurrentPage('home');
+      window.location.hash = 'home';
+    }
+  };
+
   // Global Ctrl+K / Cmd+K Search Shortcut
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
@@ -160,9 +174,36 @@ export default function App() {
 
     if (options && options.tab) {
       setProjectsInitialTab(options.tab);
+      setProjectsTabNonce((n) => n + 1);
+    } else if (page === 'projects') {
+      setProjectsInitialTab('projects');
+      setProjectsTabNonce((n) => n + 1);
     }
     setCurrentPage(page);
     window.location.hash = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAuthSuccess = (user, selectedRole) => {
+    const effectiveRole = user?.role || selectedRole || 'client';
+    if (user) setCurrentUser(user);
+    handleSetUserRole(effectiveRole);
+    handleSetIsLoggedIn(true);
+    setAuthNotice('');
+
+    const targetPage = pendingRedirect?.page || 'projects';
+    const targetOpts = pendingRedirect?.options || {};
+    setPendingRedirect(null);
+
+    if (targetOpts?.tab) {
+      setProjectsInitialTab(targetOpts.tab);
+      setProjectsTabNonce((n) => n + 1);
+    } else if (targetPage === 'projects') {
+      setProjectsInitialTab('projects');
+      setProjectsTabNonce((n) => n + 1);
+    }
+    setCurrentPage(targetPage);
+    window.location.hash = targetPage;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -187,6 +228,8 @@ export default function App() {
         setIsLoggedIn={handleSetIsLoggedIn}
         userRole={userRole}
         setUserRole={handleSetUserRole}
+        currentUser={currentUser}
+        onLogout={handleLogout}
         onOpenSearch={() => setIsSearchOpen(true)}
       />
 
