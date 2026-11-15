@@ -11,6 +11,9 @@ import ResourcesPage from './pages/ResourcesPage';
 import AuthPage from './pages/AuthPage';
 import FreelancerProfilePage from './pages/FreelancerProfilePage';
 import { FREELANCERS, PROJECTS } from './data/mockData';
+import { getAuthToken } from './api/client';
+
+const PROTECTED_PAGES = new Set(['projects']);
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -18,6 +21,8 @@ export default function App() {
   const [selectedProject, setSelectedProject] = useState(PROJECTS[0]);
   const [projectsInitialTab, setProjectsInitialTab] = useState('projects');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [pendingRedirect, setPendingRedirect] = useState(null);
+  const [authNotice, setAuthNotice] = useState('');
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     try {
@@ -65,11 +70,18 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
-  // Sync hash with page for browser back/forward navigation
+  // Sync hash with page for browser back/forward navigation & enforce protected route guard
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
       if (['home', 'talent', 'work', 'projects', 'pricing', 'resources', 'auth', 'profile'].includes(hash)) {
+        if (PROTECTED_PAGES.has(hash) && !getAuthToken()) {
+          setPendingRedirect({ page: hash, options: {} });
+          setAuthNotice('Sign in to access your Client Projects Hub or Freelancer Workspace.');
+          setCurrentPage('auth');
+          window.location.hash = 'auth';
+          return;
+        }
         setCurrentPage(hash);
       }
     };
@@ -83,6 +95,27 @@ export default function App() {
   }, []);
 
   const navigateToPage = (page, options = {}) => {
+    const authed = isLoggedIn && !!getAuthToken();
+    if (PROTECTED_PAGES.has(page) && !authed) {
+      setPendingRedirect({ page, options });
+      setAuthNotice(
+        options?.notice || 'Sign in to access your Client Projects Hub or Freelancer Workspace.'
+      );
+      setCurrentPage('auth');
+      window.location.hash = 'auth';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (page === 'auth') {
+      setAuthNotice(options?.notice || '');
+      if (options?.returnTo) {
+        setPendingRedirect({ page: options.returnTo, options: options.returnOptions || {} });
+      }
+    } else {
+      setAuthNotice('');
+    }
+
     if (options && options.tab) {
       setProjectsInitialTab(options.tab);
     }
@@ -139,12 +172,22 @@ export default function App() {
           />
         )}
 
-        {currentPage === 'projects' && (
+        {currentPage === 'projects' && isLoggedIn && getAuthToken() && (
           <ProjectsHubPage
             setCurrentPage={navigateToPage}
             initialTab={projectsInitialTab}
             userRole={userRole}
             setUserRole={handleSetUserRole}
+          />
+        )}
+
+        {currentPage === 'projects' && (!isLoggedIn || !getAuthToken()) && (
+          <AuthPage
+            setCurrentPage={navigateToPage}
+            setIsLoggedIn={handleSetIsLoggedIn}
+            userRole={userRole}
+            setUserRole={handleSetUserRole}
+            authNotice={authNotice || 'Sign in to access your Client Projects Hub or Freelancer Workspace.'}
           />
         )}
 
@@ -166,6 +209,7 @@ export default function App() {
             setIsLoggedIn={handleSetIsLoggedIn}
             userRole={userRole}
             setUserRole={handleSetUserRole}
+            authNotice={authNotice}
           />
         )}
 
