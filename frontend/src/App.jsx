@@ -240,6 +240,7 @@ export default function App() {
             setCurrentPage={navigateToPage}
             setSelectedFreelancer={setSelectedFreelancer}
             setSelectedProject={setSelectedProject}
+            isLoggedIn={isLoggedIn}
           />
         )}
 
@@ -247,6 +248,7 @@ export default function App() {
           <FindTalentPage
             setCurrentPage={navigateToPage}
             setSelectedFreelancer={setSelectedFreelancer}
+            isLoggedIn={isLoggedIn}
           />
         )}
 
@@ -254,6 +256,7 @@ export default function App() {
           <FindWorkPage
             setCurrentPage={navigateToPage}
             setSelectedProject={setSelectedProject}
+            isLoggedIn={isLoggedIn}
           />
         )}
 
@@ -261,8 +264,11 @@ export default function App() {
           <ProjectsHubPage
             setCurrentPage={navigateToPage}
             initialTab={projectsInitialTab}
+            initialTabNonce={projectsTabNonce}
             userRole={userRole}
             setUserRole={handleSetUserRole}
+            currentUser={currentUser}
+            setCurrentUser={setCurrentUser}
           />
         )}
 
@@ -272,19 +278,23 @@ export default function App() {
             setIsLoggedIn={handleSetIsLoggedIn}
             userRole={userRole}
             setUserRole={handleSetUserRole}
+            setCurrentUser={setCurrentUser}
             authNotice={authNotice || 'Sign in to access your Client Projects Hub or Freelancer Workspace.'}
+            onAuthSuccess={handleAuthSuccess}
           />
         )}
 
         {currentPage === 'pricing' && (
           <PricingPage
             setCurrentPage={navigateToPage}
+            isLoggedIn={isLoggedIn}
           />
         )}
 
         {currentPage === 'resources' && (
           <ResourcesPage
             setCurrentPage={navigateToPage}
+            isLoggedIn={isLoggedIn}
           />
         )}
 
@@ -294,7 +304,9 @@ export default function App() {
             setIsLoggedIn={handleSetIsLoggedIn}
             userRole={userRole}
             setUserRole={handleSetUserRole}
+            setCurrentUser={setCurrentUser}
             authNotice={authNotice}
+            onAuthSuccess={handleAuthSuccess}
           />
         )}
 
@@ -302,6 +314,7 @@ export default function App() {
           <FreelancerProfilePage
             freelancer={selectedFreelancer}
             setCurrentPage={navigateToPage}
+            isLoggedIn={isLoggedIn}
           />
         )}
       </main>
