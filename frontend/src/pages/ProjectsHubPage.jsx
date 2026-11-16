@@ -296,6 +296,37 @@ export default function ProjectsHubPage({
   const [projectStatusFilter, setProjectStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [projectList, setProjectList] = useState(PROJECTS);
+  // Project Overview Statistics
+  const totalProjects = projectList.length;
+
+  const inProgressCount = projectList.filter(
+    (p) => p.status === 'In Progress'
+  ).length;
+
+  const inReviewCount = projectList.filter(
+    (p) => p.status === 'In Review'
+  ).length;
+
+  const completedCount = projectList.filter(
+    (p) => p.status === 'Completed'
+  ).length;
+
+  const circumference = 251.2;
+
+  const inProgressLength =
+    totalProjects > 0
+      ? (inProgressCount / totalProjects) * circumference
+      : 0;
+
+  const inReviewLength =
+    totalProjects > 0
+      ? (inReviewCount / totalProjects) * circumference
+      : 0;
+
+  const completedLength =
+    totalProjects > 0
+      ? (completedCount / totalProjects) * circumference
+      : 0;
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
 
   // New Project 3-Step Wizard State
@@ -427,63 +458,63 @@ export default function ProjectsHubPage({
   const [settingsSuccess, setSettingsSuccess] = useState(false);
 
   // Handle Create New Project
-const handleCreateProject = (e) => {
-  e.preventDefault();
+  const handleCreateProject = (e) => {
+    e.preventDefault();
 
-  const budgetValue = Number(
-    String(newBudget).replace(/[$,]/g, '')
-  );
+    const budgetValue = Number(
+      String(newBudget).replace(/[$,]/g, '')
+    );
 
-  if (!newTitle.trim()) {
-    triggerToast('Validation Error', 'Please enter a project title.');
-    return;
-  }
+    if (!newTitle.trim()) {
+      triggerToast('Validation Error', 'Please enter a project title.');
+      return;
+    }
 
-  if (!Number.isFinite(budgetValue) || budgetValue <= 0) {
-    triggerToast('Invalid Budget', 'Please enter a valid project budget.');
-    return;
-  }
+    if (!Number.isFinite(budgetValue) || budgetValue <= 0) {
+      triggerToast('Invalid Budget', 'Please enter a valid project budget.');
+      return;
+    }
 
-  const createdProj = {
-    id: `proj-${Date.now()}`,
-    title: newTitle.trim(),
-    category: newCategory,
-    description: newDesc.trim() || 'Custom freelance project.',
-    budget: `$${budgetValue.toLocaleString('en-US')}`,
-    budgetType: 'Fixed Price',
-    duration: '2 - 3 Weeks',
-    skills: ['React', 'Next.js', 'Tailwind'],
-    featured: false,
-    saved: false,
-    applied: false,
-    progress: 0,
-    status: 'In Progress',
-    deadline: newDeadline,
-    team: [
-      {
-        name: 'You',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'
-      }
-    ],
-    teamExtra: 0,
-    thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80',
-    type: 'dev',
+    const createdProj = {
+      id: `proj-${Date.now()}`,
+      title: newTitle.trim(),
+      category: newCategory,
+      description: newDesc.trim() || 'Custom freelance project.',
+      budget: `$${budgetValue.toLocaleString('en-US')}`,
+      budgetType: 'Fixed Price',
+      duration: '2 - 3 Weeks',
+      skills: ['React', 'Next.js', 'Tailwind'],
+      featured: false,
+      saved: false,
+      applied: false,
+      progress: 0,
+      status: 'In Progress',
+      deadline: newDeadline,
+      team: [
+        {
+          name: 'You',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'
+        }
+      ],
+      teamExtra: 0,
+      thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80',
+      type: 'dev',
+    };
+
+    setProjectList((prev) => [createdProj, ...prev]);
+
+    setIsNewProjectModalOpen(false);
+    setWizardStep(1);
+    setNewTitle('');
+    setNewDesc('');
+    setNewBudget('$1,500');
+    setNewCategory('Web Development');
+
+    triggerToast(
+      'Project Created Successfully',
+      `${createdProj.title} has been added to your dashboard.`
+    );
   };
-
-  setProjectList((prev) => [createdProj, ...prev]);
-
-  setIsNewProjectModalOpen(false);
-  setWizardStep(1);
-  setNewTitle('');
-  setNewDesc('');
-  setNewBudget('$1,500');
-  setNewCategory('Web Development');
-
-  triggerToast(
-    'Project Created Successfully',
-    `${createdProj.title} has been added to your dashboard.`
-  );
-};
   // Handle Proposals Status Action
   const handleUpdateProposalStatus = (id, newStatus) => {
     setProposals((prev) =>
@@ -821,23 +852,23 @@ const handleCreateProject = (e) => {
             <div className="bg-white rounded-3xl border border-[#EAE2DC] p-3 space-y-1 sticky top-28 shadow-xs">
               {(userRole === 'client'
                 ? [
-                    { id: 'projects', label: 'My Projects', icon: FolderKanban, badge: String(projectList.length) },
-                    { id: 'kanban', label: 'Milestones Review', icon: Activity, badge: 'Live' },
-                    { id: 'proposals', label: 'Candidate Bids', icon: Send, badge: String(proposals.length) },
-                    { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '1' },
-                    { id: 'files', label: 'Project Files', icon: Folder, badge: String(filesList.length) },
-                    { id: 'team', label: 'Hired Team', icon: Users },
-                    { id: 'payments', label: 'Escrow & Invoices', icon: CreditCard },
-                  ]
+                  { id: 'projects', label: 'My Projects', icon: FolderKanban, badge: String(projectList.length) },
+                  { id: 'kanban', label: 'Milestones Review', icon: Activity, badge: 'Live' },
+                  { id: 'proposals', label: 'Candidate Bids', icon: Send, badge: String(proposals.length) },
+                  { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '1' },
+                  { id: 'files', label: 'Project Files', icon: Folder, badge: String(filesList.length) },
+                  { id: 'team', label: 'Hired Team', icon: Users },
+                  { id: 'payments', label: 'Escrow & Invoices', icon: CreditCard },
+                ]
                 : [
-                    { id: 'contracts', label: 'My Contracts', icon: Briefcase, badge: String(freelancerContracts.length) },
-                    { id: 'kanban', label: 'Milestones & Timer', icon: Clock, badge: 'Live' },
-                    { id: 'my_proposals', label: 'My Submitted Bids', icon: Send, badge: String(myProposalsList.length) },
-                    { id: 'earnings', label: 'Earnings & Wallet', icon: Wallet, badge: `$${Math.round(freelancerBalance / 1000)}k` },
-                    { id: 'messages', label: 'Client Messages', icon: MessageSquare, badge: '1' },
-                    { id: 'files', label: 'Deliverables', icon: Folder, badge: String(filesList.length) },
-                    { id: 'profile', label: 'Public Profile', icon: User },
-                  ]
+                  { id: 'contracts', label: 'My Contracts', icon: Briefcase, badge: String(freelancerContracts.length) },
+                  { id: 'kanban', label: 'Milestones & Timer', icon: Clock, badge: 'Live' },
+                  { id: 'my_proposals', label: 'My Submitted Bids', icon: Send, badge: String(myProposalsList.length) },
+                  { id: 'earnings', label: 'Earnings & Wallet', icon: Wallet, badge: `$${Math.round(freelancerBalance / 1000)}k` },
+                  { id: 'messages', label: 'Client Messages', icon: MessageSquare, badge: '1' },
+                  { id: 'files', label: 'Deliverables', icon: Folder, badge: String(filesList.length) },
+                  { id: 'profile', label: 'Public Profile', icon: User },
+                ]
               ).map((nav) => {
                 const Icon = nav.icon;
                 const isActive = activeSidebarNav === nav.id;
@@ -845,11 +876,10 @@ const handleCreateProject = (e) => {
                   <button
                     key={nav.id}
                     onClick={() => setActiveSidebarNav(nav.id)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                      isActive
-                        ? 'bg-[#171717] text-white shadow-xs'
-                        : 'text-[#666666] hover:bg-[#FFF9F5] hover:text-[#171717]'
-                    }`}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${isActive
+                      ? 'bg-[#171717] text-white shadow-xs'
+                      : 'text-[#666666] hover:bg-[#FFF9F5] hover:text-[#171717]'
+                      }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <Icon className="w-4 h-4" />
@@ -857,11 +887,10 @@ const handleCreateProject = (e) => {
                     </div>
                     {nav.badge && (
                       <span
-                        className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-bold ${
-                          isActive
-                            ? 'bg-[#F36B21] text-white'
-                            : 'bg-[#FFF3EC] text-[#F36B21]'
-                        }`}
+                        className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-bold ${isActive
+                          ? 'bg-[#F36B21] text-white'
+                          : 'bg-[#FFF3EC] text-[#F36B21]'
+                          }`}
                       >
                         {nav.badge}
                       </span>
@@ -873,11 +902,10 @@ const handleCreateProject = (e) => {
               <div className="pt-2 border-t border-[#F3ECE7]">
                 <button
                   onClick={() => setActiveSidebarNav('settings')}
-                  className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                    activeSidebarNav === 'settings'
-                      ? 'bg-[#171717] text-white shadow-xs'
-                      : 'text-[#666666] hover:bg-[#FFF9F5] hover:text-[#171717]'
-                  }`}
+                  className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${activeSidebarNav === 'settings'
+                    ? 'bg-[#171717] text-white shadow-xs'
+                    : 'text-[#666666] hover:bg-[#FFF9F5] hover:text-[#171717]'
+                    }`}
                 >
                   <Settings className="w-4 h-4" />
                   <span>Settings</span>
@@ -911,11 +939,10 @@ const handleCreateProject = (e) => {
                         <button
                           key={f.id}
                           onClick={() => setProjectStatusFilter(f.id)}
-                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                            projectStatusFilter === f.id
-                              ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
-                              : 'text-[#777777] hover:text-[#171717]'
-                          }`}
+                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${projectStatusFilter === f.id
+                            ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
+                            : 'text-[#777777] hover:text-[#171717]'
+                            }`}
                         >
                           {f.label}
                         </button>
@@ -1043,11 +1070,10 @@ const handleCreateProject = (e) => {
                         <button
                           key={f}
                           onClick={() => setContractsFilter(f)}
-                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                            contractsFilter === f
-                              ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
-                              : 'text-[#777777] hover:text-[#171717]'
-                          }`}
+                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${contractsFilter === f
+                            ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
+                            : 'text-[#777777] hover:text-[#171717]'
+                            }`}
                         >
                           {f}
                         </button>
@@ -1096,11 +1122,10 @@ const handleCreateProject = (e) => {
                                 {contract.title}
                               </h3>
                               <span
-                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
-                                  contract.status === 'Completed'
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                    : 'bg-[#FFF3EC] text-[#F36B21] border-[#FCE2D3]'
-                                }`}
+                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${contract.status === 'Completed'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-[#FFF3EC] text-[#F36B21] border-[#FCE2D3]'
+                                  }`}
                               >
                                 ● {contract.status}
                               </span>
@@ -1256,11 +1281,10 @@ const handleCreateProject = (e) => {
                         <div className="flex items-center gap-2.5">
                           <button
                             onClick={() => setIsTimerRunning(!isTimerRunning)}
-                            className={`h-12 px-5 rounded-2xl flex items-center gap-2.5 text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer shadow-lg ${
-                              isTimerRunning
-                                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/25 ring-2 ring-amber-400/50'
-                                : 'bg-[#F36B21] hover:bg-[#e05e16] text-white shadow-orange-500/30'
-                            }`}
+                            className={`h-12 px-5 rounded-2xl flex items-center gap-2.5 text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer shadow-lg ${isTimerRunning
+                              ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/25 ring-2 ring-amber-400/50'
+                              : 'bg-[#F36B21] hover:bg-[#e05e16] text-white shadow-orange-500/30'
+                              }`}
                             title={isTimerRunning ? 'Pause Session' : 'Start Session'}
                           >
                             {isTimerRunning ? (
@@ -1382,11 +1406,10 @@ const handleCreateProject = (e) => {
                         <button
                           key={pri}
                           onClick={() => setKanbanPriorityFilter(pri)}
-                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                            kanbanPriorityFilter === pri
-                              ? 'bg-[#171717] text-white font-semibold shadow-xs'
-                              : 'text-[#777777] hover:text-[#171717]'
-                          }`}
+                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${kanbanPriorityFilter === pri
+                            ? 'bg-[#171717] text-white font-semibold shadow-xs'
+                            : 'text-[#777777] hover:text-[#171717]'
+                            }`}
                         >
                           {pri}
                         </button>
@@ -1446,13 +1469,12 @@ const handleCreateProject = (e) => {
                                 {/* Top Row: Priority Pill & Estimate */}
                                 <div className="flex items-center justify-between gap-2">
                                   <span
-                                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                                      t.priority === 'Urgent'
-                                        ? 'bg-rose-100 text-rose-700 border border-rose-200'
-                                        : t.priority === 'High'
+                                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${t.priority === 'Urgent'
+                                      ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                                      : t.priority === 'High'
                                         ? 'bg-amber-100 text-amber-800 border border-amber-200'
                                         : 'bg-slate-100 text-slate-700 border border-slate-200'
-                                    }`}
+                                      }`}
                                   >
                                     {t.priority}
                                   </span>
@@ -1573,11 +1595,10 @@ const handleCreateProject = (e) => {
                       <button
                         key={status}
                         onClick={() => setProposalFilter(status)}
-                        className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                          proposalFilter === status
-                            ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
-                            : 'text-[#777777] hover:text-[#171717]'
-                        }`}
+                        className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${proposalFilter === status
+                          ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
+                          : 'text-[#777777] hover:text-[#171717]'
+                          }`}
                       >
                         {status}
                       </button>
@@ -1629,13 +1650,12 @@ const handleCreateProject = (e) => {
                       <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-[#F3ECE7]">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              prop.status === 'Accepted'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : prop.status === 'In Review'
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${prop.status === 'Accepted'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : prop.status === 'In Review'
                                 ? 'bg-amber-50 text-amber-700 border border-amber-200'
                                 : 'bg-slate-50 text-slate-700 border border-slate-200'
-                            }`}
+                              }`}
                           >
                             ● Status: {prop.status}
                           </span>
@@ -1936,9 +1956,8 @@ const handleCreateProject = (e) => {
                         <button
                           key={thread.id}
                           onClick={() => setActiveThreadId(thread.id)}
-                          className={`w-full p-3.5 text-left flex items-start gap-3 transition-colors cursor-pointer ${
-                            isSelected ? 'bg-white shadow-xs border-l-4 border-l-[#F36B21]' : 'hover:bg-white'
-                          }`}
+                          className={`w-full p-3.5 text-left flex items-start gap-3 transition-colors cursor-pointer ${isSelected ? 'bg-white shadow-xs border-l-4 border-l-[#F36B21]' : 'hover:bg-white'
+                            }`}
                         >
                           <div className="relative shrink-0">
                             <img
@@ -1995,17 +2014,15 @@ const handleCreateProject = (e) => {
                           className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${
-                              isMe
-                                ? 'bg-[#171717] text-white shadow-xs rounded-br-none'
-                                : 'bg-white border border-[#EAE2DC] text-[#171717] shadow-xs rounded-bl-none'
-                            }`}
+                            className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${isMe
+                              ? 'bg-[#171717] text-white shadow-xs rounded-br-none'
+                              : 'bg-white border border-[#EAE2DC] text-[#171717] shadow-xs rounded-bl-none'
+                              }`}
                           >
                             <p>{msg.text}</p>
                             <span
-                              className={`text-[9px] block text-right mt-1.5 ${
-                                isMe ? 'text-white/60' : 'text-[#888888]'
-                              }`}
+                              className={`text-[9px] block text-right mt-1.5 ${isMe ? 'text-white/60' : 'text-[#888888]'
+                                }`}
                             >
                               {msg.time}
                             </span>
@@ -2159,11 +2176,10 @@ const handleCreateProject = (e) => {
                       <button
                         key={st}
                         onClick={() => setPaymentFilter(st)}
-                        className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                          paymentFilter === st
-                            ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
-                            : 'text-[#777777] hover:text-[#171717]'
-                        }`}
+                        className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${paymentFilter === st
+                          ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
+                          : 'text-[#777777] hover:text-[#171717]'
+                          }`}
                       >
                         {st}
                       </button>
@@ -2213,13 +2229,12 @@ const handleCreateProject = (e) => {
                           <div className="text-right">
                             <span className="text-base font-extrabold text-[#171717]">{pay.amount}</span>
                             <span
-                              className={`text-[10px] px-2 py-0.5 rounded-full block font-semibold border ${
-                                pay.status === 'Released'
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                  : pay.status === 'In Escrow'
+                              className={`text-[10px] px-2 py-0.5 rounded-full block font-semibold border ${pay.status === 'Released'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : pay.status === 'In Escrow'
                                   ? 'bg-[#FFF3EC] text-[#F36B21] border-[#FCE2D3]'
                                   : 'bg-amber-50 text-amber-700 border-amber-200'
-                              }`}
+                                }`}
                             >
                               {pay.status}
                             </span>
@@ -2303,14 +2318,12 @@ const handleCreateProject = (e) => {
                       <button
                         type="button"
                         onClick={() => setAutoEscrowRelease(!autoEscrowRelease)}
-                        className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                          autoEscrowRelease ? 'bg-[#F36B21]' : 'bg-[#EAE2DC]'
-                        }`}
+                        className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${autoEscrowRelease ? 'bg-[#F36B21]' : 'bg-[#EAE2DC]'
+                          }`}
                       >
                         <span
-                          className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-0.5 transition-transform ${
-                            autoEscrowRelease ? 'right-0.5' : 'left-0.5'
-                          }`}
+                          className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-0.5 transition-transform ${autoEscrowRelease ? 'right-0.5' : 'left-0.5'
+                            }`}
                         />
                       </button>
                     </div>
@@ -2323,14 +2336,12 @@ const handleCreateProject = (e) => {
                       <button
                         type="button"
                         onClick={() => setTwoFactorAuth(!twoFactorAuth)}
-                        className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                          twoFactorAuth ? 'bg-[#F36B21]' : 'bg-[#EAE2DC]'
-                        }`}
+                        className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${twoFactorAuth ? 'bg-[#F36B21]' : 'bg-[#EAE2DC]'
+                          }`}
                       >
                         <span
-                          className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-0.5 transition-transform ${
-                            twoFactorAuth ? 'right-0.5' : 'left-0.5'
-                          }`}
+                          className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-0.5 transition-transform ${twoFactorAuth ? 'right-0.5' : 'left-0.5'
+                            }`}
                         />
                       </button>
                     </div>
@@ -2369,29 +2380,34 @@ const handleCreateProject = (e) => {
                             cx="50"
                             cy="50"
                             r="40"
-                            stroke="#FFF3EC"
-                            strokeWidth="10"
-                            fill="none"
-                          />
-                          <circle
-                            cx="50"
-                            cy="50"
-                            r="40"
                             stroke="#F36B21"
                             strokeWidth="10"
-                            strokeDasharray="251.2"
-                            strokeDashoffset="85"
+                            strokeDasharray={`${inProgressLength} ${circumference}`}
+                            strokeDashoffset="0"
                             strokeLinecap="round"
                             fill="none"
                           />
+
                           <circle
                             cx="50"
                             cy="50"
                             r="40"
                             stroke="#FBBF24"
                             strokeWidth="10"
-                            strokeDasharray="251.2"
-                            strokeDashoffset="230"
+                            strokeDasharray={`${inReviewLength} ${circumference}`}
+                            strokeDashoffset={-inProgressLength}
+                            strokeLinecap="round"
+                            fill="none"
+                          />
+
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="40"
+                            stroke="#94A3B8"
+                            strokeWidth="10"
+                            strokeDasharray={`${completedLength} ${circumference}`}
+                            strokeDashoffset={-(inProgressLength + inReviewLength)}
                             strokeLinecap="round"
                             fill="none"
                           />
@@ -2629,13 +2645,12 @@ const handleCreateProject = (e) => {
               ].map((st) => (
                 <div key={st.s} className="flex items-center gap-2 flex-1">
                   <div
-                    className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
-                      wizardStep === st.s
-                        ? 'bg-[#F36B21] text-white shadow-xs'
-                        : wizardStep > st.s
+                    className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${wizardStep === st.s
+                      ? 'bg-[#F36B21] text-white shadow-xs'
+                      : wizardStep > st.s
                         ? 'bg-emerald-500 text-white'
                         : 'bg-[#FFF3EC] text-[#888888]'
-                    }`}
+                      }`}
                   >
                     {wizardStep > st.s ? '✓' : st.s}
                   </div>
@@ -2773,10 +2788,38 @@ const handleCreateProject = (e) => {
                   </div>
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-center text-xs text-emerald-800 font-semibold">
-                  ✓ 100% Milestone Schedule Balanced (30% + 50% + 20%)
-                </div>
+                <div className="p-3 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#171717]">
+                    <span>Total Milestone Allocation</span>
+                    <span className="text-[#F36B21]">
+                      {Number(m1Pct) + Number(m2Pct) + Number(m3Pct)}%
+                    </span>
+                  </div>
 
+                  <div className="w-full h-2 rounded-full bg-white overflow-hidden flex">
+                    <div
+                      className="bg-[#F36B21] transition-all"
+                      style={{ width: `${Number(m1Pct)}%` }}
+                    />
+                    <div
+                      className="bg-amber-400 transition-all"
+                      style={{ width: `${Number(m2Pct)}%` }}
+                    />
+                    <div
+                      className="bg-emerald-500 transition-all"
+                      style={{ width: `${Number(m3Pct)}%` }}
+                    />
+                  </div>
+
+                  <p className={`text-[11px] font-semibold text-center ${Number(m1Pct) + Number(m2Pct) + Number(m3Pct) === 100
+                    ? 'text-emerald-700'
+                    : 'text-red-600'
+                    }`}>
+                    {Number(m1Pct) + Number(m2Pct) + Number(m3Pct) === 100
+                      ? '✓ Milestone allocation is balanced'
+                      : '⚠ Total allocation must equal 100%'}
+                  </p>
+                </div>
                 <div className="flex items-center justify-between pt-2">
                   <button
                     type="button"
@@ -3321,15 +3364,20 @@ const handleCreateProject = (e) => {
               </button>
               <button
                 type="button"
-                onClick={() => {const amount = Number(withdrawAmountInput);
-                if (!amount || amount <= 0) {triggerToast('Invalid Amount', 'Please enter a valid withdrawal amount.');
-                 return;}
-                if (amount > freelancerBalance) {triggerToast('Insufficient Balance', 'You do not have enough available balance.');
-                 return;}
+                onClick={() => {
+                  const amount = Number(withdrawAmountInput);
+                  if (!amount || amount <= 0) {
+                    triggerToast('Invalid Amount', 'Please enter a valid withdrawal amount.');
+                    return;
+                  }
+                  if (amount > freelancerBalance) {
+                    triggerToast('Insufficient Balance', 'You do not have enough available balance.');
+                    return;
+                  }
 
-                setFreelancerBalance((prev) => prev - amount);
-                setIsWithdrawModalOpen(false);
-                triggerToast('Withdrawal Initiated', `$${amount.toFixed(2)} withdrawal request submitted successfully!`);
+                  setFreelancerBalance((prev) => prev - amount);
+                  setIsWithdrawModalOpen(false);
+                  triggerToast('Withdrawal Initiated', `$${amount.toFixed(2)} withdrawal request submitted successfully!`);
                 }}
                 className="px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold shadow-md shadow-orange-500/20 transition-all cursor-pointer flex items-center gap-1.5"
               >
