@@ -487,6 +487,11 @@ export default function ProjectsHubPage({
 
   const totalPaymentsVolume = clientEscrowHolding + pendingClearanceTotal + clientReleasedTotal;
 
+  const donutCircumference = 251.33;
+  const donutTotal = Math.max(0, freelancerBalance + escrowBalance);
+  const availableArc = donutTotal > 0 ? (freelancerBalance / donutTotal) * donutCircumference : 0;
+  const escrowArc = donutTotal > 0 ? (escrowBalance / donutTotal) * donutCircumference : 0;
+
   return (
     <div className="w-full min-h-screen bg-[#FFF9F5] text-[#171717] pb-24 relative">
       {/* ========================================================
@@ -2373,50 +2378,76 @@ export default function ProjectsHubPage({
               ) : (
                 <>
                   {/* Freelancer Card 1: Escrow & Available Funds Widget */}
-                  <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-4 shadow-xs">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
-                      <Wallet className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Wallet & Escrow Balance</span>
+                  <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-4 shadow-xs min-w-0 overflow-hidden">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5 min-w-0">
+                      <Wallet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span className="truncate">Wallet & Escrow Balance</span>
                     </h3>
 
-                    {/* Ring Visualization */}
+                    {/* Live Proportional Ring Visualization */}
                     <div className="flex items-center justify-center py-2">
                       <div className="relative w-32 h-32 flex items-center justify-center">
                         <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                           <circle cx="50" cy="50" r="40" stroke="#FFF3EC" strokeWidth="10" fill="none" />
-                          <circle cx="50" cy="50" r="40" stroke="#10B981" strokeWidth="10" strokeDasharray="251.2" strokeDashoffset="90" strokeLinecap="round" fill="none" />
-                          <circle cx="50" cy="50" r="40" stroke="#F59E0B" strokeWidth="10" strokeDasharray="251.2" strokeDashoffset="180" strokeLinecap="round" fill="none" />
+                          {escrowArc > 0 && (
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="40"
+                              stroke="#F59E0B"
+                              strokeWidth="10"
+                              strokeDasharray={`${escrowArc.toFixed(2)} ${donutCircumference}`}
+                              strokeDashoffset={(-availableArc).toFixed(2)}
+                              strokeLinecap="round"
+                              fill="none"
+                            />
+                          )}
+                          {availableArc > 0 && (
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="40"
+                              stroke="#10B981"
+                              strokeWidth="10"
+                              strokeDasharray={`${Math.max(availableArc, 6).toFixed(2)} ${donutCircumference}`}
+                              strokeDashoffset="0"
+                              strokeLinecap="round"
+                              fill="none"
+                            />
+                          )}
                         </svg>
-                        <div className="absolute text-center">
-                          <span className="text-lg font-black text-emerald-600">${freelancerBalance.toFixed(0)}</span>
-                          <p className="text-[9px] text-[#777777] font-semibold uppercase">Available</p>
+                        <div className="absolute text-center px-2 max-w-[92px]">
+                          <span className="text-sm font-black text-emerald-600 tabular-nums block truncate">
+                            {formatUsd(freelancerBalance)}
+                          </span>
+                          <p className="text-[9px] text-[#777777] font-semibold uppercase tracking-wide">Available</p>
                         </div>
                       </div>
                     </div>
 
                     <div className="space-y-2 pt-2 border-t border-[#F3ECE7] text-xs">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                          <span className="text-[#777777]">Ready for Payout</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                          <span className="text-[#777777] truncate">Ready for Payout</span>
                         </div>
-                        <span className="font-bold text-emerald-600">${freelancerBalance.toFixed(2)}</span>
+                        <span className="font-bold text-emerald-600 tabular-nums shrink-0">{formatUsd(freelancerBalance)}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                          <span className="text-[#777777]">Locked in Escrow</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+                          <span className="text-[#777777] truncate">Locked in Escrow</span>
                         </div>
-                        <span className="font-bold text-amber-600">$8,900.00</span>
+                        <span className="font-bold text-amber-600 tabular-nums shrink-0">{formatUsd(escrowBalance)}</span>
                       </div>
                     </div>
 
                     <button
                       onClick={() => setIsWithdrawModalOpen(true)}
-                      className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <Wallet className="w-3.5 h-3.5" />
-                      <span>Instant Withdrawal</span>
+                      <Wallet className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Instant Withdrawal</span>
                     </button>
                   </div>
 
