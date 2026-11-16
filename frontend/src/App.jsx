@@ -10,18 +10,25 @@ import PricingPage from './pages/PricingPage';
 import ResourcesPage from './pages/ResourcesPage';
 import AuthPage from './pages/AuthPage';
 import FreelancerProfilePage from './pages/FreelancerProfilePage';
-import { FREELANCERS, PROJECTS } from './data/mockData';
+import { getStoredUser, authGetMe, authLogout, getAuthToken, fetchTalentById, fetchProjects } from './api/client';
+
+const PROTECTED_PAGES = new Set(['projects']);
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
-  const [selectedFreelancer, setSelectedFreelancer] = useState(FREELANCERS[0]);
-  const [selectedProject, setSelectedProject] = useState(PROJECTS[0]);
+  const [selectedFreelancer, setSelectedFreelancer] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
   const [projectsInitialTab, setProjectsInitialTab] = useState('projects');
+  const [projectsTabNonce, setProjectsTabNonce] = useState(0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [pendingRedirect, setPendingRedirect] = useState(null);
+  const [authNotice, setAuthNotice] = useState('');
+
+  const [currentUser, setCurrentUser] = useState(() => getStoredUser());
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     try {
-      return localStorage.getItem('wv_is_logged_in') === 'true';
+      return !!getAuthToken();
     } catch {
       return false;
     }
@@ -29,11 +36,52 @@ export default function App() {
 
   const [userRole, setUserRole] = useState(() => {
     try {
+      const stored = getStoredUser();
+      if (stored && stored.role) return stored.role;
       return localStorage.getItem('wv_user_role') || 'client';
     } catch {
       return 'client';
     }
   });
+
+  // Verify session and hydrate initial defaults from live backend on mount
+  useEffect(() => {
+    const token = getAuthToken();
+    if (token) {
+      authGetMe()
+        .then((user) => {
+          if (user) {
+            setCurrentUser(user);
+            setIsLoggedIn(true);
+            if (user.role) setUserRole(user.role);
+          }
+        })
+        .catch(() => {
+          console.warn('Session expired, logging out');
+          authLogout();
+          setCurrentUser(null);
+          setIsLoggedIn(false);
+          if (window.location.hash === '#projects') {
+            setAuthNotice('Your session expired. Please sign in to access your Workspace.');
+            setPendingRedirect({ page: 'projects', options: {} });
+            setCurrentPage('auth');
+            window.location.hash = 'auth';
+          }
+        });
+    }
+
+    fetchTalentById('arjun-mehta')
+      .then((t) => setSelectedFreelancer((prev) => prev || t))
+      .catch(() => {});
+
+    fetchProjects()
+      .then((list) => {
+        if (Array.isArray(list) && list.length) {
+          setSelectedProject((prev) => prev || list[0]);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSetIsLoggedIn = (val) => {
     setIsLoggedIn(val);
@@ -53,6 +101,19 @@ export default function App() {
     }
   };
 
+  const handleLogout = () => {
+    authLogout();
+    setCurrentUser(null);
+    setIsLoggedIn(false);
+    setUserRole('client');
+    setPendingRedirect(null);
+    setAuthNotice('');
+    if (currentPage === 'projects' || window.location.hash === '#projects') {
+      setCurrentPage('home');
+      window.location.hash = 'home';
+    }
+  };
+
   // Global Ctrl+K / Cmd+K Search Shortcut
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
@@ -65,11 +126,18 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
-  // Sync hash with page for browser back/forward navigation
+  // Sync hash with page for browser back/forward navigation & enforce protected route guard
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
       if (['home', 'talent', 'work', 'projects', 'pricing', 'resources', 'auth', 'profile'].includes(hash)) {
+        if (PROTECTED_PAGES.has(hash) && !getAuthToken()) {
+          setPendingRedirect({ page: hash, options: {} });
+          setAuthNotice('Sign in to access your Client Projects Hub or Freelancer Workspace.');
+          setCurrentPage('auth');
+          window.location.hash = 'auth';
+          return;
+        }
         setCurrentPage(hash);
       }
     };
@@ -83,11 +151,59 @@ export default function App() {
   }, []);
 
   const navigateToPage = (page, options = {}) => {
+    const authed = isLoggedIn && !!getAuthToken();
+    if (PROTECTED_PAGES.has(page) && !authed) {
+      setPendingRedirect({ page, options });
+      setAuthNotice(
+        options?.notice || 'Sign in to access your Client Projects Hub or Freelancer Workspace.'
+      );
+      setCurrentPage('auth');
+      window.location.hash = 'auth';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (page === 'auth') {
+      setAuthNotice(options?.notice || '');
+      if (options?.returnTo) {
+        setPendingRedirect({ page: options.returnTo, options: options.returnOptions || {} });
+      }
+    } else {
+      setAuthNotice('');
+    }
+
     if (options && options.tab) {
       setProjectsInitialTab(options.tab);
+      setProjectsTabNonce((n) => n + 1);
+    } else if (page === 'projects') {
+      setProjectsInitialTab('projects');
+      setProjectsTabNonce((n) => n + 1);
     }
     setCurrentPage(page);
     window.location.hash = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAuthSuccess = (user, selectedRole) => {
+    const effectiveRole = user?.role || selectedRole || 'client';
+    if (user) setCurrentUser(user);
+    handleSetUserRole(effectiveRole);
+    handleSetIsLoggedIn(true);
+    setAuthNotice('');
+
+    const targetPage = pendingRedirect?.page || 'projects';
+    const targetOpts = pendingRedirect?.options || {};
+    setPendingRedirect(null);
+
+    if (targetOpts?.tab) {
+      setProjectsInitialTab(targetOpts.tab);
+      setProjectsTabNonce((n) => n + 1);
+    } else if (targetPage === 'projects') {
+      setProjectsInitialTab('projects');
+      setProjectsTabNonce((n) => n + 1);
+    }
+    setCurrentPage(targetPage);
+    window.location.hash = targetPage;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -112,6 +228,8 @@ export default function App() {
         setIsLoggedIn={handleSetIsLoggedIn}
         userRole={userRole}
         setUserRole={handleSetUserRole}
+        currentUser={currentUser}
+        onLogout={handleLogout}
         onOpenSearch={() => setIsSearchOpen(true)}
       />
 
@@ -122,6 +240,7 @@ export default function App() {
             setCurrentPage={navigateToPage}
             setSelectedFreelancer={setSelectedFreelancer}
             setSelectedProject={setSelectedProject}
+            isLoggedIn={isLoggedIn}
           />
         )}
 
@@ -129,6 +248,7 @@ export default function App() {
           <FindTalentPage
             setCurrentPage={navigateToPage}
             setSelectedFreelancer={setSelectedFreelancer}
+            isLoggedIn={isLoggedIn}
           />
         )}
 
@@ -136,27 +256,45 @@ export default function App() {
           <FindWorkPage
             setCurrentPage={navigateToPage}
             setSelectedProject={setSelectedProject}
+            isLoggedIn={isLoggedIn}
           />
         )}
 
-        {currentPage === 'projects' && (
+        {currentPage === 'projects' && isLoggedIn && getAuthToken() && (
           <ProjectsHubPage
             setCurrentPage={navigateToPage}
             initialTab={projectsInitialTab}
+            initialTabNonce={projectsTabNonce}
             userRole={userRole}
             setUserRole={handleSetUserRole}
+            currentUser={currentUser}
+            setCurrentUser={setCurrentUser}
+          />
+        )}
+
+        {currentPage === 'projects' && (!isLoggedIn || !getAuthToken()) && (
+          <AuthPage
+            setCurrentPage={navigateToPage}
+            setIsLoggedIn={handleSetIsLoggedIn}
+            userRole={userRole}
+            setUserRole={handleSetUserRole}
+            setCurrentUser={setCurrentUser}
+            authNotice={authNotice || 'Sign in to access your Client Projects Hub or Freelancer Workspace.'}
+            onAuthSuccess={handleAuthSuccess}
           />
         )}
 
         {currentPage === 'pricing' && (
           <PricingPage
             setCurrentPage={navigateToPage}
+            isLoggedIn={isLoggedIn}
           />
         )}
 
         {currentPage === 'resources' && (
           <ResourcesPage
             setCurrentPage={navigateToPage}
+            isLoggedIn={isLoggedIn}
           />
         )}
 
@@ -166,6 +304,9 @@ export default function App() {
             setIsLoggedIn={handleSetIsLoggedIn}
             userRole={userRole}
             setUserRole={handleSetUserRole}
+            setCurrentUser={setCurrentUser}
+            authNotice={authNotice}
+            onAuthSuccess={handleAuthSuccess}
           />
         )}
 
@@ -173,6 +314,7 @@ export default function App() {
           <FreelancerProfilePage
             freelancer={selectedFreelancer}
             setCurrentPage={navigateToPage}
+            isLoggedIn={isLoggedIn}
           />
         )}
       </main>
