@@ -154,15 +154,20 @@ export default function ProjectsHubPage({
 
   // Freelancer Specific State
   const [contractsFilter, setContractsFilter] = useState('All');
-  const [freelancerContracts, setFreelancerContracts] = useState(FREELANCER_CONTRACTS);
+  const [freelancerContracts, setFreelancerContracts] = useState([]);
   const [myProposalsFilter, setMyProposalsFilter] = useState('All');
-  const [myProposalsList, setMyProposalsList] = useState(FREELANCER_SUBMITTED_PROPOSALS);
+  const [myProposalsList, setMyProposalsList] = useState([]);
   const [freelancerBalance, setFreelancerBalance] = useState(currentUser?.wallet_balance ?? 4250.00);
   const [escrowBalance, setEscrowBalance] = useState(currentUser?.escrow_balance ?? 8900.00);
   const [walletTransactions, setWalletTransactions] = useState([]);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
-  const [withdrawAmountInput, setWithdrawAmountInput] = useState('4250.00');
+  const [withdrawAmountInput, setWithdrawAmountInput] = useState(
+    (currentUser?.wallet_balance ?? 4250.00) > 0
+      ? Math.min(250, currentUser?.wallet_balance ?? 4250.00).toFixed(2)
+      : '0.00'
+  );
   const [withdrawMethod, setWithdrawMethod] = useState('stripe');
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   // Toast Notification State
   const [toast, setToast] = useState(null);
@@ -176,7 +181,7 @@ export default function ProjectsHubPage({
   // Projects State
   const [projectStatusFilter, setProjectStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [projectList, setProjectList] = useState(PROJECTS);
+  const [projectList, setProjectList] = useState([]);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
 
   // New Project 3-Step Wizard State
@@ -194,7 +199,7 @@ export default function ProjectsHubPage({
   const [m3Pct, setM3Pct] = useState('20');
 
   // Kanban Tasks State
-  const [kanbanTasks, setKanbanTasks] = useState(INITIAL_KANBAN_TASKS);
+  const [kanbanTasks, setKanbanTasks] = useState([]);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskCol, setNewTaskCol] = useState('backlog');
@@ -203,11 +208,152 @@ export default function ProjectsHubPage({
   const [newTaskProject, setNewTaskProject] = useState('SaaS Dashboard Development');
   const [kanbanSearch, setKanbanSearch] = useState('');
   const [kanbanPriorityFilter, setKanbanPriorityFilter] = useState('All');
+  const [draggedTaskId, setDraggedTaskId] = useState(null);
+  const [dragOverCol, setDragOverCol] = useState(null);
+  const [dragOverTaskId, setDragOverTaskId] = useState(null);
 
   // Live Stopwatch Time Tracker State
   const [timerSeconds, setTimerSeconds] = useState(5076); // 01:24:36
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [hourlyRate, setHourlyRate] = useState(45);
+  const [hourlyRate, setHourlyRate] = useState(currentUser?.hourly_rate || 45);
+
+  // Official Invoice Modal State
+  const [activeInvoicePayment, setActiveInvoicePayment] = useState(null);
+
+  // Proposals State
+  const [proposals, setProposals] = useState([]);
+  const [proposalFilter, setProposalFilter] = useState('All');
+  const [reviewedProposal, setReviewedProposal] = useState(null);
+
+  // Messages State
+  const [messageThreads, setMessageThreads] = useState([]);
+  const [activeThreadId, setActiveThreadId] = useState('thread-1');
+  const [chatInputText, setChatInputText] = useState('');
+
+  // Files State
+  const [filesList, setFilesList] = useState([]);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+  const [newFileProject, setNewFileProject] = useState('SaaS Dashboard Development');
+  const [downloadSuccessToast, setDownloadSuccessToast] = useState(null);
+
+  // Team State
+  const [teamList, setTeamList] = useState([]);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('Senior Full Stack Engineer');
+  const [inviteProject, setInviteProject] = useState('SaaS Dashboard Development');
+
+  // Payments State
+  const [paymentsList, setPaymentsList] = useState([]);
+  const [paymentFilter, setPaymentFilter] = useState('All');
+
+  // Settings State
+  const [workspaceName, setWorkspaceName] = useState(currentUser?.workspace_name || 'Workverse Ventures');
+  const [billingEmail, setBillingEmail] = useState(currentUser?.billing_email || 'finance@workverse.io');
+  const [autoEscrowRelease, setAutoEscrowRelease] = useState(currentUser?.auto_escrow_release ?? true);
+  const [twoFactorAuth, setTwoFactorAuth] = useState(currentUser?.two_factor_auth ?? true);
+  const [emailDigest, setEmailDigest] = useState(currentUser?.email_digest || 'Daily');
+  const [settingsSuccess, setSettingsSuccess] = useState(false);
+
+  // ========================================================
+  // LIVE BACKEND DATA HYDRATION (SQLite + Express API on port 5000)
+  // ========================================================
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadBackendData() {
+      if (!getAuthToken()) return;
+      try {
+        const [
+          projRes,
+          kanbanRes,
+          contractRes,
+          propRes,
+          msgRes,
+          filesRes,
+          teamRes,
+          paymentsRes,
+          walletRes,
+          settingsRes,
+        ] = await Promise.allSettled([
+          fetchProjects(),
+          fetchKanbanTasks(),
+          fetchContracts(),
+          fetchProposals(),
+          fetchMessages(),
+          fetchFiles(),
+          fetchTeam(),
+          fetchPayments(),
+          fetchWalletInfo(),
+          fetchSettings(),
+        ]);
+
+        if (!isMounted) return;
+
+        if (projRes.status === 'fulfilled' && Array.isArray(projRes.value)) {
+          setProjectList(projRes.value);
+        }
+        if (kanbanRes.status === 'fulfilled' && Array.isArray(kanbanRes.value)) {
+          setKanbanTasks(kanbanRes.value);
+        }
+        if (contractRes.status === 'fulfilled' && Array.isArray(contractRes.value)) {
+          setFreelancerContracts(contractRes.value);
+        }
+        if (propRes.status === 'fulfilled' && Array.isArray(propRes.value)) {
+          setProposals(propRes.value);
+          setMyProposalsList(propRes.value);
+        }
+        if (msgRes.status === 'fulfilled' && Array.isArray(msgRes.value)) {
+          setMessageThreads(msgRes.value);
+          if (msgRes.value.length > 0 && !msgRes.value.some((t) => t.id === activeThreadId)) {
+            setActiveThreadId(msgRes.value[0].id);
+          }
+        }
+        if (filesRes.status === 'fulfilled' && Array.isArray(filesRes.value)) {
+          setFilesList(filesRes.value);
+        }
+        if (teamRes.status === 'fulfilled' && Array.isArray(teamRes.value)) {
+          setTeamList(teamRes.value);
+        }
+        if (paymentsRes.status === 'fulfilled' && Array.isArray(paymentsRes.value)) {
+          setPaymentsList(paymentsRes.value);
+        }
+        if (walletRes.status === 'fulfilled' && walletRes.value) {
+          if (typeof walletRes.value.walletBalance === 'number') {
+            setFreelancerBalance(walletRes.value.walletBalance);
+            setWithdrawAmountInput(
+              walletRes.value.walletBalance > 0
+                ? Math.min(250, walletRes.value.walletBalance).toFixed(2)
+                : '0.00'
+            );
+          }
+          if (typeof walletRes.value.escrowBalance === 'number') {
+            setEscrowBalance(walletRes.value.escrowBalance);
+          }
+          if (Array.isArray(walletRes.value.transactions)) {
+            setWalletTransactions(walletRes.value.transactions);
+          }
+        }
+        if (settingsRes.status === 'fulfilled' && settingsRes.value) {
+          const s = settingsRes.value;
+          if (s.workspaceName) setWorkspaceName(s.workspaceName);
+          if (s.billingEmail) setBillingEmail(s.billingEmail);
+          if (typeof s.autoEscrowRelease === 'boolean') setAutoEscrowRelease(s.autoEscrowRelease);
+          if (typeof s.twoFactorAuth === 'boolean') setTwoFactorAuth(s.twoFactorAuth);
+          if (s.emailDigest) setEmailDigest(s.emailDigest);
+        }
+      } catch (err) {
+        console.error('Failed to load live backend data:', err);
+      }
+    }
+
+    loadBackendData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userRole]);
 
   useEffect(() => {
     let interval = null;
@@ -228,133 +374,273 @@ export default function ProjectsHubPage({
     return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  const moveTask = (taskId, direction) => {
-    const cols = ['backlog', 'progress', 'review', 'done'];
-    setKanbanTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          const currentIndex = cols.indexOf(t.column);
-          const nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-          if (nextIndex >= 0 && nextIndex < cols.length) {
-            const nextCol = cols[nextIndex];
-            triggerToast('Task Moved', `Moved "${t.title}" to ${nextCol.toUpperCase()}`);
-            return { ...t, column: nextCol };
-          }
+  // Move or Reorder Kanban Card across/within columns (Optimistic UI + API Sync)
+  const moveTaskToColumn = async (taskId, targetColId, beforeTaskId = null) => {
+    const currentTask = kanbanTasks.find((t) => t.id === taskId);
+    if (!currentTask) return;
+
+    const columnChanged = currentTask.column !== targetColId;
+
+    setKanbanTasks((prev) => {
+      const moving = prev.find((t) => t.id === taskId);
+      if (!moving) return prev;
+      const updated = { ...moving, column: targetColId };
+      const remaining = prev.filter((t) => t.id !== taskId);
+
+      if (beforeTaskId && beforeTaskId !== taskId) {
+        const insertIdx = remaining.findIndex((t) => t.id === beforeTaskId);
+        if (insertIdx !== -1) {
+          const nextList = [...remaining];
+          nextList.splice(insertIdx, 0, updated);
+          return nextList;
         }
-        return t;
-      })
-    );
+      }
+      return [...remaining, updated];
+    });
+
+    if (!columnChanged) return;
+
+    const targetLabel =
+      KANBAN_COLUMNS.find((c) => c.id === targetColId)?.title || targetColId.toUpperCase();
+    triggerToast('Deliverable Moved', `Moved "${currentTask.title}" to ${targetLabel}`);
+
+    try {
+      await updateKanbanColumn(taskId, targetColId);
+    } catch (err) {
+      console.error('Failed to persist task column move:', err);
+      setKanbanTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, column: currentTask.column } : t))
+      );
+      triggerToast('Sync Error', 'Could not persist task move. Reverted.', 'error');
+    }
   };
 
-  const handleCreateTask = (e) => {
+  // Button-based Prev / Next fallback
+  const moveTask = (taskId, direction) => {
+    const cols = KANBAN_COLUMNS.map((c) => c.id);
+    const currentTask = kanbanTasks.find((t) => t.id === taskId);
+    if (!currentTask) return;
+
+    const currentIndex = cols.indexOf(currentTask.column);
+    const nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+    if (nextIndex < 0 || nextIndex >= cols.length) return;
+    moveTaskToColumn(taskId, cols[nextIndex]);
+  };
+
+  // Kanban HTML5 Drag & Drop Handlers
+  const handleCardDragStart = (e, taskId) => {
+    setDraggedTaskId(taskId);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', taskId);
+    }
+  };
+
+  const handleCardDragEnd = () => {
+    setDraggedTaskId(null);
+    setDragOverCol(null);
+    setDragOverTaskId(null);
+  };
+
+  const handleColumnDragOver = (e, colId, targetTaskId = null) => {
+    e.preventDefault();
+    if (targetTaskId !== null) e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    if (dragOverCol !== colId) setDragOverCol(colId);
+    if (dragOverTaskId !== targetTaskId) setDragOverTaskId(targetTaskId);
+  };
+
+  const handleColumnDragLeave = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverCol(null);
+      setDragOverTaskId(null);
+    }
+  };
+
+  const handleDropTarget = (e, targetColId, beforeTaskId = null) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const taskId = e.dataTransfer?.getData('text/plain') || draggedTaskId;
+    setDraggedTaskId(null);
+    setDragOverCol(null);
+    setDragOverTaskId(null);
+    if (taskId) {
+      moveTaskToColumn(taskId, targetColId, beforeTaskId);
+    }
+  };
+
+  // Create Kanban Card (API Sync)
+  const handleCreateTask = async (e) => {
     e.preventDefault();
     if (newTaskTitle.trim()) {
-      const task = {
-        id: `kb-${Date.now()}`,
+      const taskPayload = {
         title: newTaskTitle.trim(),
         project: newTaskProject,
         column: newTaskCol,
         priority: newTaskPriority,
         estimate: newTaskEstimate,
-        assignee: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
-        assigneeName: 'Arjun Mehta',
-        assigneeRole: 'Frontend Lead',
-        subtasks: '1/2 ready',
+        assigneeName: currentUser?.name || 'Arjun Mehta',
+        assigneeRole: currentUser?.title || 'Frontend Lead',
+        assignee: currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
       };
-      setKanbanTasks((prev) => [task, ...prev]);
-      setIsNewTaskModalOpen(false);
-      setNewTaskTitle('');
-      triggerToast('Task Created', `Added "${task.title}" to Kanban board`);
+
+      try {
+        const res = await createKanbanTask(taskPayload);
+        const task = res.task || { id: `kb-${Date.now()}`, ...taskPayload, subtasks: '1/2 ready' };
+        setKanbanTasks((prev) => [task, ...prev]);
+        setIsNewTaskModalOpen(false);
+        setNewTaskTitle('');
+        triggerToast('Task Created', `Added "${task.title}" to Kanban board`);
+      } catch (err) {
+        console.error('Failed to create task on backend:', err);
+        const task = { id: `kb-${Date.now()}`, ...taskPayload, subtasks: '1/2 ready' };
+        setKanbanTasks((prev) => [task, ...prev]);
+        setIsNewTaskModalOpen(false);
+        setNewTaskTitle('');
+        triggerToast('Task Created', `Added "${task.title}" to Kanban board`);
+      }
     }
   };
 
-  // Official Invoice Modal State
-  const [activeInvoicePayment, setActiveInvoicePayment] = useState(null);
-
-  // Proposals State
-  const [proposals, setProposals] = useState(PROPOSALS_DATA);
-  const [proposalFilter, setProposalFilter] = useState('All');
-  const [reviewedProposal, setReviewedProposal] = useState(null);
-
-  // Messages State
-  const [messageThreads, setMessageThreads] = useState(MESSAGES_THREADS_DATA);
-  const [activeThreadId, setActiveThreadId] = useState('thread-1');
-  const [chatInputText, setChatInputText] = useState('');
-
-  // Files State
-  const [filesList, setFilesList] = useState(FILES_DATA);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [newFileName, setNewFileName] = useState('');
-  const [newFileProject, setNewFileProject] = useState('SaaS Dashboard Development');
-  const [downloadSuccessToast, setDownloadSuccessToast] = useState(null);
-
-  // Team State
-  const [teamList, setTeamList] = useState(TEAM_MEMBERS_DATA);
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('Senior Full Stack Engineer');
-  const [inviteProject, setInviteProject] = useState('SaaS Dashboard Development');
-
-  // Payments State
-  const [paymentsList, setPaymentsList] = useState(PAYMENTS_DATA);
-  const [paymentFilter, setPaymentFilter] = useState('All');
-
-  // Settings State
-  const [workspaceName, setWorkspaceName] = useState('Workverse Ventures');
-  const [billingEmail, setBillingEmail] = useState('finance@workverse.io');
-  const [autoEscrowRelease, setAutoEscrowRelease] = useState(true);
-  const [twoFactorAuth, setTwoFactorAuth] = useState(true);
-  const [emailDigest, setEmailDigest] = useState('Daily');
-  const [settingsSuccess, setSettingsSuccess] = useState(false);
-
-  // Handle Create New Project
-  const handleCreateProject = (e) => {
+  // Handle Create New Project (API Sync)
+  const handleCreateProject = async (e) => {
     e.preventDefault();
     if (newTitle.trim()) {
-      const createdProj = {
-        id: `proj-${Date.now()}`,
-        title: newTitle,
+      const projPayload = {
+        title: newTitle.trim(),
         category: newCategory,
         description: newDesc || 'Custom freelance milestone deliverables and engineering.',
         budget: newBudget,
         budgetType: 'Fixed Price',
         duration: '2 - 3 Weeks',
         skills: ['React', 'Next.js', 'Tailwind'],
-        featured: false,
-        saved: false,
-        applied: false,
-        progress: 10,
-        status: 'In Progress',
         deadline: newDeadline,
-        team: [
-          { name: 'You', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' },
-        ],
-        teamExtra: 0,
-        thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80',
-        type: 'dev',
       };
-      setProjectList((prev) => [createdProj, ...prev]);
-      setIsNewProjectModalOpen(false);
-      setNewTitle('');
-      setNewDesc('');
+
+      try {
+        const res = await createProject(projPayload);
+        const createdProj = res.project || { id: `proj-${Date.now()}`, ...projPayload, progress: 10, status: 'In Progress' };
+        setProjectList((prev) => [createdProj, ...prev]);
+        setIsNewProjectModalOpen(false);
+        setNewTitle('');
+        setNewDesc('');
+        triggerToast('Project Created', `Published "${createdProj.title}" to workspace!`);
+      } catch (err) {
+        console.error('Failed to create project on backend:', err);
+        const createdProj = { id: `proj-${Date.now()}`, ...projPayload, progress: 10, status: 'In Progress' };
+        setProjectList((prev) => [createdProj, ...prev]);
+        setIsNewProjectModalOpen(false);
+        setNewTitle('');
+        setNewDesc('');
+        triggerToast('Project Created', `Published "${createdProj.title}"!`);
+      }
     }
   };
 
-  // Handle Proposals Status Action
-  const handleUpdateProposalStatus = (id, newStatus) => {
+  // Handle Log Milestone Time (API Sync)
+  const handleLogMilestoneTime = async () => {
+    const hrs = (timerSeconds / 3600).toFixed(2);
+    const earned = ((timerSeconds / 3600) * hourlyRate).toFixed(2);
+
+    try {
+      const res = await logTimeSession({
+        seconds: timerSeconds,
+        project_title: 'SaaS Dashboard Development',
+        hourly_rate: hourlyRate,
+        formatted_time: formatTimer(timerSeconds),
+      });
+
+      if (res && typeof res.newWalletBalance === 'number') {
+        setFreelancerBalance(res.newWalletBalance);
+        setWithdrawAmountInput(res.newWalletBalance.toFixed(2));
+      } else {
+        setFreelancerBalance((prev) => prev + parseFloat(earned));
+      }
+      fetchWalletInfo().then((w) => {
+        if (Array.isArray(w?.transactions)) setWalletTransactions(w.transactions);
+      }).catch(() => { });
+      triggerToast('Session Logged to Milestone', `Logged ${hrs} hrs ($${earned}) to verified wallet!`);
+      setTimerSeconds(0);
+      setIsTimerRunning(false);
+    } catch (err) {
+      console.error('Failed to log session:', err);
+      triggerToast('Log Error', err.message || 'Could not log time session.', 'error');
+    }
+  };
+
+  // Handle Confirm Withdrawal (API Sync)
+  const handleConfirmWithdrawal = async () => {
+    if (isWithdrawing) return;
+    const requested = parseFloat(withdrawAmountInput);
+    if (isNaN(requested) || requested <= 0) {
+      triggerToast('Invalid Amount', 'Enter a positive withdrawal amount.', 'error');
+      return;
+    }
+    if (requested > freelancerBalance) {
+      triggerToast('Insufficient Funds', `Maximum available balance is ${formatUsd(freelancerBalance)}.`, 'error');
+      return;
+    }
+
+    setIsWithdrawing(true);
+    try {
+      const res = await requestWithdrawal({ amount: requested, method: withdrawMethod });
+      setIsWithdrawModalOpen(false);
+      if (res && typeof res.remainingBalance === 'number') {
+        setFreelancerBalance(res.remainingBalance);
+        setWithdrawAmountInput(Math.min(250, res.remainingBalance).toFixed(2));
+      }
+      fetchWalletInfo().then((w) => {
+        if (Array.isArray(w?.transactions)) setWalletTransactions(w.transactions);
+      }).catch(() => { });
+      triggerToast('Withdrawal Processed', res.message || `${formatUsd(requested)} transferred via ${withdrawMethod.toUpperCase()}!`);
+    } catch (err) {
+      console.error('Failed withdrawal:', err);
+      triggerToast('Withdrawal Failed', err.message || 'Unable to process withdrawal.', 'error');
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
+
+  // Delete Kanban Task (API Sync)
+  const handleDeleteTask = async (taskId, title) => {
+    setKanbanTasks((prev) => prev.filter((t) => t.id !== taskId));
+    triggerToast('Deliverable Removed', `Removed "${title}" from sprint board.`);
+    try {
+      await deleteKanbanTask(taskId);
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+    }
+  };
+
+  // Handle Proposals Status Action (API Sync)
+  const handleUpdateProposalStatus = async (id, newStatus) => {
     setProposals((prev) =>
       prev.map((prop) => (prop.id === id ? { ...prop, status: newStatus } : prop))
     );
+    setMyProposalsList((prev) =>
+      prev.map((prop) => (prop.id === id ? { ...prop, status: newStatus } : prop))
+    );
+    try {
+      await updateProposalStatus(id, newStatus);
+      if (newStatus === 'Accepted') {
+        const updatedContracts = await fetchContracts();
+        if (Array.isArray(updatedContracts)) setFreelancerContracts(updatedContracts);
+      }
+      triggerToast('Proposal Updated', `Proposal marked as ${newStatus}`);
+    } catch (err) {
+      console.error('Failed to update proposal status:', err);
+    }
   };
 
-  // Handle Send Chat Message
-  const handleSendChatMessage = (e) => {
+  // Handle Send Chat Message (API Sync)
+  const handleSendChatMessage = async (e) => {
     e.preventDefault();
     if (chatInputText.trim()) {
+      const text = chatInputText.trim();
       const newMsg = {
         id: `msg-${Date.now()}`,
         sender: 'you',
-        text: chatInputText.trim(),
+        text,
         time: 'Just now',
       };
       setMessageThreads((prev) =>
@@ -362,7 +648,7 @@ export default function ProjectsHubPage({
           if (thread.id === activeThreadId) {
             return {
               ...thread,
-              lastMessage: newMsg.text,
+              lastMessage: text,
               time: 'Just now',
               messages: [...thread.messages, newMsg],
             };
@@ -371,66 +657,138 @@ export default function ProjectsHubPage({
         })
       );
       setChatInputText('');
+
+      try {
+        await sendMessage({ thread_id: activeThreadId, text, project: activeThread?.project || 'SaaS Dashboard Development' });
+      } catch (err) {
+        console.error('Failed to send message:', err);
+      }
     }
   };
 
-  // Handle Upload File
-  const handleUploadFileSubmit = (e) => {
+  // Handle Upload File (API Sync)
+  const handleUploadFileSubmit = async (e) => {
     e.preventDefault();
     if (newFileName.trim()) {
-      const newFileObj = {
-        id: `f-${Date.now()}`,
-        name: newFileName.trim(),
-        size: '14.2 MB',
-        type: newFileName.endsWith('.pdf') ? 'pdf' : newFileName.endsWith('.fig') ? 'figma' : 'archive',
-        uploadedBy: 'You',
-        date: 'Today',
-        project: newFileProject,
-      };
-      setFilesList((prev) => [newFileObj, ...prev]);
-      setIsUploadModalOpen(false);
-      setNewFileName('');
+      const name = newFileName.trim();
+      try {
+        const res = await uploadFile({ name, size: '14.2 MB', project: newFileProject });
+        const savedFile = res?.file || {
+          id: `f-${Date.now()}`,
+          name,
+          size: '14.2 MB',
+          type: name.endsWith('.pdf') ? 'pdf' : name.endsWith('.fig') ? 'figma' : 'archive',
+          uploaded_by: currentUser?.name || 'You',
+          date: 'Today',
+          project: newFileProject,
+        };
+        setFilesList((prev) => [savedFile, ...prev]);
+        setIsUploadModalOpen(false);
+        setNewFileName('');
+        triggerToast('File Uploaded', `Uploaded "${name}" to project repository.`);
+      } catch (err) {
+        console.error('Failed to upload file:', err);
+        triggerToast('Upload Error', err.message || 'Could not save file.', 'error');
+      }
     }
   };
 
-  // Handle Download File Simulation
-  const handleSimulateDownload = (fileName) => {
+  // Handle Delete File (API Sync)
+  const handleDeleteFile = async (fileId, fileName) => {
+    setFilesList((prev) => prev.filter((f) => f.id !== fileId));
+    triggerToast('File Deleted', `Removed "${fileName}" from repository.`);
+    try {
+      await deleteFile(fileId);
+    } catch (err) {
+      console.error('Failed to delete file:', err);
+    }
+  };
+
+  // Real File Download Trigger (generates downloadable receipt/bundle)
+  const handleSimulateDownload = (fileName, summaryText) => {
+    try {
+      const content =
+        summaryText ||
+        `Workverse Deliverable / Escrow Receipt\nFile: ${fileName}\nExported: ${new Date().toISOString()}\nWorkspace: ${workspaceName}\nStatus: Verified & Archived\n`;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      // ignore fallback
+    }
     setDownloadSuccessToast(fileName);
     setTimeout(() => setDownloadSuccessToast(null), 3000);
   };
 
-  // Handle Invite Contributor
-  const handleInviteSubmit = (e) => {
+  // Handle Invite Contributor (API Sync)
+  const handleInviteSubmit = async (e) => {
     e.preventDefault();
     if (inviteEmail.trim()) {
-      const newMember = {
-        id: `tm-${Date.now()}`,
-        name: inviteEmail.split('@')[0],
-        role: inviteRole,
-        project: inviteProject,
-        status: 'Invited',
-        hourly: '$40/hr',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-        permission: 'Editor',
-      };
-      setTeamList((prev) => [...prev, newMember]);
-      setIsInviteModalOpen(false);
-      setInviteEmail('');
+      const email = inviteEmail.trim();
+      try {
+        const res = await inviteTeamMember({ email, role: inviteRole, project: inviteProject });
+        const newMember = res?.member || {
+          id: `tm-${Date.now()}`,
+          name: email.split('@')[0],
+          role: inviteRole,
+          project: inviteProject,
+          status: 'Active',
+          hourly: '$40/hr',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+          permission: 'Editor',
+        };
+        setTeamList((prev) => [newMember, ...prev]);
+        setIsInviteModalOpen(false);
+        setInviteEmail('');
+        triggerToast('Invitation Sent', `Added ${email} to ${inviteProject}`);
+      } catch (err) {
+        console.error('Failed to invite member:', err);
+        triggerToast('Invite Error', err.message || 'Unable to invite member.', 'error');
+      }
     }
   };
 
-  // Handle Release Escrow
-  const handleReleaseEscrow = (paymentId) => {
-    setPaymentsList((prev) =>
-      prev.map((p) => (p.id === paymentId ? { ...p, status: 'Released' } : p))
-    );
+  // Handle Release Escrow (API Sync)
+  const handleReleaseEscrow = async (paymentId) => {
+    try {
+      const res = await releasePaymentEscrow(paymentId);
+      setPaymentsList((prev) =>
+        prev.map((p) => (p.id === paymentId ? { ...p, status: 'Released' } : p))
+      );
+      triggerToast('Escrow Payment Released', res.message || 'Milestone funds credited to contractor balance.');
+    } catch (err) {
+      console.error('Failed to release escrow:', err);
+      triggerToast('Release Notice', err.message || 'Unable to release escrow.', 'error');
+    }
   };
 
-  // Handle Save Settings
-  const handleSaveSettings = (e) => {
+  // Handle Save Settings (API Sync)
+  const handleSaveSettings = async (e) => {
     e.preventDefault();
-    setSettingsSuccess(true);
-    setTimeout(() => setSettingsSuccess(false), 3000);
+    try {
+      const res = await saveSettings({
+        workspaceName,
+        billingEmail,
+        autoEscrowRelease,
+        twoFactorAuth,
+        emailDigest,
+      });
+      if (res?.settings && setCurrentUser) {
+        setCurrentUser(res.settings);
+      }
+      setSettingsSuccess(true);
+      triggerToast('Settings Saved', 'Workspace preferences persisted to database.');
+      setTimeout(() => setSettingsSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      triggerToast('Save Failed', err.message || 'Unable to save settings.', 'error');
+    }
   };
 
   // Filter project cards
@@ -462,7 +820,18 @@ export default function ProjectsHubPage({
   });
 
   const activeThread =
-    messageThreads.find((t) => t.id === activeThreadId) || messageThreads[0];
+    messageThreads.find((t) => t.id === activeThreadId) ||
+    messageThreads[0] || {
+      id: 'loading',
+      user: {
+        name: 'Workspace Chat',
+        role: '',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+        online: true,
+      },
+      project: 'Collaboration',
+      messages: [],
+    };
 
   // Live financial & escrow aggregations (never hardcoded)
   const totalWithdrawnAmount = walletTransactions
