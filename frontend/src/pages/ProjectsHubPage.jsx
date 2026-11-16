@@ -45,233 +45,112 @@ import {
   Briefcase,
   User,
   Wallet,
+  ArrowUpRight,
+  GripVertical,
 } from 'lucide-react';
 import {
-  PROJECTS,
-  PROPOSALS_DATA,
-  MESSAGES_THREADS_DATA,
-  FILES_DATA,
-  TEAM_MEMBERS_DATA,
-  PAYMENTS_DATA,
-} from '../data/mockData';
+  fetchProjects,
+  createProject,
+  fetchKanbanTasks,
+  createKanbanTask,
+  updateKanbanColumn,
+  deleteKanbanTask,
+  fetchContracts,
+  fetchProposals,
+  submitProposal,
+  updateProposalStatus,
+  logTimeSession,
+  fetchWalletInfo,
+  requestWithdrawal,
+  fetchMessages,
+  sendMessage,
+  fetchFiles,
+  uploadFile,
+  deleteFile,
+  fetchTeam,
+  inviteTeamMember,
+  fetchPayments,
+  releasePaymentEscrow,
+  fetchSettings,
+  saveSettings,
+  getAuthToken,
+} from '../api/client';
 
-const INITIAL_KANBAN_TASKS = [
-  {
-    id: 'kb-1',
-    title: 'Architecture RFC & Token Sync',
-    project: 'SaaS Dashboard Development',
-    column: 'backlog',
-    priority: 'High',
-    estimate: '8 hrs',
-    assignee: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
-    assigneeName: 'Elena Rostova',
-    assigneeRole: 'Lead Architect',
-    subtasks: '3/4 done',
-  },
-  {
-    id: 'kb-2',
-    title: 'Stripe Escrow Webhook Integration',
-    project: 'E-commerce Platform',
-    column: 'backlog',
-    priority: 'Medium',
-    estimate: '12 hrs',
-    assignee: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
-    assigneeName: 'Marcus Vance',
-    assigneeRole: 'Backend Engineer',
-    subtasks: '1/3 done',
-  },
-  {
-    id: 'kb-3',
-    title: 'Core Telemetry & Analytics Charts',
-    project: 'SaaS Dashboard Development',
-    column: 'progress',
-    priority: 'High',
-    estimate: '16 hrs',
-    assignee: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
-    assigneeName: 'Arjun Mehta',
-    assigneeRole: 'Frontend Lead',
-    subtasks: '5/6 done',
-  },
-  {
-    id: 'kb-4',
-    title: 'PostgreSQL Migration & Indexing',
-    project: 'E-commerce Platform',
-    column: 'progress',
-    priority: 'Medium',
-    estimate: '6 hrs',
-    assignee: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80',
-    assigneeName: 'David Chen',
-    assigneeRole: 'DB Administrator',
-    subtasks: '2/2 done',
-  },
-  {
-    id: 'kb-5',
-    title: 'Mobile Responsive Audit & Tap Targets',
-    project: 'Brand Identity & Web',
-    column: 'review',
-    priority: 'Urgent',
-    estimate: '4 hrs',
-    assignee: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
-    assigneeName: 'Vinita Parmar',
-    assigneeRole: 'UX Specialist',
-    subtasks: '4/4 ready',
-  },
-  {
-    id: 'kb-6',
-    title: 'Design Tokens & UI Component Kit',
-    project: 'Brand Identity & Web',
-    column: 'done',
-    priority: 'High',
-    estimate: '14 hrs',
-    assignee: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
-    assigneeName: 'Vinita Parmar',
-    assigneeRole: 'UX Specialist',
-    subtasks: 'Completed',
-  },
-  {
-    id: 'kb-7',
-    title: 'Wireframes & User Flow Signoff',
-    project: 'SaaS Dashboard Development',
-    column: 'done',
-    priority: 'Medium',
-    estimate: '10 hrs',
-    assignee: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
-    assigneeName: 'Arjun Mehta',
-    assigneeRole: 'Frontend Lead',
-    subtasks: 'Approved',
-  },
-];
+function formatUsd(val, decimals = 2) {
+  const num = Number(val);
+  const safe = Number.isFinite(num) ? num : 0;
+  return `$${safe.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}`;
+}
 
-const FREELANCER_CONTRACTS = [
-  {
-    id: 'cnt-1',
-    title: 'SaaS Dashboard Development',
-    client: {
-      name: 'Sarah Jenkins',
-      company: 'CloudScale AI',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
-    },
-    type: 'Hourly',
-    rate: '$45.00/hr',
-    weeklyLimit: '40 hrs/wk',
-    totalEarned: '$4,850.00',
-    escrowLocked: '$3,200.00',
-    currentMilestone: 'Phase 2: Core Telemetry & Analytics Charts',
-    deadline: 'Nov 12, 2026',
-    status: 'In Progress',
-    progress: 65,
-    milestonesCount: '4 of 6 approved',
-    thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=80',
-  },
-  {
-    id: 'cnt-2',
-    title: 'PostgreSQL Migration & Index Optimization',
-    client: {
-      name: 'Marcus Cole',
-      company: 'FinTech Labs',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
-    },
-    type: 'Fixed Price',
-    rate: '$3,200.00',
-    totalEarned: '$2,000.00',
-    escrowLocked: '$1,200.00',
-    currentMilestone: 'Milestone 3: Sharding & Query Optimization',
-    deadline: 'Nov 20, 2026',
-    status: 'In Progress',
-    progress: 70,
-    milestonesCount: '2 of 3 approved',
-    thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400&q=80',
-  },
-  {
-    id: 'cnt-3',
-    title: 'Design Tokens & UI Component Kit',
-    client: {
-      name: 'Elena Woods',
-      company: 'Studio Arc',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-    },
-    type: 'Hourly',
-    rate: '$50.00/hr',
-    totalEarned: '$4,200.00',
-    escrowLocked: '$0.00',
-    currentMilestone: 'All Deliverables Signed Off',
-    deadline: 'Oct 30, 2026',
-    status: 'Completed',
-    progress: 100,
-    milestonesCount: '5 of 5 approved',
-    thumbnail: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=400&q=80',
-  },
-];
+function parseUsdAmount(val) {
+  if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+  const parsed = parseFloat(String(val ?? '0').replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
-const FREELANCER_SUBMITTED_PROPOSALS = [
-  {
-    id: 'my-prop-1',
-    projectTitle: 'SaaS Dashboard Development',
-    clientName: 'Sarah Jenkins (CloudScale AI)',
-    clientAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
-    bidAmount: '$45.00/hr',
-    duration: '6 Weeks',
-    submittedDate: 'Oct 12, 2026',
-    status: 'Awarded & Active',
-    statusBadgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    coverLetter: 'Delivering interactive analytics widgets with React 19, Tailwind CSS, and Recharts. All milestone deliverables include comprehensive unit tests and automated escrow verification.',
-  },
-  {
-    id: 'my-prop-2',
-    projectTitle: 'Integrate AI Features into Existing Product',
-    clientName: 'David Zhang (TechPulse)',
-    clientAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80',
-    bidAmount: '$55.00/hr',
-    duration: 'Ongoing Sprint',
-    submittedDate: 'Nov 01, 2026',
-    status: 'Awarded & Active',
-    statusBadgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    coverLetter: 'Extensive background building streaming LLM interfaces, vector similarity search, and model fallback mechanisms with 99.9% uptime SLA.',
-  },
-  {
-    id: 'my-prop-3',
-    projectTitle: 'Realtime Collaborative Whiteboard Engine',
-    clientName: 'Alex Rivera (CollabStack)',
-    clientAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&q=80',
-    bidAmount: '$2,800.00',
-    duration: '2 Weeks',
-    submittedDate: 'Nov 06, 2026',
-    status: 'Interview Requested',
-    statusBadgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
-    coverLetter: 'Specialized in WebSockets and operational transforms for low-latency multi-user canvas synchronization.',
-  },
-  {
-    id: 'my-prop-4',
-    projectTitle: 'FinTech Mobile App UI Architecture',
-    clientName: 'Neha Sharma (Neobank Co)',
-    clientAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80',
-    bidAmount: '$1,100.00',
-    duration: '10 Days',
-    submittedDate: 'Nov 08, 2026',
-    status: 'Under Client Review',
-    statusBadgeColor: 'bg-slate-100 text-slate-700 border-slate-200',
-    coverLetter: 'Conducting comprehensive touch target audit, accessibility color contrast compliance, and biometric auth flows.',
-  },
+function formatLedgerDate(dateStr) {
+  if (!dateStr) return 'Today';
+  const normalized = dateStr.includes('T')
+    ? dateStr
+    : /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateStr)
+      ? `${dateStr.replace(' ', 'T')}Z`
+      : dateStr;
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+}
+
+function formatWalletMethodLabel(method) {
+  const map = {
+    stripe: 'Stripe Instant Transfer',
+    wire: 'SWIFT Wire Transfer',
+    escrow: 'Escrow Settlement',
+    paypal: 'PayPal Instant Payout',
+  };
+  return map[String(method || '').toLowerCase()] || 'Workverse Wallet';
+}
+
+const KANBAN_COLUMNS = [
+  { id: 'backlog', title: 'Backlog / Specs', accentColor: 'bg-slate-400', badgeBg: 'bg-slate-100 text-slate-700' },
+  { id: 'progress', title: 'In Development', accentColor: 'bg-[#F36B21]', badgeBg: 'bg-amber-100 text-amber-800' },
+  { id: 'review', title: 'Milestone Review', accentColor: 'bg-purple-500', badgeBg: 'bg-purple-100 text-purple-800' },
+  { id: 'done', title: 'Approved & Released', accentColor: 'bg-emerald-500', badgeBg: 'bg-emerald-100 text-emerald-800' },
 ];
 
 export default function ProjectsHubPage({
   setCurrentPage,
   initialTab = 'projects',
+  initialTabNonce = 0,
   userRole = 'client',
   setUserRole,
+  currentUser,
+  setCurrentUser,
 }) {
   const [activeSidebarNav, setActiveSidebarNav] = useState(() => {
-    if (initialTab && initialTab !== 'projects') return initialTab;
-    return userRole === 'freelancer' ? 'contracts' : 'projects';
+    if (!initialTab || initialTab === 'projects') {
+      return userRole === 'freelancer' ? 'contracts' : 'projects';
+    }
+    const roleTabMap =
+      userRole === 'freelancer'
+        ? { proposals: 'my_proposals', payments: 'earnings', contracts: 'contracts' }
+        : { my_proposals: 'proposals', earnings: 'payments', contracts: 'projects' };
+    return roleTabMap[initialTab] || initialTab;
   });
 
   useEffect(() => {
-    if (initialTab && initialTab !== 'projects') {
-      setActiveSidebarNav(initialTab);
-    } else {
+    if (!initialTab || initialTab === 'projects') {
       setActiveSidebarNav(userRole === 'freelancer' ? 'contracts' : 'projects');
+      return;
     }
-  }, [initialTab, userRole]);
+    const roleTabMap =
+      userRole === 'freelancer'
+        ? { proposals: 'my_proposals', payments: 'earnings', contracts: 'contracts' }
+        : { my_proposals: 'proposals', earnings: 'payments', contracts: 'projects' };
+    setActiveSidebarNav(roleTabMap[initialTab] || initialTab);
+  }, [initialTab, initialTabNonce, userRole]);
 
   // Freelancer Specific State
   const [contractsFilter, setContractsFilter] = useState('All');
