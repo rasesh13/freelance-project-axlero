@@ -157,7 +157,9 @@ export default function ProjectsHubPage({
   const [freelancerContracts, setFreelancerContracts] = useState(FREELANCER_CONTRACTS);
   const [myProposalsFilter, setMyProposalsFilter] = useState('All');
   const [myProposalsList, setMyProposalsList] = useState(FREELANCER_SUBMITTED_PROPOSALS);
-  const [freelancerBalance, setFreelancerBalance] = useState(4250.00);
+  const [freelancerBalance, setFreelancerBalance] = useState(currentUser?.wallet_balance ?? 4250.00);
+  const [escrowBalance, setEscrowBalance] = useState(currentUser?.escrow_balance ?? 8900.00);
+  const [walletTransactions, setWalletTransactions] = useState([]);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [withdrawAmountInput, setWithdrawAmountInput] = useState('4250.00');
   const [withdrawMethod, setWithdrawMethod] = useState('stripe');
@@ -461,6 +463,29 @@ export default function ProjectsHubPage({
 
   const activeThread =
     messageThreads.find((t) => t.id === activeThreadId) || messageThreads[0];
+
+  // Live financial & escrow aggregations (never hardcoded)
+  const totalWithdrawnAmount = walletTransactions
+    .filter((wt) => wt.type === 'withdrawal')
+    .reduce((sum, wt) => sum + parseUsdAmount(wt.amount), 0);
+
+  const freelancerTotalEarnings = freelancerBalance + escrowBalance + totalWithdrawnAmount;
+
+  const pendingClearanceTotal = paymentsList
+    .filter((p) => p.status === 'Pending Approval')
+    .reduce((sum, p) => sum + parseUsdAmount(p.amount), 0);
+  const pendingClearanceCount = paymentsList.filter((p) => p.status === 'Pending Approval').length;
+
+  const clientEscrowHolding = paymentsList
+    .filter((p) => p.status === 'In Escrow')
+    .reduce((sum, p) => sum + parseUsdAmount(p.amount), 0);
+
+  const clientReleasedTotal = paymentsList
+    .filter((p) => p.status === 'Released')
+    .reduce((sum, p) => sum + parseUsdAmount(p.amount), 0);
+  const clientReleasedCount = paymentsList.filter((p) => p.status === 'Released').length;
+
+  const totalPaymentsVolume = clientEscrowHolding + pendingClearanceTotal + clientReleasedTotal;
 
   return (
     <div className="w-full min-h-screen bg-[#FFF9F5] text-[#171717] pb-24 relative">
@@ -1633,29 +1658,39 @@ export default function ProjectsHubPage({
                 </div>
 
                 {/* 4 Financial Highlight Pods */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-3xl border border-emerald-200 p-5 space-y-1 shadow-xs bg-gradient-to-br from-white to-emerald-50/30">
+                <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-3xl border border-emerald-200 p-5 space-y-1.5 shadow-xs bg-gradient-to-br from-white to-emerald-50/30 min-w-0 overflow-hidden">
                     <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block">Available for Payout</span>
-                    <span className="text-2xl sm:text-3xl font-black text-emerald-600 block">${freelancerBalance.toFixed(2)}</span>
-                    <span className="text-[10px] text-emerald-700 font-medium">Ready for instant transfer</span>
+                    <span className="text-2xl font-black text-emerald-600 tabular-nums tracking-tight block truncate" title={formatUsd(freelancerBalance)}>
+                      {formatUsd(freelancerBalance)}
+                    </span>
+                    <span className="text-[11px] text-emerald-700 font-medium block">Ready for instant transfer</span>
                   </div>
 
-                  <div className="bg-white rounded-3xl border border-amber-200 p-5 space-y-1 shadow-xs bg-gradient-to-br from-white to-amber-50/30">
+                  <div className="bg-white rounded-3xl border border-amber-200 p-5 space-y-1.5 shadow-xs bg-gradient-to-br from-white to-amber-50/30 min-w-0 overflow-hidden">
                     <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block">In Milestone Escrow</span>
-                    <span className="text-2xl sm:text-3xl font-black text-amber-600 block">$8,900.00</span>
-                    <span className="text-[10px] text-amber-700 font-medium">Locked in smart contract</span>
+                    <span className="text-2xl font-black text-amber-600 tabular-nums tracking-tight block truncate" title={formatUsd(escrowBalance)}>
+                      {formatUsd(escrowBalance)}
+                    </span>
+                    <span className="text-[11px] text-amber-700 font-medium block">Locked in smart contract</span>
                   </div>
 
-                  <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-1 shadow-xs">
+                  <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-1.5 shadow-xs min-w-0 overflow-hidden">
                     <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider block">2026 Total Earnings</span>
-                    <span className="text-2xl sm:text-3xl font-black text-[#171717] block">$48,720.00</span>
-                    <span className="text-[10px] text-emerald-600 font-medium">▲ +24% vs last year</span>
+                    <span className="text-2xl font-black text-[#171717] tabular-nums tracking-tight block truncate" title={formatUsd(freelancerTotalEarnings)}>
+                      {formatUsd(freelancerTotalEarnings)}
+                    </span>
+                    <span className="text-[11px] text-emerald-600 font-medium block">▲ Available + Escrow + Paid</span>
                   </div>
 
-                  <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-1 shadow-xs">
+                  <div className="bg-white rounded-3xl border border-[#EAE2DC] p-5 space-y-1.5 shadow-xs min-w-0 overflow-hidden">
                     <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider block">Pending Clearance</span>
-                    <span className="text-2xl sm:text-3xl font-black text-slate-700 block">$1,450.00</span>
-                    <span className="text-[10px] text-[#777777] font-medium">Clearing in 24 hours</span>
+                    <span className="text-2xl font-black text-slate-700 tabular-nums tracking-tight block truncate" title={formatUsd(pendingClearanceTotal)}>
+                      {formatUsd(pendingClearanceTotal)}
+                    </span>
+                    <span className="text-[11px] text-[#777777] font-medium block">
+                      {pendingClearanceCount > 0 ? `${pendingClearanceCount} awaiting signoff` : 'Escrow review stage'}
+                    </span>
                   </div>
                 </div>
 
