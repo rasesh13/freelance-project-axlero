@@ -585,53 +585,35 @@ const completedLength =
       return;
     }
 
-    const projPayload = {
-      title: newTitle.trim(),
-      category: newCategory,
-      description: newDesc.trim() || 'Custom freelance milestone deliverables and engineering.',
-      budget: `$${budgetValue.toLocaleString('en-US')}`,
-      budgetType: 'Fixed Price',
-      duration: '2 - 3 Weeks',
-      skills: ['React', 'Next.js', 'Tailwind'],
-      featured: false,
-      saved: false,
-      applied: false,
-      progress: 0,
-      status: 'In Progress',
-      deadline: newDeadline,
-      team: [
-        {
-          name: 'You',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
-        },
-      ],
-      teamExtra: 0,
-      thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80',
-      type: 'dev',
-    };
+    if (newTitle.trim()) {
+      const projPayload = {
+        title: newTitle.trim(),
+        category: newCategory,
+        description: newDesc || 'Custom freelance milestone deliverables and engineering.',
+        budget: newBudget,
+        budgetType: 'Fixed Price',
+        duration: '2 - 3 Weeks',
+        skills: ['React', 'Next.js', 'Tailwind'],
+        deadline: newDeadline,
+      };
 
-    try {
-      const res = await createProject(projPayload);
-      const createdProj = res.project || { id: `proj-${Date.now()}`, ...projPayload };
-      setProjectList((prev) => [createdProj, ...prev]);
-      setIsNewProjectModalOpen(false);
-      setWizardStep(1);
-      setNewTitle('');
-      setNewDesc('');
-      setNewBudget('$1,500');
-      setNewCategory('Web Development');
-      triggerToast('Project Created Successfully', `${createdProj.title} has been added to your dashboard.`);
-    } catch (err) {
-      console.error('Failed to create project on backend:', err);
-      const createdProj = { id: `proj-${Date.now()}`, ...projPayload };
-      setProjectList((prev) => [createdProj, ...prev]);
-      setIsNewProjectModalOpen(false);
-      setWizardStep(1);
-      setNewTitle('');
-      setNewDesc('');
-      setNewBudget('$1,500');
-      setNewCategory('Web Development');
-      triggerToast('Project Created', `Saved "${createdProj.title}" locally.`);
+      try {
+        const res = await createProject(projPayload);
+        const createdProj = res.project || { id: `proj-${Date.now()}`, ...projPayload, progress: 10, status: 'In Progress' };
+        setProjectList((prev) => [createdProj, ...prev]);
+        setIsNewProjectModalOpen(false);
+        setNewTitle('');
+        setNewDesc('');
+        triggerToast('Project Created', `Published "${createdProj.title}" to workspace!`);
+      } catch (err) {
+        console.error('Failed to create project on backend:', err);
+        const createdProj = { id: `proj-${Date.now()}`, ...projPayload, progress: 10, status: 'In Progress' };
+        setProjectList((prev) => [createdProj, ...prev]);
+        setIsNewProjectModalOpen(false);
+        setNewTitle('');
+        setNewDesc('');
+        triggerToast('Project Created', `Published "${createdProj.title}"!`);
+      }
     }
   };
 
