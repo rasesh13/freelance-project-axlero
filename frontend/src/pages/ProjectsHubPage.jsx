@@ -261,6 +261,9 @@ const completedLength =
 
   // Official Invoice Modal State
   const [activeInvoicePayment, setActiveInvoicePayment] = useState(null);
+  const [releaseConfirmPayment, setReleaseConfirmPayment] = useState(null);
+  const [generateReceiptOnRelease, setGenerateReceiptOnRelease] = useState(true);
+  const [isReleasingMilestone, setIsReleasingMilestone] = useState(false);
 
   // Proposals State
   const [proposals, setProposals] = useState([]);
@@ -2767,13 +2770,11 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
 
                           {pay.status === 'In Escrow' || pay.status === 'Pending Approval' ? (
                             <button
-                              onClick={() => {
-                                handleReleaseEscrow(pay.id);
-                                triggerToast('Escrow Released', `Disbursed ${pay.amount} to ${pay.recipient}!`);
-                              }}
-                              className="px-4 py-2 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                              onClick={() => setReleaseConfirmPayment(pay)}
+                              className="px-4 py-2 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
                             >
-                              Release Payout
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                              <span>Release Payout</span>
                             </button>
                           ) : (
                             <button
@@ -3627,6 +3628,102 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          ESCROW MILESTONE RELEASE & APPROVAL DIALOG
+      ======================================================== */}
+      {releaseConfirmPayment && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setReleaseConfirmPayment(null)}
+        >
+          <div
+            className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-[#EAE2DC] p-6 sm:p-8 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200">
+                  Escrow Milestone Release
+                </span>
+                <h3 className="text-lg font-bold text-[#171717] mt-1.5">Approve Deliverable & Disburse Funds</h3>
+                <p className="text-xs text-[#777777]">Authorize cryptographic milestone release from smart escrow holding.</p>
+              </div>
+              <button
+                onClick={() => setReleaseConfirmPayment(null)}
+                className="p-1 rounded-full text-[#777777] hover:text-[#171717] hover:bg-[#FFF3EC] cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[#777777]">Deliverable Item</span>
+                <span className="text-xs font-bold text-[#171717]">{releaseConfirmPayment.project}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[#777777]">Beneficiary Contractor</span>
+                <span className="text-xs font-bold text-[#171717]">{releaseConfirmPayment.recipient}</span>
+              </div>
+              <div className="border-t border-[#F3ECE7] pt-2 flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#171717]">Gross Escrow Amount</span>
+                <span className="text-base font-black text-[#171717] tabular-nums">{releaseConfirmPayment.amount}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-[#777777]">
+                <span>Escrow Guarantee Fee</span>
+                <span className="font-semibold text-emerald-600">$0.00 (Zero Fee)</span>
+              </div>
+              <div className="border-t border-[#F3ECE7] pt-2 flex items-center justify-between">
+                <span className="text-xs font-bold text-[#171717]">Total Contractor Disbursement</span>
+                <span className="text-lg font-black text-[#F36B21] tabular-nums">{releaseConfirmPayment.amount}</span>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2.5 p-3 rounded-2xl bg-[#FFF3EC]/60 border border-[#FCE2D3] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={generateReceiptOnRelease}
+                onChange={(e) => setGenerateReceiptOnRelease(e.target.checked)}
+                className="w-4 h-4 rounded text-[#F36B21] accent-[#F36B21]"
+              />
+              <span className="text-xs font-semibold text-[#171717]">
+                Generate & archive signed cryptographic escrow receipt upon release
+              </span>
+            </label>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setReleaseConfirmPayment(null)}
+                className="px-4 py-2 rounded-full text-xs font-semibold text-[#777777] hover:text-[#171717] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isReleasingMilestone}
+                onClick={async () => {
+                  setIsReleasingMilestone(true);
+                  await handleReleaseEscrow(releaseConfirmPayment.id);
+                  if (generateReceiptOnRelease) {
+                    handleSimulateDownload(
+                      `Escrow_Release_Receipt_${releaseConfirmPayment.id}.txt`,
+                      `WORKVERSE CRYPTOGRAPHIC ESCROW DISBURSEMENT RECEIPT\nPayment ID: ${releaseConfirmPayment.id}\nRecipient: ${releaseConfirmPayment.recipient}\nAmount: ${releaseConfirmPayment.amount}\nStatus: VERIFIED & RELEASED\nTimestamp: ${new Date().toISOString()}\nProtection: 100% Workverse Smart Escrow Guarantee`
+                    );
+                  }
+                  setIsReleasingMilestone(false);
+                  setReleaseConfirmPayment(null);
+                }}
+                className="px-6 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex items-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                <span>{isReleasingMilestone ? 'Disbursing...' : 'Confirm Release & Payout'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
