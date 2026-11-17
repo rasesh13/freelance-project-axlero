@@ -75,6 +75,7 @@ import {
   saveSettings,
   getAuthToken,
 } from '../api/client';
+import { PROJECTS } from '../data/mockData';
 
 function formatUsd(val, decimals = 2) {
   const num = Number(val);
@@ -188,7 +189,7 @@ export default function ProjectsHubPage({
   // Projects State
   const [projectStatusFilter, setProjectStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-const [projectList, setProjectList] = useState(PROJECTS);
+  const [projectList, setProjectList] = useState(PROJECTS || []);
 
 // Project Overview Statistics
 const totalProjects = projectList.length;
