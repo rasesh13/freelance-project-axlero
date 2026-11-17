@@ -303,6 +303,14 @@ const completedLength =
   const [billingEmail, setBillingEmail] = useState(currentUser?.billing_email || 'finance@workverse.io');
   const [autoEscrowRelease, setAutoEscrowRelease] = useState(currentUser?.auto_escrow_release ?? true);
   const [twoFactorAuth, setTwoFactorAuth] = useState(currentUser?.two_factor_auth ?? true);
+  const [twoFactorMethod, setTwoFactorMethod] = useState('TOTP Authenticator');
+  const [sessionTimeout, setSessionTimeout] = useState('1 Hour');
+  const [payoutThreshold, setPayoutThreshold] = useState('1,000');
+  const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
+  const [disputeContract, setDisputeContract] = useState('SaaS Dashboard Development');
+  const [disputeReason, setDisputeReason] = useState('Deliverable Specs Discrepancy');
+  const [disputeNotes, setDisputeNotes] = useState('');
+  const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
   const [emailDigest, setEmailDigest] = useState(currentUser?.email_digest || 'Daily');
   const [settingsSuccess, setSettingsSuccess] = useState(false);
 
@@ -2857,7 +2865,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                     <div className="flex items-center justify-between">
                       <div>
                         <h4 className="text-xs font-bold text-[#171717]">Two-Factor Escrow Authorization (2FA)</h4>
-                        <p className="text-[11px] text-[#777777]">Require biometric or SMS authorization for payouts over $1,000.</p>
+                        <p className="text-[11px] text-[#777777]">Require biometric or TOTP authorization for payouts over ${payoutThreshold}.</p>
                       </div>
                       <button
                         type="button"
@@ -2871,9 +2879,67 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                         />
                       </button>
                     </div>
+
+                    {twoFactorAuth && (
+                      <div className="p-4 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#171717] mb-1">
+                              2FA Authenticator Method
+                            </label>
+                            <select
+                              value={twoFactorMethod}
+                              onChange={(e) => setTwoFactorMethod(e.target.value)}
+                              className="w-full px-3 py-2 rounded-xl bg-white border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                            >
+                              <option value="TOTP Authenticator">Google Authenticator / Authy (TOTP)</option>
+                              <option value="Hardware Key">Hardware Security Key (FIDO2 / WebAuthn)</option>
+                              <option value="SMS Verification">Encrypted SMS PIN</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#171717] mb-1">
+                              Session Inactivity Lockout
+                            </label>
+                            <select
+                              value={sessionTimeout}
+                              onChange={(e) => setSessionTimeout(e.target.value)}
+                              className="w-full px-3 py-2 rounded-xl bg-white border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                            >
+                              <option value="15 Minutes">15 Minutes</option>
+                              <option value="1 Hour">1 Hour (Recommended)</option>
+                              <option value="8 Hours">8 Hours (Workday)</option>
+                              <option value="30 Days">30 Days</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="pt-4 flex justify-end">
+                  {/* Escrow Dispute & Mediation Resolution Card */}
+                  <div className="pt-4 border-t border-[#F3ECE7]">
+                    <div className="p-4 rounded-2xl bg-[#FFF3EC]/60 border border-[#FCE2D3] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-xs font-bold text-[#171717] flex items-center gap-1.5">
+                          <ShieldAlert className="w-4 h-4 text-[#F36B21]" />
+                          <span>Escrow Mediation & Dispute Center</span>
+                        </h4>
+                        <p className="text-[11px] text-[#777777] mt-0.5">
+                          File an official dispute or claim mediation for deliverable discrepancies or contractual defaults.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsDisputeModalOpen(true)}
+                        className="px-4 py-2 rounded-full border border-[#F36B21] text-[#F36B21] hover:bg-[#F36B21] hover:text-white text-xs font-bold transition-all whitespace-nowrap cursor-pointer shadow-xs self-start sm:self-auto"
+                      >
+                        File Mediation Claim
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
                     <button
                       type="submit"
                       className="px-6 py-2.5 rounded-full bg-[#171717] hover:bg-[#F36B21] text-white text-xs font-semibold transition-all shadow-xs cursor-pointer"
@@ -4189,6 +4255,112 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                 </span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          ESCROW DISPUTE RESOLUTION MODAL
+      ======================================================== */}
+      {isDisputeModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setIsDisputeModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-[#EAE2DC] p-6 sm:p-8 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 text-xs font-semibold border border-red-200">
+                  Escrow Dispute & Arbitration
+                </span>
+                <h3 className="text-lg font-bold text-[#171717] mt-1.5">File Mediation Claim</h3>
+                <p className="text-xs text-[#777777]">Freeze milestone funds and request neutral Workverse arbitration.</p>
+              </div>
+              <button
+                onClick={() => setIsDisputeModalOpen(false)}
+                className="p-1 rounded-full text-[#777777] hover:text-[#171717] hover:bg-[#FFF3EC] cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitDispute} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                  Select Project / Contract Under Dispute
+                </label>
+                <select
+                  value={disputeContract}
+                  onChange={(e) => setDisputeContract(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                >
+                  {projectList.map((p) => (
+                    <option key={p.id} value={p.title}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                  Dispute Category
+                </label>
+                <select
+                  value={disputeReason}
+                  onChange={(e) => setDisputeReason(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                >
+                  <option value="Deliverable Specs Discrepancy">Deliverable Specs Discrepancy</option>
+                  <option value="Milestone Deadline Default">Milestone Deadline Default</option>
+                  <option value="Quality Defects / Unresolved Bugs">Quality Defects / Unresolved Bugs</option>
+                  <option value="Communication Breakdown">Communication Breakdown</option>
+                  <option value="Contractual Scope Creep">Contractual Scope Creep</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                  Claim Summary & Evidence
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={disputeNotes}
+                  onChange={(e) => setDisputeNotes(e.target.value)}
+                  placeholder="Detail the deliverable discrepancy, expected milestone criteria, and references to project files..."
+                  className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-medium focus:outline-none focus:border-[#F36B21]"
+                />
+              </div>
+
+              <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <span>
+                  Filing places the milestone escrow into verified freeze state until Workverse Arbitration reviews both parties' submissions (24-48 hrs).
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsDisputeModalOpen(false)}
+                  className="px-4 py-2 rounded-full text-xs font-semibold text-[#777777] hover:text-[#171717] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingDispute}
+                  className="px-6 py-2.5 rounded-full bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-red-600/20 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <ShieldAlert className="w-4 h-4" />
+                  <span>{isSubmittingDispute ? 'Registering Claim...' : 'Submit Mediation Claim'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
