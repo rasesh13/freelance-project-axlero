@@ -113,6 +113,13 @@ function formatWalletMethodLabel(method) {
   return map[String(method || '').toLowerCase()] || 'Workverse Wallet';
 }
 
+const WORKSPACE_MEMBERS = [
+  { name: 'Arjun Mehta', role: 'Frontend Lead', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' },
+  { name: 'Vinita Paramar', role: 'Fullstack Engineer', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80' },
+  { name: 'Elena Rostova', role: 'UI/UX Designer', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=100&q=80' },
+  { name: 'Marcus Chen', role: 'Smart Contract Dev', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80' },
+];
+
 const KANBAN_COLUMNS = [
   { id: 'backlog', title: 'Backlog / Specs', accentColor: 'bg-slate-400', badgeBg: 'bg-slate-100 text-slate-700' },
   { id: 'progress', title: 'In Development', accentColor: 'bg-[#F36B21]', badgeBg: 'bg-amber-100 text-amber-800' },
@@ -238,6 +245,9 @@ const completedLength =
   const [newTaskPriority, setNewTaskPriority] = useState('Medium');
   const [newTaskEstimate, setNewTaskEstimate] = useState('4 hrs');
   const [newTaskProject, setNewTaskProject] = useState('SaaS Dashboard Development');
+  const [newTaskSubtasksList, setNewTaskSubtasksList] = useState([]);
+  const [subtaskInput, setSubtaskInput] = useState('');
+  const [newTaskAssigneeIndex, setNewTaskAssigneeIndex] = useState(0);
   const [kanbanSearch, setKanbanSearch] = useState('');
   const [kanbanPriorityFilter, setKanbanPriorityFilter] = useState('All');
   const [draggedTaskId, setDraggedTaskId] = useState(null);
@@ -505,30 +515,40 @@ const completedLength =
   const handleCreateTask = async (e) => {
     e.preventDefault();
     if (newTaskTitle.trim()) {
+      const chosenMember = WORKSPACE_MEMBERS[newTaskAssigneeIndex] || WORKSPACE_MEMBERS[0];
+      const subtasksSummary = newTaskSubtasksList.length > 0
+        ? `0/${newTaskSubtasksList.length} items`
+        : '1/2 ready';
+
       const taskPayload = {
         title: newTaskTitle.trim(),
-        project: newTaskProject,
+        project: newTaskProject || (projectList[0]?.title || 'SaaS Dashboard Development'),
         column: newTaskCol,
         priority: newTaskPriority,
-        estimate: newTaskEstimate,
-        assigneeName: currentUser?.name || 'Arjun Mehta',
-        assigneeRole: currentUser?.title || 'Frontend Lead',
-        assignee: currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+        estimate: newTaskEstimate || '4 hrs',
+        subtasks: subtasksSummary,
+        assigneeName: chosenMember.name,
+        assigneeRole: chosenMember.role,
+        assignee: chosenMember.avatar,
       };
 
       try {
         const res = await createKanbanTask(taskPayload);
-        const task = res.task || { id: `kb-${Date.now()}`, ...taskPayload, subtasks: '1/2 ready' };
+        const task = res.task || { id: `kb-${Date.now()}`, ...taskPayload };
         setKanbanTasks((prev) => [task, ...prev]);
         setIsNewTaskModalOpen(false);
         setNewTaskTitle('');
+        setNewTaskSubtasksList([]);
+        setSubtaskInput('');
         triggerToast('Task Created', `Added "${task.title}" to Kanban board`);
       } catch (err) {
         console.error('Failed to create task on backend:', err);
-        const task = { id: `kb-${Date.now()}`, ...taskPayload, subtasks: '1/2 ready' };
+        const task = { id: `kb-${Date.now()}`, ...taskPayload };
         setKanbanTasks((prev) => [task, ...prev]);
         setIsNewTaskModalOpen(false);
         setNewTaskTitle('');
+        setNewTaskSubtasksList([]);
+        setSubtaskInput('');
         triggerToast('Task Created', `Added "${task.title}" to Kanban board`);
       }
     }
@@ -3641,6 +3661,49 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                  Associated Project
+                </label>
+                <select
+                  value={newTaskProject}
+                  onChange={(e) => setNewTaskProject(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                >
+                  {projectList.map((p) => (
+                    <option key={p.id} value={p.title}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                  Assign Team Member
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {WORKSPACE_MEMBERS.map((member, idx) => (
+                    <button
+                      key={member.name}
+                      type="button"
+                      onClick={() => setNewTaskAssigneeIndex(idx)}
+                      className={`flex items-center gap-2 p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                        newTaskAssigneeIndex === idx
+                          ? 'border-[#F36B21] bg-[#FFF3EC]/60 ring-1 ring-[#F36B21]'
+                          : 'border-[#EAE2DC] bg-[#FFF9F5] hover:border-[#FCE2D3]'
+                      }`}
+                    >
+                      <img src={member.avatar} alt={member.name} className="w-7 h-7 rounded-full object-cover shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-[#171717] truncate">{member.name}</p>
+                        <p className="text-[10px] text-[#777777] truncate">{member.role}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
@@ -3672,6 +3735,64 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                     <option value="Urgent">Urgent</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#171717]">
+                    Task Checklist ({newTaskSubtasksList.length})
+                  </label>
+                  <span className="text-[11px] text-[#777777]">Optional milestone subtasks</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={subtaskInput}
+                    onChange={(e) => setSubtaskInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (subtaskInput.trim()) {
+                          setNewTaskSubtasksList((prev) => [...prev, subtaskInput.trim()]);
+                          setSubtaskInput('');
+                        }
+                      }
+                    }}
+                    placeholder="Add subtask (e.g. Implement unit tests)"
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-medium focus:outline-none focus:border-[#F36B21]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (subtaskInput.trim()) {
+                        setNewTaskSubtasksList((prev) => [...prev, subtaskInput.trim()]);
+                        setSubtaskInput('');
+                      }
+                    }}
+                    className="px-3 py-2 rounded-xl bg-[#171717] text-white text-xs font-bold hover:bg-[#333333] cursor-pointer shrink-0"
+                  >
+                    + Add
+                  </button>
+                </div>
+                {newTaskSubtasksList.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {newTaskSubtasksList.map((item, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FFF3EC] text-[#F36B21] border border-[#FCE2D3] text-[11px] font-semibold"
+                      >
+                        <span>✓ {item}</span>
+                        <button
+                          type="button"
+                          onClick={() => setNewTaskSubtasksList((prev) => prev.filter((_, i) => i !== idx))}
+                          className="text-[#F36B21] hover:text-[#171717] cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
