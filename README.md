@@ -1,255 +1,609 @@
-# Workverse — Freelance & Project Management Platform
+::: {align="center"}
+# WORKVERSE
 
-**Workverse** is a modern freelance marketplace and project management platform designed to streamline collaboration between clients and freelancers. It brings talent discovery, project management, communication, deliverables, and financial tracking together in one unified workspace.
+### Where Talent Meets Opportunity.
 
-Built with a focus on modern UI/UX, architectural aesthetics, and fluid GSAP animations, Workverse delivers an intuitive and engaging digital workspace.
+**A unified freelance marketplace and project management workspace.**
 
----
+Discover talent. Find meaningful work. Manage projects, conversations,
+deliverables, and escrow workflows --- all in one place.
 
-## ✨ Key Features
+`<br/>`{=html}
 
-### 1. Architectural UI & Interactive Experience
-- Modern, minimal, and responsive interface.
-- Warm Ivory (`#FFF9F5`), Architectural Orange (`#F36B21`), and Charcoal Black (`#171717`) design system.
-- Smooth GSAP-powered animations and transitions.
-- Clean layouts with intuitive navigation.
+[![Version](https://img.shields.io/badge/version-1.0.0-F36B21?style=for-the-badge)](#release-v100)
+[![Frontend](https://img.shields.io/badge/frontend-React%2019-171717?style=for-the-badge&logo=react&logoColor=61DAFB)](#technology-stack)
+[![Backend](https://img.shields.io/badge/backend-Node.js-171717?style=for-the-badge&logo=nodedotjs&logoColor=5FA04E)](#technology-stack)
+[![Build](https://img.shields.io/badge/build-Vite-171717?style=for-the-badge&logo=vite&logoColor=646CFF)](#getting-started)
+[![API](https://img.shields.io/badge/API-OpenAPI%203.0-F36B21?style=for-the-badge)](#api-documentation)
 
-### 2. Find Talent Hub
-- Discover and explore freelancer profiles.
-- Real-time search and advanced filtering.
-- Quick-filter options and candidate cards.
-- Stateful pagination.
-- Direct messaging through interactive modals.
+`<br/>`{=html}
 
-### 3. Find Work Directory
-- Browse and discover freelance opportunities.
-- Search and filter available projects.
-- Detailed project scope drawer.
-- Milestone-based escrow schedule breakdown.
-- Proposal submission functionality.
+**Warm Ivory** `#FFF9F5`  ·  **Architectural Orange** `#F36B21`  · 
+**Charcoal** `#171717`
+:::
 
-### 4. Projects Hub — 7 Integrated Modules
+------------------------------------------------------------------------
 
-| Module | Functionality |
-|---|---|
-| Projects Directory | Project tracking, status filters, progress indicators, and project creation. |
-| Proposals Manager | Review freelancer bids, pitch details, and accept proposals. |
-| Live Messages | Split-pane messaging interface with real-time message sending. |
-| Deliverables Drive | File management, preview metadata, upload, and download interactions. |
-| Squad & Team Roster | Manage contributors, assign roles, permissions, and send invitations. |
-| Escrow Financials | Track escrow balances, release payouts, and manage receipts. |
-| Workspace Settings | Configure security preferences, 2FA toggles, and notifications. |
+## Contents
 
-### 5. Pricing & Subscription Plans
-- Multiple currency options: INR (₹), USD ($), and EUR (€).
-- Monthly and annual billing options.
-- Interactive plan selection.
-- Expandable FAQ accordion.
+```{=html}
+<details open>
+```
+```{=html}
+<summary>
+```
+`<strong>`{=html}Explore Workverse`</strong>`{=html}
+```{=html}
+</summary>
+```
+-   [Overview](#overview)
+-   [Highlights](#highlights)
+-   [Platform modules](#platform-modules)
+-   [Architecture](#architecture)
+-   [Role-based access](#role-based-access)
+-   [Technology stack](#technology-stack)
+-   [Getting started](#getting-started)
+-   [API documentation](#api-documentation)
+-   [Testing and production build](#testing-and-production-build)
+-   [Project structure](#project-structure)
+-   [Release v1.0.0](#release-v100)
+-   [Roadmap](#roadmap)
 
-### 6. Resources & Knowledge Base
-- Searchable knowledge base.
-- Articles, guides, and playbooks.
-- Category-based filtering.
-
-### 7. Freelancer Profiles
-- Professional freelancer portfolios.
-- Work experience and project history.
-- Client reviews and ratings.
-- Direct messaging functionality.
-- Escrow contract creation.
-
-### 8. Global Command Palette
-- Accessible using `Ctrl + K` (Windows/Linux) or `Cmd + K` (macOS).
-- Universal search across talent, projects, and resources.
-- Quick navigation from different sections of the platform.
-
----
-
-## 🏗️ System Architecture & Engineering Flow
-
-Workverse is engineered with a separation of concerns across a modern decoupled architecture:
-
-```mermaid
-graph TD
-    subgraph ClientLayer["🖥️ Frontend Application (React 19 + Vite 8)"]
-        UI["Modern Ivory & Architectural Charcoal UI"]
-        GSAP["GSAP 3 Animation Engine"]
-        DND["HTML5 Native Kanban Drag & Drop"]
-        State["Dual Persona State (Client / Freelancer)"]
-    end
-
-    subgraph APILayer["⚡ REST API Layer (Node.js + Express 5)"]
-        Router["Express 5 REST Router (/api/*)"]
-        JWT["Cryptographic JWT Bearer Authenticator"]
-        CORS["CORS & Request Sanitization"]
-        Docs["OpenAPI 3.0 & Swagger UI (/docs)"]
-    end
-
-    subgraph DataLayer["🗄️ Persistence & Financial Engine"]
-        SQLite["SQLite Embedded Engine (WAL Mode)"]
-        Ledger["Double-Entry Escrow & Wallet Ledger"]
-        Relational["18 Relational Normalized Tables"]
-    end
-
-    UI --> Router
-    State --> JWT
-    DND --> Router
-    Router --> SQLite
-    Router --> Ledger
-    Ledger --> Relational
+```{=html}
+</details>
 ```
 
-### 🔐 Role-Based Access Control (RBAC) & Persona Modeling
+------------------------------------------------------------------------
 
-| Feature / Domain | Client Persona | Freelancer Persona | Backend Security Policy |
-| :
----
+## Overview
 
-## 📡 OpenAPI 3.0 REST Specification & API Catalog
+**Workverse** is a modern freelance marketplace and project management
+platform built to bring clients and freelancers into one connected
+workspace. It combines talent discovery, project opportunities, project
+execution, communication, deliverable management, and financial
+tracking.
 
-Workverse provides a production-grade REST API with interactive Swagger documentation and embedded OpenAPI 3.0 schema generation:
+The experience is shaped around a minimal, responsive interface with an
+architectural visual language and GSAP-powered motion.
 
-- **Interactive Swagger UI**: [`http://localhost:5000/docs`](http://localhost:5000/docs)
-- **Raw OpenAPI 3.0 JSON**: [`http://localhost:5000/openapi.json`](http://localhost:5000/openapi.json)
-- **Healthcheck & Telemetry**: [`http://localhost:5000/api/health`](http://localhost:5000/api/health)
+```{=html}
+<table>
+```
+```{=html}
+<tr>
+```
+```{=html}
+<td width="33%" align="center">
+```
+**Discover**
 
-### 📋 Core REST Endpoints Catalog
+Find freelancers, explore portfolios, and browse opportunities.
 
-| HTTP Method | Endpoint URI | Description | Auth Required |
-| :--- | :--- | :--- | :---: |
-| `GET` | `/api/health` | SQLite WAL connectivity, server uptime, and status | No |
-| `GET` | `/api/stats` | Aggregated platform metrics (projects, users, volume) | No |
-| `POST` | `/api/auth/login` | Authenticate user credentials and issue JWT Bearer token | No |
-| `POST` | `/api/auth/register` | Register new client or freelancer account | No |
-| `GET` | `/api/auth/me` | Fetch authenticated session claims and profile | **Yes (Bearer)** |
-| `GET` | `/api/projects` | Query active projects with category, status & text filter | No |
-| `POST` | `/api/projects` | Create new fixed-price or hourly project initiative | No |
-| `GET` | `/api/projects/:id` | Retrieve comprehensive project details and scope | No |
-| `DELETE` | `/api/projects/:id` | Remove project initiative from workspace | No |
-| `GET` | `/api/kanban` | Retrieve sprint milestone tasks partitioned by columns | **Yes (Bearer)** |
-| `POST` | `/api/kanban` | Create new kanban task card with checklist subtasks | **Yes (Bearer)** |
-| `PATCH` | `/api/kanban/:id/column` | Update card column position (HTML5 Drag & Drop sync) | **Yes (Bearer)** |
-| `DELETE` | `/api/kanban/:id` | Remove deliverable task card from sprint board | **Yes (Bearer)** |
-| `GET` | `/api/files` | Query workspace project files, sizes, and upload metadata | **Yes (Bearer)** |
-| `POST` | `/api/files` | Upload and register new deliverable asset metadata | **Yes (Bearer)** |
-| `DELETE` | `/api/files/:id` | Remove deliverable file from workspace repository | **Yes (Bearer)** |
-| `GET` | `/api/wallet` | Fetch available balance, escrow holding, and ledger records | **Yes (Bearer)** |
-| `POST` | `/api/wallet/withdraw` | Submit verified balance withdrawal request | **Yes (Bearer)** |
-| `POST` | `/api/time/log` | Record billable stopwatch time and credit wallet balance | **Yes (Bearer)** |
-| `GET` | `/api/payments` | Query escrow milestone disbursements and clearance states | **Yes (Bearer)** |
-| `PATCH` | `/api/payments/:id/release` | Release smart escrow milestone funds to beneficiary | **Yes (Bearer)** |
-| `GET` | `/api/contracts` | Fetch active engagement contracts and agreements | **Yes (Bearer)** |
-| `GET` | `/api/proposals` | Query freelancer proposals, bids, and pitch letters | **Yes (Bearer)** |
-| `GET` | `/api/messages` | Retrieve split-pane live conversation threads | **Yes (Bearer)** |
-| `POST` | `/api/messages` | Dispatch new workspace message to thread | **Yes (Bearer)** |
-| `GET` | `/api/search` | Full-text search across talent, projects, and resources | No |
-| `GET` | `/api/settings` | Retrieve workspace 2FA policies and escrow configurations | No |
-| `PUT` | `/api/settings` | Update workspace preferences, 2FA, and payout limits | No |
---- | :---: | :---: | :--- |
-| **Project Creation & Scoping** | Full (Create, Budget, Milestones) | Read-only / Bid Discovery | Enforced validation on fixed budget / hourly rate |
-| **Sprint Milestones Kanban** | Inspect & Approve Columns | Drag & Drop Card Movement | Optimistic UI with real-time SQLite sync |
-| **Deliverables Drive** | Review & Download Archives | Upload Code & Design Bundles | Cryptographic sha256 metadata verification |
-| **Smart Escrow Wallet** | Deposit, Lock & Release Funds | Request Payout & Withdraw | 100% Zero-fee guarantee, non-negative assertions |
-| **Workspace Settings** | Configure 2FA & Auto-Disbursement | Manage Portfolio & Hourly Rates | JWT authenticated session policies |
+```{=html}
+</td>
+```
+```{=html}
+<td width="33%" align="center">
+```
+**Collaborate**
 
----
+Coordinate projects, proposals, messages, teams, and deliverables.
 
-## 🛠️ Technology Stack
+```{=html}
+</td>
+```
+```{=html}
+<td width="33%" align="center">
+```
+**Manage**
 
-| Category | Technologies |
-|---|---|
-| Frontend | React.js, JavaScript |
-| Build Tool | Vite |
-| Styling | CSS |
-| Animations | GSAP |
-| Backend | Node.js |
-| Database | Project backend integration |
-| Package Manager | npm |
-| Version Control | Git & GitHub |
+Track milestones, time, escrow balances, and payouts.
 
----
+```{=html}
+</td>
+```
+```{=html}
+</tr>
+```
+```{=html}
+</table>
+```
+## Highlights
 
-## 🚀 Getting Started
+  -----------------------------------------------------------------------
+  Experience                          What it brings
+  ----------------------------------- -----------------------------------
+  **Architectural UI**                Responsive layouts, a warm
+                                      ivory/orange/charcoal design
+                                      system, and smooth GSAP
+                                      transitions.
 
-Follow these steps to run Workverse locally.
+  **Talent discovery**                Freelancer profiles, search,
+                                      advanced filters, quick filters,
+                                      pagination, and messaging modals.
+
+  **Work discovery**                  Searchable opportunities,
+                                      project-scope drawers,
+                                      milestone-based escrow breakdowns,
+                                      and proposal submission.
+
+  **Project workspace**               Seven connected modules for project
+                                      execution and administration.
+
+  **Pricing**                         INR, USD, and EUR currency options,
+                                      monthly/annual billing, plan
+                                      selection, and FAQ accordion.
+
+  **Knowledge base**                  Searchable articles, guides,
+                                      playbooks, and category filters.
+
+  **Freelancer profiles**             Portfolios, experience, project
+                                      history, reviews, ratings,
+                                      messaging, and escrow contract
+                                      creation.
+
+  **Command palette**                 Universal search and quick
+                                      navigation with `Ctrl + K`
+                                      (Windows/Linux) or `Cmd + K`
+                                      (macOS).
+  -----------------------------------------------------------------------
+
+## Platform modules
+
+### Find Talent
+
+-   Discover and explore freelancer profiles.
+-   Search and filter candidates.
+-   Use quick filters and stateful pagination.
+-   Start conversations through interactive messaging modals.
+
+### Find Work
+
+-   Browse freelance opportunities.
+-   Search and filter available projects.
+-   Inspect detailed project scopes in a drawer.
+-   Review milestone-based escrow schedules.
+-   Submit proposals.
+
+### Projects Hub
+
+The Projects Hub brings seven project workflows together:
+
+  -----------------------------------------------------------------------
+  Module                              Capabilities
+  ----------------------------------- -----------------------------------
+  **Projects Directory**              Track projects, filter by status,
+                                      view progress, and create projects.
+
+  **Proposals Manager**               Review bids and pitch details, then
+                                      accept proposals.
+
+  **Live Messages**                   Split-pane messaging interface with
+                                      message sending.
+
+  **Deliverables Drive**              Manage files, preview metadata, and
+                                      use upload/download interactions.
+
+  **Squad & Team Roster**             Manage contributors, assign roles
+                                      and permissions, and send
+                                      invitations.
+
+  **Escrow Financials**               Track escrow balances, release
+                                      payouts, and manage receipts.
+
+  **Workspace Settings**              Configure security preferences, 2FA
+                                      toggles, and notifications.
+  -----------------------------------------------------------------------
+
+### Pricing & Resources
+
+-   Pricing plans with INR, USD, and EUR currency options.
+-   Monthly and annual billing selection.
+-   Expandable FAQ accordion.
+-   Searchable knowledge base with articles, guides, playbooks, and
+    category filters.
+
+### Global command palette
+
+Use the keyboard shortcut to search across talent, projects, and
+resources, then navigate directly to a relevant area of the platform.
+
+```{=html}
+<pre>
+Windows / Linux     Ctrl + K
+macOS               Cmd + K
+</pre>
+```
+
+------------------------------------------------------------------------
+
+## Architecture
+
+Workverse follows a decoupled client/API/persistence architecture. The
+frontend communicates with the REST API, while the backend handles
+authentication, routing, persistence, and the financial ledger.
+
+``` mermaid
+flowchart TB
+    subgraph CLIENT["Frontend application · React 19 + Vite 8"]
+        UI["Ivory & charcoal interface"]
+        GSAP["GSAP 3 animation engine"]
+        DND["HTML5 native Kanban drag & drop"]
+        STATE["Client / Freelancer persona state"]
+    end
+
+    subgraph API["REST API layer · Node.js + Express 5"]
+        ROUTER["Express REST router · /api/*"]
+        AUTH["JWT bearer authentication"]
+        CORS["CORS & request sanitization"]
+        DOCS["OpenAPI 3.0 · Swagger UI"]
+    end
+
+    subgraph DATA["Persistence & financial engine"]
+        DB[("SQLite · WAL mode")]
+        LEDGER["Double-entry escrow & wallet ledger"]
+        TABLES["18 normalized relational tables"]
+    end
+
+    UI --> ROUTER
+    GSAP --> UI
+    DND --> ROUTER
+    STATE --> AUTH
+    ROUTER --> CORS
+    ROUTER --> AUTH
+    ROUTER --> DOCS
+    ROUTER --> DB
+    ROUTER --> LEDGER
+    LEDGER --> TABLES
+    DB --> TABLES
+```
+
+### Engineering notes
+
+-   **Frontend:** React 19 application built with Vite 8.
+-   **API:** Express 5 REST endpoints.
+-   **Authentication:** JWT bearer-token flow.
+-   **Persistence:** SQLite configured in Write-Ahead Logging (WAL)
+    mode.
+-   **Financial workflows:** Escrow and wallet ledger functionality.
+-   **API reference:** OpenAPI 3.0 schema and Swagger UI.
+
+## Role-based access
+
+Workverse models two platform personas: **Client** and **Freelancer**.
+The available project description identifies persona-specific workflows
+and backend security policies, but the original RBAC matrix is
+incomplete. The table below therefore summarizes only the documented
+distinction.
+
+  -----------------------------------------------------------------------
+  Area                    Client persona          Freelancer persona
+  ----------------------- ----------------------- -----------------------
+  Project creation        Create and scope        Discover projects and
+                          projects, set budgets   submit bids
+                          and milestones          
+
+  Sprint milestones       Inspect and approve     Move task cards through
+                          workflow columns        the board
+
+  Deliverables            Review and download     Upload code and design
+                          deliverables            bundles
+
+  Escrow wallet           Deposit, lock, and      Request payouts and
+                          release funds           withdrawals
+
+  Workspace               Configure 2FA and       Manage portfolio and
+                          auto-disbursement       hourly rates
+  -----------------------------------------------------------------------
+
+> **Note:** Backend policy descriptions in the source include validation
+> for fixed budgets/hourly rates, optimistic UI with SQLite
+> synchronization, SHA-256 metadata verification, non-negative wallet
+> assertions, and JWT-authenticated session policies.
+
+------------------------------------------------------------------------
+
+## Technology stack
+
+  Layer               Technologies
+  ------------------- -------------------------
+  Frontend            React.js, JavaScript
+  Build tool          Vite
+  Styling             CSS
+  Animation           GSAP
+  Backend             Node.js, Express 5
+  Database            SQLite (WAL mode)
+  API specification   OpenAPI 3.0, Swagger UI
+  Package manager     npm
+  Version control     Git & GitHub
+
+------------------------------------------------------------------------
+
+## Getting started
+
+Run Workverse locally using the frontend and backend development
+servers.
 
 ### Prerequisites
 
-Make sure you have the following installed:
+-   **Node.js:** v18.0.0 or higher
+-   **npm:** v9.0.0 or higher
+-   **Git**
 
-- **Node.js:** v18.0.0 or higher
-- **npm:** v9.0.0 or higher
-- **Git**
+### 1. Clone the repository
 
-### Installation & Local Setup
-
-**1. Clone the repository**
-
-```bash
+``` bash
 git clone https://github.com/rasesh13/freelance-project-axlero.git
 cd freelance-project-axlero
 ```
 
-**2. Start the Backend API (Terminal 1)**
+### 2. Start the backend
 
-The backend runs on Express 5 + SQLite WAL persistence on port `5000`:
+Open a terminal:
 
-```bash
+``` bash
 cd backend
 npm install
 npm start
 ```
 
-*Backend server is live on:* [`http://localhost:5000`](http://localhost:5000)  
-*Swagger Documentation:* [`http://localhost:5000/docs`](http://localhost:5000/docs)  
-*Health Check:* [`http://localhost:5000/api/health`](http://localhost:5000/api/health)
+Backend base URL: `http://localhost:5000`
 
-**3. Start the Frontend App (Terminal 2)**
+  Resource       URL
+  -------------- --------------------------------------
+  Backend        `http://localhost:5000`
+  Swagger UI     `http://localhost:5000/docs`
+  OpenAPI JSON   `http://localhost:5000/openapi.json`
+  Health check   `http://localhost:5000/api/health`
 
-The frontend runs on Vite 8 on port `5173`:
+### 3. Start the frontend
 
-```bash
+Open a second terminal from the repository root:
+
+``` bash
 cd frontend
 npm install
 npm run dev
 ```
 
-*Frontend interface is live on:* [`http://localhost:5173`](http://localhost:5173)
+Frontend development URL: `http://localhost:5173`
 
----
+------------------------------------------------------------------------
 
-## 🧪 Automated Testing & Verification Suite
+## API documentation
 
-Workverse includes a comprehensive automated test runner with 100% pass certification:
+Workverse exposes a REST API with interactive Swagger documentation and
+an OpenAPI 3.0 schema.
 
-```bash
-# Run unified test suite (Database Relational Audit + REST API Integration)
-npm test --prefix backend
+-   **Swagger UI:**
+    [`http://localhost:5000/docs`](http://localhost:5000/docs)
+-   **Raw OpenAPI JSON:**
+    [`http://localhost:5000/openapi.json`](http://localhost:5000/openapi.json)
+-   **Health check:**
+    [`http://localhost:5000/api/health`](http://localhost:5000/api/health)
 
-# Run individual testing stages
-npm run test:api --prefix backend       # 26 E2E REST API integration tests
-npm run test:db --prefix backend        # 13 Database relational & WAL checks
-npm run test:health --prefix backend    # Instant health check ping
+### Endpoint catalog
+
+```{=html}
+<details open>
+```
+```{=html}
+<summary>
+```
+`<strong>`{=html}Health, metrics & authentication`</strong>`{=html}
+```{=html}
+</summary>
+```
+  ----------------------------------------------------------------------------
+  Method            Endpoint               Description       Auth
+  ----------------- ---------------------- ----------------- -----------------
+  `GET`             `/api/health`          SQLite WAL        No
+                                           connectivity,     
+                                           uptime, and       
+                                           server status     
+
+  `GET`             `/api/stats`           Aggregated        No
+                                           platform metrics  
+
+  `POST`            `/api/auth/login`      Authenticate and  No
+                                           issue JWT bearer  
+                                           token             
+
+  `POST`            `/api/auth/register`   Register a client No
+                                           or freelancer     
+                                           account           
+
+  `GET`             `/api/auth/me`         Fetch             Bearer
+                                           authenticated     
+                                           session claims    
+                                           and profile       
+  ----------------------------------------------------------------------------
+
+```{=html}
+</details>
+```
+```{=html}
+<details>
+```
+```{=html}
+<summary>
+```
+`<strong>`{=html}Projects & Kanban`</strong>`{=html}
+```{=html}
+</summary>
+```
+  --------------------------------------------------------------------------------
+  Method            Endpoint                   Description       Auth
+  ----------------- -------------------------- ----------------- -----------------
+  `GET`             `/api/projects`            Query projects by No
+                                               category, status, 
+                                               and text filter   
+
+  `POST`            `/api/projects`            Create a          No
+                                               fixed-price or    
+                                               hourly project    
+
+  `GET`             `/api/projects/:id`        Retrieve project  No
+                                               details and scope 
+
+  `DELETE`          `/api/projects/:id`        Remove a project  No
+
+  `GET`             `/api/kanban`              Retrieve sprint   Bearer
+                                               tasks grouped by  
+                                               columns           
+
+  `POST`            `/api/kanban`              Create a task     Bearer
+                                               card with         
+                                               checklist         
+                                               subtasks          
+
+  `PATCH`           `/api/kanban/:id/column`   Update a card's   Bearer
+                                               column after drag 
+                                               and drop          
+
+  `DELETE`          `/api/kanban/:id`          Remove a sprint   Bearer
+                                               task card         
+  --------------------------------------------------------------------------------
+
+```{=html}
+</details>
+```
+```{=html}
+<details>
+```
+```{=html}
+<summary>
+```
+`<strong>`{=html}Files, wallet & payments`</strong>`{=html}
+```{=html}
+</summary>
+```
+  -----------------------------------------------------------------------------------
+  Method            Endpoint                      Description       Auth
+  ----------------- ----------------------------- ----------------- -----------------
+  `GET`             `/api/files`                  Query project     Bearer
+                                                  files and upload  
+                                                  metadata          
+
+  `POST`            `/api/files`                  Upload/register   Bearer
+                                                  deliverable asset 
+                                                  metadata          
+
+  `DELETE`          `/api/files/:id`              Remove a          Bearer
+                                                  deliverable file  
+
+  `GET`             `/api/wallet`                 Fetch balance,    Bearer
+                                                  escrow holdings,  
+                                                  and ledger        
+                                                  records           
+
+  `POST`            `/api/wallet/withdraw`        Submit a balance  Bearer
+                                                  withdrawal        
+                                                  request           
+
+  `POST`            `/api/time/log`               Record billable   Bearer
+                                                  time and credit   
+                                                  wallet balance    
+
+  `GET`             `/api/payments`               Query escrow      Bearer
+                                                  milestone         
+                                                  disbursements     
+
+  `PATCH`           `/api/payments/:id/release`   Release milestone Bearer
+                                                  funds to a        
+                                                  beneficiary       
+  -----------------------------------------------------------------------------------
+
+```{=html}
+</details>
+```
+```{=html}
+<details>
+```
+```{=html}
+<summary>
+```
+`<strong>`{=html}Contracts, proposals, messages, search &
+settings`</strong>`{=html}
+```{=html}
+</summary>
+```
+  ------------------------------------------------------------------------
+  Method            Endpoint           Description       Auth
+  ----------------- ------------------ ----------------- -----------------
+  `GET`             `/api/contracts`   Fetch active      Bearer
+                                       engagement        
+                                       contracts         
+
+  `GET`             `/api/proposals`   Query freelancer  Bearer
+                                       proposals and     
+                                       pitch letters     
+
+  `GET`             `/api/messages`    Retrieve          Bearer
+                                       conversation      
+                                       threads           
+
+  `POST`            `/api/messages`    Send a workspace  Bearer
+                                       message           
+
+  `GET`             `/api/search`      Search talent,    No
+                                       projects, and     
+                                       resources         
+
+  `GET`             `/api/settings`    Retrieve          No
+                                       workspace and     
+                                       escrow settings   
+
+  `PUT`             `/api/settings`    Update            No
+                                       preferences, 2FA, 
+                                       and payout limits 
+  ------------------------------------------------------------------------
+
+```{=html}
+</details>
 ```
 
-### 📦 Production Build
+------------------------------------------------------------------------
 
-To verify and generate an optimized client production bundle:
+## Testing and production build
 
-```bash
+The project includes a backend test runner covering REST API
+integration, database checks, and health verification.
+
+### Run the test suite
+
+``` bash
+# Unified test suite
+npm test --prefix backend
+
+# Individual test stages
+npm run test:api --prefix backend
+npm run test:db --prefix backend
+npm run test:health --prefix backend
+```
+
+  Test stage            Reported coverage
+  --------------------- ----------------------------------------
+  API integration       26 end-to-end REST API tests
+  Database audit        13 relational integrity and WAL checks
+  Health verification   Backend health-check ping
+
+### Build the frontend
+
+``` bash
 cd frontend
 npm run build
 ```
 
-Output directory: `frontend/dist/` (Verified: `✓ 2076 modules transformed, 0 errors`).
+The supplied release notes report a production build of **2,076 modules
+transformed with 0 errors**.
 
----
+------------------------------------------------------------------------
 
-## 📁 Project Structure
+## Project structure
 
-```text
+``` text
 Workverse/
-│
 ├── backend/
 │   ├── dashboard.js
 │   ├── db.js
@@ -271,66 +625,103 @@ Workverse/
 └── README.md
 ```
 
----
+------------------------------------------------------------------------
 
-## 🎯 Project Goals
+## Release v1.0.0
 
-Workverse aims to simplify the freelance ecosystem by providing:
+**Workverse v1.0.0** marks completion of the documented 10-day milestone
+development plan.
 
-- A centralized platform for clients and freelancers.
-- Better project visibility and collaboration.
-- Streamlined communication and deliverable management.
-- Transparent milestone and escrow tracking.
-- An intuitive and engaging user experience.
-
----
-
-
----
-
-## 🏆 Workverse v1.0.0 Production Release & Sprint Changelog
-
-Workverse v1.0.0 represents the completion of the 10-day milestone development plan, delivering a modern full-stack freelance marketplace and project management dashboard:
-
-```text
-========================================================================================
-✨ WORKVERSE v1.0.0 PRODUCTION MILESTONE SCHEDULE COMPLETE
-========================================================================================
-  [Day 01] Design tokens, palette configuration, GSAP animations, responsive navbar
-  [Day 02] Find Talent & Find Work directories, scope modals, candidate cards
-  [Day 03] Interactive sprint board, stopwatch time tracker, 3-step project setup wizard
-  [Day 04] Express 5 REST API, SQLite WAL persistence, OpenAPI 3.0 & Swagger UI
-  [Day 05] Unified App architecture, JWT authentication, client & freelancer personas
-  [Day 06] Projects Hub sub-navigation, live escrow wallet telemetry, SVG donut analytics
-  [Day 07] Milestones delivery board, native HTML5 Drag & Drop, backend column sync
-  [Day 08] Task checklist modals, split-pane chat drawer, escrow dispute resolution
-  [Day 09] 39-test automated test runner, SQLite integrity audit, health verification
-  [Day 10] Architecture diagrams, OpenAPI guide, developer documentation & v1.0.0 release
-========================================================================================
+```{=html}
+<details open>
 ```
+```{=html}
+<summary>
+```
+`<strong>`{=html}10-day development timeline`</strong>`{=html}
+```{=html}
+</summary>
+```
+  -----------------------------------------------------------------------
+                                       Day Milestone
+  ---------------------------------------- ------------------------------
+                                        01 Design tokens, palette
+                                           configuration, GSAP
+                                           animations, responsive navbar
 
-### 📋 Release Verification Checklist
+                                        02 Find Talent & Find Work
+                                           directories, scope modals,
+                                           candidate cards
 
-- [x] **Frontend Production Build**: `✓ 2076 modules transformed, 0 errors` via Rolldown & Vite.
-- [x] **Backend Integration Tests**: `26/26 integration tests passed` via `backend/test-api.js`.
-- [x] **Database Relational Integrity**: `13/13 relational checks passed` via `backend/test-db.js`.
-- [x] **Zero Memory Leaks & WAL Journal**: Verified active SQLite Write-Ahead-Logging mode.
-- [x] **OpenAPI 3.0 & Swagger UI**: Live on `/docs` and `/openapi.json`.
-- [x] **Clean Git History**: 100% linear commit stream on branch `rasesh`.
+                                        03 Interactive sprint board,
+                                           stopwatch time tracker, 3-step
+                                           project setup wizard
 
-## 🔮 Future Enhancements
+                                        04 Express 5 REST API, SQLite WAL
+                                           persistence, OpenAPI 3.0 &
+                                           Swagger UI
 
-- Enhanced real-time notifications.
-- Advanced analytics and reporting.
-- Secure payment gateway integration.
-- Improved file-sharing and collaboration tools.
-- Further automation of project workflows.
+                                        05 Unified app architecture, JWT
+                                           authentication, client &
+                                           freelancer personas
 
----
+                                        06 Projects Hub navigation,
+                                           escrow wallet telemetry, SVG
+                                           donut analytics
 
+                                        07 Milestones delivery board,
+                                           native HTML5 drag and drop,
+                                           backend column sync
 
-<p align="center">
-  <strong>Workverse — Where Talent Meets Opportunity.</strong>
-  <br/>
-  Built to empower better collaboration and smarter project management.
-</p>
+                                        08 Task checklist modals,
+                                           split-pane chat drawer, escrow
+                                           dispute resolution
+
+                                        09 39-test automated runner,
+                                           SQLite integrity audit, health
+                                           verification
+
+                                        10 Architecture diagrams, OpenAPI
+                                           guide, developer
+                                           documentation, v1.0.0 release
+  -----------------------------------------------------------------------
+
+```{=html}
+</details>
+```
+### Release verification
+
+-   [x] Frontend production build --- 2,076 modules transformed, 0
+    errors (as reported).
+-   [x] Backend API integration tests --- 26/26 passed (as reported).
+-   [x] Database relational integrity checks --- 13/13 passed (as
+    reported).
+-   [x] SQLite Write-Ahead Logging mode verified (as reported).
+-   [x] OpenAPI 3.0 schema and Swagger UI documented.
+-   [x] Linear Git commit stream on branch `rasesh` (as reported).
+
+------------------------------------------------------------------------
+
+## Roadmap
+
+Planned areas for future enhancement:
+
+-   Enhanced real-time notifications.
+-   Advanced analytics and reporting.
+-   Secure payment gateway integration.
+-   Improved file sharing and collaboration.
+-   Further automation of project workflows.
+
+------------------------------------------------------------------------
+
+::: {align="center"}
+## Workverse
+
+### Where Talent Meets Opportunity.
+
+*Built to empower better collaboration and smarter project management.*
+
+`<br/>`{=html}
+
+**Discover · Collaborate · Deliver**
+:::
