@@ -1668,14 +1668,9 @@ export default function ProjectsHubPage({
                   </div>
                 </div>
 
-                {/* 4. Full-Width 4-Column Responsive Kanban Grid */}
+                {/* 4. Full-Width 4-Column Responsive Drag & Drop Kanban Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-6 items-start">
-                  {[
-                    { id: 'backlog', title: 'Backlog / Specs', accentColor: 'bg-slate-400', badgeBg: 'bg-slate-100 text-slate-700' },
-                    { id: 'progress', title: 'In Development', accentColor: 'bg-[#F36B21]', badgeBg: 'bg-amber-100 text-amber-800' },
-                    { id: 'review', title: 'Milestone Review', accentColor: 'bg-purple-500', badgeBg: 'bg-purple-100 text-purple-800' },
-                    { id: 'done', title: 'Approved & Released', accentColor: 'bg-emerald-500', badgeBg: 'bg-emerald-100 text-emerald-800' },
-                  ].map((col) => {
+                  {KANBAN_COLUMNS.map((col) => {
                     const colTasks = kanbanTasks.filter((t) => {
                       const matchesCol = t.column === col.id;
                       const matchesSearch = !kanbanSearch || t.title.toLowerCase().includes(kanbanSearch.toLowerCase()) || t.project.toLowerCase().includes(kanbanSearch.toLowerCase());
