@@ -1,13 +1,23 @@
 {
-  "name": "backend",
+  "name": "workverse-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Workverse Production Backend API with SQLite WAL persistence, JWT authentication, and Escrow disbursements",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "test": "node test-runner.js",
+    "test:api": "node test-api.js",
+    "test:db": "node test-db.js",
+    "test:health": "node -e \"fetch('http://localhost:5000/api/health').then(r=>r.json()).then(d=>{console.log('Status:', d.status, '| DB:', d.database); process.exit(d.status==='ok'?0:1)})\""
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "workverse",
+    "freelance-marketplace",
+    "sqlite-wal",
+    "rest-api",
+    "escrow"
+  ],
+  "author": "Workverse Core Engineering",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
