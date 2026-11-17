@@ -181,7 +181,39 @@ export default function ProjectsHubPage({
   // Projects State
   const [projectStatusFilter, setProjectStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [projectList, setProjectList] = useState([]);
+const [projectList, setProjectList] = useState(PROJECTS);
+
+// Project Overview Statistics
+const totalProjects = projectList.length;
+
+const inProgressCount = projectList.filter(
+  (p) => p.status === 'In Progress'
+).length;
+
+const inReviewCount = projectList.filter(
+  (p) => p.status === 'In Review'
+).length;
+
+const completedCount = projectList.filter(
+  (p) => p.status === 'Completed'
+).length;
+
+const circumference = 251.2;
+
+const inProgressLength =
+  totalProjects > 0
+    ? (inProgressCount / totalProjects) * circumference
+    : 0;
+
+const inReviewLength =
+  totalProjects > 0
+    ? (inReviewCount / totalProjects) * circumference
+    : 0;
+
+const completedLength =
+  totalProjects > 0
+    ? (completedCount / totalProjects) * circumference
+    : 0;
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
 
   // New Project 3-Step Wizard State
@@ -502,7 +534,7 @@ export default function ProjectsHubPage({
     }
   };
 
-  // Handle Create New Project (API Sync)
+  // Handle Create New Project (API Sync + Validation)
   const handleCreateProject = async (e) => {
     e.preventDefault();
 
@@ -516,115 +548,143 @@ export default function ProjectsHubPage({
       return;
     }
 
-    if (newTitle.trim()) {
-      const projPayload = {
-        title: newTitle.trim(),
-        category: newCategory,
-        description: newDesc || 'Custom freelance milestone deliverables and engineering.',
-        budget: newBudget,
-        budgetType: 'Fixed Price',
-        duration: '2 - 3 Weeks',
-        skills: ['React', 'Next.js', 'Tailwind'],
-        deadline: newDeadline,
-      };
-
-      try {
-        const res = await createProject(projPayload);
-        const createdProj = res.project || { id: `proj-${Date.now()}`, ...projPayload, progress: 10, status: 'In Progress' };
-        setProjectList((prev) => [createdProj, ...prev]);
-        setIsNewProjectModalOpen(false);
-        setNewTitle('');
-        setNewDesc('');
-        triggerToast('Project Created', `Published "${createdProj.title}" to workspace!`);
-      } catch (err) {
-        console.error('Failed to create project on backend:', err);
-        const createdProj = { id: `proj-${Date.now()}`, ...projPayload, progress: 10, status: 'In Progress' };
-        setProjectList((prev) => [createdProj, ...prev]);
-        setIsNewProjectModalOpen(false);
-        setNewTitle('');
-        setNewDesc('');
-        triggerToast('Project Created', `Published "${createdProj.title}"!`);
-      }
-    }
-  };
-
-  // Handle Log Milestone Time (API Sync)
-  const handleLogMilestoneTime = async () => {
-    const hrs = (timerSeconds / 3600).toFixed(2);
-    const earned = ((timerSeconds / 3600) * hourlyRate).toFixed(2);
+    const projPayload = {
+      title: newTitle.trim(),
+      category: newCategory,
+      description: newDesc.trim() || 'Custom freelance milestone deliverables and engineering.',
+      budget: `$${budgetValue.toLocaleString('en-US')}`,
+      budgetType: 'Fixed Price',
+      duration: '2 - 3 Weeks',
+      skills: ['React', 'Next.js', 'Tailwind'],
+      featured: false,
+      saved: false,
+      applied: false,
+      progress: 0,
+      status: 'In Progress',
+      deadline: newDeadline,
+      team: [
+        {
+          name: 'You',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+        },
+      ],
+      teamExtra: 0,
+      thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80',
+      type: 'dev',
+    };
 
     try {
-      const res = await logTimeSession({
-        seconds: timerSeconds,
-        project_title: 'SaaS Dashboard Development',
-        hourly_rate: hourlyRate,
-        formatted_time: formatTimer(timerSeconds),
-      });
-
-      if (res && typeof res.newWalletBalance === 'number') {
-        setFreelancerBalance(res.newWalletBalance);
-        setWithdrawAmountInput(res.newWalletBalance.toFixed(2));
-      } else {
-        setFreelancerBalance((prev) => prev + parseFloat(earned));
-      }
-      fetchWalletInfo().then((w) => {
-        if (Array.isArray(w?.transactions)) setWalletTransactions(w.transactions);
-      }).catch(() => { });
-      triggerToast('Session Logged to Milestone', `Logged ${hrs} hrs ($${earned}) to verified wallet!`);
-      setTimerSeconds(0);
-      setIsTimerRunning(false);
+      const res = await createProject(projPayload);
+      const createdProj = res.project || { id: `proj-${Date.now()}`, ...projPayload };
+      setProjectList((prev) => [createdProj, ...prev]);
+      setIsNewProjectModalOpen(false);
+      setWizardStep(1);
+      setNewTitle('');
+      setNewDesc('');
+      setNewBudget('$1,500');
+      setNewCategory('Web Development');
+      triggerToast('Project Created Successfully', `${createdProj.title} has been added to your dashboard.`);
     } catch (err) {
-      console.error('Failed to log session:', err);
-      triggerToast('Log Error', err.message || 'Could not log time session.', 'error');
+      console.error('Failed to create project on backend:', err);
+      const createdProj = { id: `proj-${Date.now()}`, ...projPayload };
+      setProjectList((prev) => [createdProj, ...prev]);
+      setIsNewProjectModalOpen(false);
+      setWizardStep(1);
+      setNewTitle('');
+      setNewDesc('');
+      setNewBudget('$1,500');
+      setNewCategory('Web Development');
+      triggerToast('Project Created', `Saved "${createdProj.title}" locally.`);
     }
   };
 
-  // Handle Confirm Withdrawal (API Sync)
-  const handleConfirmWithdrawal = async () => {
-    if (isWithdrawing) return;
-    const requested = parseFloat(withdrawAmountInput);
-    if (isNaN(requested) || requested <= 0) {
-      triggerToast('Invalid Amount', 'Enter a positive withdrawal amount.', 'error');
-      return;
-    }
-    if (requested > freelancerBalance) {
-      triggerToast('Insufficient Funds', `Maximum available balance is ${formatUsd(freelancerBalance)}.`, 'error');
-      return;
+// Handle Log Milestone Time (API Sync)
+const handleLogMilestoneTime = async () => {
+  const hrs = (timerSeconds / 3600).toFixed(2);
+  const earned = ((timerSeconds / 3600) * hourlyRate).toFixed(2);
+
+  try {
+    const res = await logTimeSession({
+      seconds: timerSeconds,
+      project_title: 'SaaS Dashboard Development',
+      hourly_rate: hourlyRate,
+      formatted_time: formatTimer(timerSeconds),
+    });
+
+    if (res && typeof res.newWalletBalance === 'number') {
+      setFreelancerBalance(res.newWalletBalance);
+      setWithdrawAmountInput(res.newWalletBalance.toFixed(2));
+    } else {
+      setFreelancerBalance((prev) => prev + parseFloat(earned));
     }
 
-    setIsWithdrawing(true);
-    try {
-      const res = await requestWithdrawal({ amount: requested, method: withdrawMethod });
-      setIsWithdrawModalOpen(false);
-      if (res && typeof res.remainingBalance === 'number') {
-        setFreelancerBalance(res.remainingBalance);
-        setWithdrawAmountInput(Math.min(250, res.remainingBalance).toFixed(2));
-      }
-      fetchWalletInfo().then((w) => {
-        if (Array.isArray(w?.transactions)) setWalletTransactions(w.transactions);
-      }).catch(() => { });
-      triggerToast('Withdrawal Processed', res.message || `${formatUsd(requested)} transferred via ${withdrawMethod.toUpperCase()}!`);
-    } catch (err) {
-      console.error('Failed withdrawal:', err);
-      triggerToast('Withdrawal Failed', err.message || 'Unable to process withdrawal.', 'error');
-    } finally {
-      setIsWithdrawing(false);
-    }
-  };
+    fetchWalletInfo().then((w) => {
+      if (Array.isArray(w?.transactions)) setWalletTransactions(w.transactions);
+    }).catch(() => { });
 
-  // Delete Kanban Task (API Sync)
-  const handleDeleteTask = async (taskId, title) => {
-    setKanbanTasks((prev) => prev.filter((t) => t.id !== taskId));
-    triggerToast('Deliverable Removed', `Removed "${title}" from sprint board.`);
-    try {
-      await deleteKanbanTask(taskId);
-    } catch (err) {
-      console.error('Failed to delete task:', err);
-    }
-  };
+    triggerToast('Session Logged to Milestone', `Logged ${hrs} hrs ($${earned}) to verified wallet!`);
+    setTimerSeconds(0);
+    setIsTimerRunning(false);
+  } catch (err) {
+    console.error('Failed to log session:', err);
+    triggerToast('Log Error', err.message || 'Could not log time session.', 'error');
+  }
+};
 
-  // Handle Proposals Status Action (API Sync)
-  const handleUpdateProposalStatus = async (id, newStatus) => {
+// Handle Confirm Withdrawal (API Sync)
+const handleConfirmWithdrawal = async () => {
+  if (isWithdrawing) return;
+
+  const requested = parseFloat(withdrawAmountInput);
+
+  if (isNaN(requested) || requested <= 0) {
+    triggerToast('Invalid Amount', 'Enter a positive withdrawal amount.', 'error');
+    return;
+  }
+
+  if (requested > freelancerBalance) {
+    triggerToast('Insufficient Funds', `Maximum available balance is ${formatUsd(freelancerBalance)}.`, 'error');
+    return;
+  }
+
+  setIsWithdrawing(true);
+
+  try {
+    const res = await requestWithdrawal({ amount: requested, method: withdrawMethod });
+    setIsWithdrawModalOpen(false);
+
+    if (res && typeof res.remainingBalance === 'number') {
+      setFreelancerBalance(res.remainingBalance);
+      setWithdrawAmountInput(Math.min(250, res.remainingBalance).toFixed(2));
+    }
+
+    fetchWalletInfo().then((w) => {
+      if (Array.isArray(w?.transactions)) setWalletTransactions(w.transactions);
+    }).catch(() => { });
+
+    triggerToast('Withdrawal Processed', res.message || `${formatUsd(requested)} transferred via ${withdrawMethod.toUpperCase()}!`);
+  } catch (err) {
+    console.error('Failed withdrawal:', err);
+    triggerToast('Withdrawal Failed', err.message || 'Unable to process withdrawal.', 'error');
+  } finally {
+    setIsWithdrawing(false);
+  }
+};
+
+// Delete Kanban Task (API Sync)
+const handleDeleteTask = async (taskId, title) => {
+  setKanbanTasks((prev) => prev.filter((t) => t.id !== taskId));
+  triggerToast('Deliverable Removed', `Removed "${title}" from sprint board.`);
+
+  try {
+    await deleteKanbanTask(taskId);
+  } catch (err) {
+    console.error('Failed to delete task:', err);
+  }
+};
+
+// Handle Proposals Status Action (API Sync)
+const handleUpdateProposalStatus = async (id, newStatus) => {
     setProposals((prev) =>
       prev.map((prop) => (prop.id === id ? { ...prop, status: newStatus } : prop))
     );
@@ -2733,29 +2793,34 @@ export default function ProjectsHubPage({
                             cx="50"
                             cy="50"
                             r="40"
-                            stroke="#FFF3EC"
-                            strokeWidth="10"
-                            fill="none"
-                          />
-                          <circle
-                            cx="50"
-                            cy="50"
-                            r="40"
                             stroke="#F36B21"
                             strokeWidth="10"
-                            strokeDasharray="251.2"
-                            strokeDashoffset="85"
+                            strokeDasharray={`${inProgressLength} ${circumference}`}
+                            strokeDashoffset="0"
                             strokeLinecap="round"
                             fill="none"
                           />
+
                           <circle
                             cx="50"
                             cy="50"
                             r="40"
                             stroke="#FBBF24"
                             strokeWidth="10"
-                            strokeDasharray="251.2"
-                            strokeDashoffset="230"
+                            strokeDasharray={`${inReviewLength} ${circumference}`}
+                            strokeDashoffset={-inProgressLength}
+                            strokeLinecap="round"
+                            fill="none"
+                          />
+
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="40"
+                            stroke="#94A3B8"
+                            strokeWidth="10"
+                            strokeDasharray={`${completedLength} ${circumference}`}
+                            strokeDashoffset={-(inProgressLength + inReviewLength)}
                             strokeLinecap="round"
                             fill="none"
                           />
@@ -3150,10 +3215,38 @@ export default function ProjectsHubPage({
                   </div>
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-center text-xs text-emerald-800 font-semibold">
-                  ✓ 100% Milestone Schedule Balanced (30% + 50% + 20%)
-                </div>
+                <div className="p-3 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#171717]">
+                    <span>Total Milestone Allocation</span>
+                    <span className="text-[#F36B21]">
+                      {Number(m1Pct) + Number(m2Pct) + Number(m3Pct)}%
+                    </span>
+                  </div>
 
+                  <div className="w-full h-2 rounded-full bg-white overflow-hidden flex">
+                    <div
+                      className="bg-[#F36B21] transition-all"
+                      style={{ width: `${Number(m1Pct)}%` }}
+                    />
+                    <div
+                      className="bg-amber-400 transition-all"
+                      style={{ width: `${Number(m2Pct)}%` }}
+                    />
+                    <div
+                      className="bg-emerald-500 transition-all"
+                      style={{ width: `${Number(m3Pct)}%` }}
+                    />
+                  </div>
+
+                  <p className={`text-[11px] font-semibold text-center ${Number(m1Pct) + Number(m2Pct) + Number(m3Pct) === 100
+                    ? 'text-emerald-700'
+                    : 'text-red-600'
+                    }`}>
+                    {Number(m1Pct) + Number(m2Pct) + Number(m3Pct) === 100
+                      ? '✓ Milestone allocation is balanced'
+                      : '⚠ Total allocation must equal 100%'}
+                  </p>
+                </div>
                 <div className="flex items-center justify-between pt-2">
                   <button
                     type="button"
@@ -3698,15 +3791,20 @@ export default function ProjectsHubPage({
               </button>
               <button
                 type="button"
-                onClick={() => {const amount = Number(withdrawAmountInput);
-                if (!amount || amount <= 0) {triggerToast('Invalid Amount', 'Please enter a valid withdrawal amount.');
-                 return;}
-                if (amount > freelancerBalance) {triggerToast('Insufficient Balance', 'You do not have enough available balance.');
-                 return;}
+                onClick={() => {
+                  const amount = Number(withdrawAmountInput);
+                  if (!amount || amount <= 0) {
+                    triggerToast('Invalid Amount', 'Please enter a valid withdrawal amount.');
+                    return;
+                  }
+                  if (amount > freelancerBalance) {
+                    triggerToast('Insufficient Balance', 'You do not have enough available balance.');
+                    return;
+                  }
 
-                setFreelancerBalance((prev) => prev - amount);
-                setIsWithdrawModalOpen(false);
-                triggerToast('Withdrawal Initiated', `$${amount.toFixed(2)} withdrawal request submitted successfully!`);
+                  setFreelancerBalance((prev) => prev - amount);
+                  setIsWithdrawModalOpen(false);
+                  triggerToast('Withdrawal Initiated', `$${amount.toFixed(2)} withdrawal request submitted successfully!`);
                 }}
                 className="px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold shadow-md shadow-orange-500/20 transition-all cursor-pointer flex items-center gap-1.5"
               >
