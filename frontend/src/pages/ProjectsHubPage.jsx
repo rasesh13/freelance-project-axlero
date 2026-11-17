@@ -1708,19 +1708,26 @@ export default function ProjectsHubPage({
                           <div className="space-y-3.5">
                             {colTasks.map((t) => {
                               const isDraggingThis = draggedTaskId === t.id;
+                              const isDropIndicatorBefore =
+                                draggedTaskId && draggedTaskId !== t.id && dragOverTaskId === t.id;
 
                               return (
-                                <div
-                                  key={t.id}
-                                  draggable
-                                  onDragStart={(e) => handleCardDragStart(e, t.id)}
-                                  onDragEnd={handleCardDragEnd}
-                                  className={`bg-white rounded-2xl border p-4.5 space-y-3 transition-all duration-150 group relative cursor-grab active:cursor-grabbing ${
-                                    isDraggingThis
-                                      ? 'opacity-45 scale-[0.97] border-[#F36B21] ring-2 ring-[#F36B21]/20 shadow-md'
-                                      : 'border-[#EAE2DC] shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:border-[#F36B21]/60 hover:shadow-[0_12px_28px_rgba(243,107,33,0.08)]'
-                                  }`}
-                                >
+                                <React.Fragment key={t.id}>
+                                  {isDropIndicatorBefore && (
+                                    <div className="h-1.5 rounded-full bg-[#F36B21] shadow-xs animate-pulse my-1" />
+                                  )}
+                                  <div
+                                    draggable
+                                    onDragStart={(e) => handleCardDragStart(e, t.id)}
+                                    onDragEnd={handleCardDragEnd}
+                                    onDragOver={(e) => handleColumnDragOver(e, col.id, t.id)}
+                                    onDrop={(e) => handleDropTarget(e, col.id, t.id)}
+                                    className={`bg-white rounded-2xl border p-4.5 space-y-3 transition-all duration-150 group relative cursor-grab active:cursor-grabbing ${
+                                      isDraggingThis
+                                        ? 'opacity-45 scale-[0.97] border-[#F36B21] ring-2 ring-[#F36B21]/20 shadow-md'
+                                        : 'border-[#EAE2DC] shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:border-[#F36B21]/60 hover:shadow-[0_12px_28px_rgba(243,107,33,0.08)]'
+                                    }`}
+                                  >
                                 {/* Top Row: Drag Grip Handle, Priority Pill & Estimate */}
                                 <div className="flex items-center justify-between gap-2">
                                   <div className="flex items-center gap-1.5 min-w-0">
@@ -1816,8 +1823,9 @@ export default function ProjectsHubPage({
                                 </div>
                                   </div>
                                 </div>
-                              );
-                            })}
+                              </React.Fragment>
+                            );
+                          })}
 
                             {colTasks.length === 0 && (
                               <div className="text-center py-12 px-4 border-2 border-dashed border-[#EAE2DC] rounded-2xl bg-white/50 space-y-2">
