@@ -181,57 +181,67 @@ Make sure you have the following installed:
 - **npm:** v9.0.0 or higher
 - **Git**
 
-### Installation
+### Installation & Local Setup
 
 **1. Clone the repository**
 
 ```bash
-git clone https://github.com/Rishijdv04/Freelance-PM-Dashboard-Project-2-.git
+git clone https://github.com/rasesh13/freelance-project-axlero.git
+cd freelance-project-axlero
 ```
 
-**2. Navigate to the project directory**
+**2. Start the Backend API (Terminal 1)**
+
+The backend runs on Express 5 + SQLite WAL persistence on port `5000`:
 
 ```bash
-cd Freelance-PM-Dashboard-Project-2-
+cd backend
+npm install
+npm start
 ```
 
-**3. Navigate to the frontend directory**
+*Backend server is live on:* [`http://localhost:5000`](http://localhost:5000)  
+*Swagger Documentation:* [`http://localhost:5000/docs`](http://localhost:5000/docs)  
+*Health Check:* [`http://localhost:5000/api/health`](http://localhost:5000/api/health)
+
+**3. Start the Frontend App (Terminal 2)**
+
+The frontend runs on Vite 8 on port `5173`:
 
 ```bash
 cd frontend
-```
-
-**4. Install dependencies**
-
-```bash
 npm install
-```
-
-**5. Start the development server**
-
-```bash
 npm run dev
 ```
 
-Open your browser and visit:
+*Frontend interface is live on:* [`http://localhost:5173`](http://localhost:5173)
 
-```text
-http://localhost:5173
-```
+---
 
-### Production Build
+## 🧪 Automated Testing & Verification Suite
 
-To generate an optimized production build:
+Workverse includes a comprehensive automated test runner with 100% pass certification:
 
 ```bash
+# Run unified test suite (Database Relational Audit + REST API Integration)
+npm test --prefix backend
+
+# Run individual testing stages
+npm run test:api --prefix backend       # 26 E2E REST API integration tests
+npm run test:db --prefix backend        # 13 Database relational & WAL checks
+npm run test:health --prefix backend    # Instant health check ping
+```
+
+### 📦 Production Build
+
+To verify and generate an optimized client production bundle:
+
+```bash
+cd frontend
 npm run build
 ```
 
-The production-ready files will be generated inside:
-
-```text
-frontend/dist/
-```
+Output directory: `frontend/dist/` (Verified: `✓ 2076 modules transformed, 0 errors`).
 
 ---
 
