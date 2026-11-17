@@ -102,7 +102,50 @@ graph TD
 ### 🔐 Role-Based Access Control (RBAC) & Persona Modeling
 
 | Feature / Domain | Client Persona | Freelancer Persona | Backend Security Policy |
-| :--- | :---: | :---: | :--- |
+| :
+---
+
+## 📡 OpenAPI 3.0 REST Specification & API Catalog
+
+Workverse provides a production-grade REST API with interactive Swagger documentation and embedded OpenAPI 3.0 schema generation:
+
+- **Interactive Swagger UI**: [`http://localhost:5000/docs`](http://localhost:5000/docs)
+- **Raw OpenAPI 3.0 JSON**: [`http://localhost:5000/openapi.json`](http://localhost:5000/openapi.json)
+- **Healthcheck & Telemetry**: [`http://localhost:5000/api/health`](http://localhost:5000/api/health)
+
+### 📋 Core REST Endpoints Catalog
+
+| HTTP Method | Endpoint URI | Description | Auth Required |
+| :--- | :--- | :--- | :---: |
+| `GET` | `/api/health` | SQLite WAL connectivity, server uptime, and status | No |
+| `GET` | `/api/stats` | Aggregated platform metrics (projects, users, volume) | No |
+| `POST` | `/api/auth/login` | Authenticate user credentials and issue JWT Bearer token | No |
+| `POST` | `/api/auth/register` | Register new client or freelancer account | No |
+| `GET` | `/api/auth/me` | Fetch authenticated session claims and profile | **Yes (Bearer)** |
+| `GET` | `/api/projects` | Query active projects with category, status & text filter | No |
+| `POST` | `/api/projects` | Create new fixed-price or hourly project initiative | No |
+| `GET` | `/api/projects/:id` | Retrieve comprehensive project details and scope | No |
+| `DELETE` | `/api/projects/:id` | Remove project initiative from workspace | No |
+| `GET` | `/api/kanban` | Retrieve sprint milestone tasks partitioned by columns | **Yes (Bearer)** |
+| `POST` | `/api/kanban` | Create new kanban task card with checklist subtasks | **Yes (Bearer)** |
+| `PATCH` | `/api/kanban/:id/column` | Update card column position (HTML5 Drag & Drop sync) | **Yes (Bearer)** |
+| `DELETE` | `/api/kanban/:id` | Remove deliverable task card from sprint board | **Yes (Bearer)** |
+| `GET` | `/api/files` | Query workspace project files, sizes, and upload metadata | **Yes (Bearer)** |
+| `POST` | `/api/files` | Upload and register new deliverable asset metadata | **Yes (Bearer)** |
+| `DELETE` | `/api/files/:id` | Remove deliverable file from workspace repository | **Yes (Bearer)** |
+| `GET` | `/api/wallet` | Fetch available balance, escrow holding, and ledger records | **Yes (Bearer)** |
+| `POST` | `/api/wallet/withdraw` | Submit verified balance withdrawal request | **Yes (Bearer)** |
+| `POST` | `/api/time/log` | Record billable stopwatch time and credit wallet balance | **Yes (Bearer)** |
+| `GET` | `/api/payments` | Query escrow milestone disbursements and clearance states | **Yes (Bearer)** |
+| `PATCH` | `/api/payments/:id/release` | Release smart escrow milestone funds to beneficiary | **Yes (Bearer)** |
+| `GET` | `/api/contracts` | Fetch active engagement contracts and agreements | **Yes (Bearer)** |
+| `GET` | `/api/proposals` | Query freelancer proposals, bids, and pitch letters | **Yes (Bearer)** |
+| `GET` | `/api/messages` | Retrieve split-pane live conversation threads | **Yes (Bearer)** |
+| `POST` | `/api/messages` | Dispatch new workspace message to thread | **Yes (Bearer)** |
+| `GET` | `/api/search` | Full-text search across talent, projects, and resources | No |
+| `GET` | `/api/settings` | Retrieve workspace 2FA policies and escrow configurations | No |
+| `PUT` | `/api/settings` | Update workspace preferences, 2FA, and payout limits | No |
+--- | :---: | :---: | :--- |
 | **Project Creation & Scoping** | Full (Create, Budget, Milestones) | Read-only / Bid Discovery | Enforced validation on fixed budget / hourly rate |
 | **Sprint Milestones Kanban** | Inspect & Approve Columns | Drag & Drop Card Movement | Optimistic UI with real-time SQLite sync |
 | **Deliverables Drive** | Review & Download Archives | Upload Code & Design Bundles | Cryptographic sha256 metadata verification |
