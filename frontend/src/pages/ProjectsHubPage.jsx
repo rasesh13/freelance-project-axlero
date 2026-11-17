@@ -271,6 +271,8 @@ const completedLength =
   const [messageThreads, setMessageThreads] = useState([]);
   const [activeThreadId, setActiveThreadId] = useState('thread-1');
   const [chatInputText, setChatInputText] = useState('');
+  const [chatThreadSearch, setChatThreadSearch] = useState('');
+  const [isTypingReply, setIsTypingReply] = useState(false);
 
   // Files State
   const [filesList, setFilesList] = useState([]);
@@ -2369,12 +2371,29 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
               <div className="bg-white rounded-3xl border border-[#EAE2DC] shadow-xs overflow-hidden flex flex-col md:flex-row h-[600px]">
                 {/* Threads Left List */}
                 <div className="w-full md:w-64 border-r border-[#EAE2DC] flex flex-col bg-[#FFF9F5]/50">
-                  <div className="p-4 border-b border-[#EAE2DC]">
-                    <h3 className="text-sm font-bold text-[#171717]">Conversations</h3>
-                    <p className="text-[11px] text-[#888888]">Active team and candidate threads</p>
+                  <div className="p-4 border-b border-[#EAE2DC] space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-bold text-[#171717]">Conversations</h3>
+                        <p className="text-[11px] text-[#888888]">Live team & client feedback threads</p>
+                      </div>
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" title="Socket Connected" />
+                    </div>
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-[#888888] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={chatThreadSearch}
+                        onChange={(e) => setChatThreadSearch(e.target.value)}
+                        placeholder="Filter conversations..."
+                        className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white border border-[#EAE2DC] text-[11px] font-medium focus:outline-none focus:border-[#F36B21]"
+                      />
+                    </div>
                   </div>
                   <div className="flex-1 overflow-y-auto divide-y divide-[#F3ECE7]">
-                    {messageThreads.map((thread) => {
+                    {messageThreads
+                      .filter((th) => !chatThreadSearch || th.user.name.toLowerCase().includes(chatThreadSearch.toLowerCase()) || th.lastMessage.toLowerCase().includes(chatThreadSearch.toLowerCase()))
+                      .map((thread) => {
                       const isSelected = thread.id === activeThreadId;
                       return (
                         <button
@@ -2456,8 +2475,44 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                     })}
                   </div>
 
+                  {/* Typing Indicator */}
+                  {isTypingReply && (
+                    <div className="px-5 py-2 text-[11px] text-[#888888] italic flex items-center gap-2 bg-[#FFF9F5]/60 border-t border-[#F3ECE7]">
+                      <span className="w-2 h-2 rounded-full bg-[#F36B21] animate-ping" />
+                      <span>{activeThread.user.name} is typing feedback...</span>
+                    </div>
+                  )}
+
+                  {/* Quick Client Feedback Action Tags */}
+                  <div className="px-4 py-2 border-t border-[#F3ECE7] flex items-center gap-1.5 overflow-x-auto scrollbar-none bg-[#FFF9F5]/40">
+                    <span className="text-[10px] font-bold text-[#888888] uppercase tracking-wider shrink-0 mr-1">Quick:</span>
+                    {[
+                      '✓ Deliverables uploaded for review',
+                      '⚡ Ready for QA validation',
+                      '💳 Escrow milestone release approved',
+                      '💬 Need brief sync on architecture',
+                    ].map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => handleSendChatMessage(null, tag)}
+                        className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white border border-[#EAE2DC] text-[#666666] hover:border-[#F36B21] hover:text-[#F36B21] whitespace-nowrap cursor-pointer transition-colors shrink-0 shadow-xs"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+
                   {/* Chat Input Bar */}
                   <form onSubmit={handleSendChatMessage} className="p-3 border-t border-[#EAE2DC] flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => triggerToast('Attachment Selected', 'Choose deliverable files to link to this thread.')}
+                      className="w-9 h-9 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] text-[#777777] hover:text-[#F36B21] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                      title="Attach deliverable file"
+                    >
+                      <Paperclip className="w-4 h-4" />
+                    </button>
                     <input
                       type="text"
                       value={chatInputText}
