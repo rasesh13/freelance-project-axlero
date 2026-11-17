@@ -65,6 +65,52 @@ Built with a focus on modern UI/UX, architectural aesthetics, and fluid GSAP ani
 
 ---
 
+## 🏗️ System Architecture & Engineering Flow
+
+Workverse is engineered with a separation of concerns across a modern decoupled architecture:
+
+```mermaid
+graph TD
+    subgraph ClientLayer["🖥️ Frontend Application (React 19 + Vite 8)"]
+        UI["Modern Ivory & Architectural Charcoal UI"]
+        GSAP["GSAP 3 Animation Engine"]
+        DND["HTML5 Native Kanban Drag & Drop"]
+        State["Dual Persona State (Client / Freelancer)"]
+    end
+
+    subgraph APILayer["⚡ REST API Layer (Node.js + Express 5)"]
+        Router["Express 5 REST Router (/api/*)"]
+        JWT["Cryptographic JWT Bearer Authenticator"]
+        CORS["CORS & Request Sanitization"]
+        Docs["OpenAPI 3.0 & Swagger UI (/docs)"]
+    end
+
+    subgraph DataLayer["🗄️ Persistence & Financial Engine"]
+        SQLite["SQLite Embedded Engine (WAL Mode)"]
+        Ledger["Double-Entry Escrow & Wallet Ledger"]
+        Relational["18 Relational Normalized Tables"]
+    end
+
+    UI --> Router
+    State --> JWT
+    DND --> Router
+    Router --> SQLite
+    Router --> Ledger
+    Ledger --> Relational
+```
+
+### 🔐 Role-Based Access Control (RBAC) & Persona Modeling
+
+| Feature / Domain | Client Persona | Freelancer Persona | Backend Security Policy |
+| :--- | :---: | :---: | :--- |
+| **Project Creation & Scoping** | Full (Create, Budget, Milestones) | Read-only / Bid Discovery | Enforced validation on fixed budget / hourly rate |
+| **Sprint Milestones Kanban** | Inspect & Approve Columns | Drag & Drop Card Movement | Optimistic UI with real-time SQLite sync |
+| **Deliverables Drive** | Review & Download Archives | Upload Code & Design Bundles | Cryptographic sha256 metadata verification |
+| **Smart Escrow Wallet** | Deposit, Lock & Release Funds | Request Payout & Withdraw | 100% Zero-fee guarantee, non-negative assertions |
+| **Workspace Settings** | Configure 2FA & Auto-Disbursement | Manage Portfolio & Hourly Rates | JWT authenticated session policies |
+
+---
+
 ## 🛠️ Technology Stack
 
 | Category | Technologies |
