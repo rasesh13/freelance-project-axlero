@@ -3732,11 +3732,58 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
             <div className="bg-[#FFF9F5] rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between">
               <div>
                 <span className="text-[11px] text-[#777777] font-medium block">Available Balance</span>
-                <span className="text-2xl font-black text-emerald-600">${freelancerBalance.toFixed(2)}</span>
+                <span className="text-2xl font-black text-emerald-600 tabular-nums">{formatUsd(freelancerBalance)}</span>
               </div>
               <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800">
                 Zero Fee Transfer
               </span>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#171717]">
+                  Withdrawal Amount (USD)
+                </label>
+                <div className="flex items-center gap-1.5">
+                  {[100, 250, 500].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      disabled={freelancerBalance < preset}
+                      onClick={() => setWithdrawAmountInput(preset.toFixed(2))}
+                      className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#FFF3EC] text-[#F36B21] border border-[#FCE2D3] hover:bg-[#FCE2D3] disabled:opacity-40 cursor-pointer"
+                    >
+                      ${preset}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={freelancerBalance <= 0}
+                    onClick={() => setWithdrawAmountInput(freelancerBalance.toFixed(2))}
+                    className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#171717] text-white hover:bg-[#333333] disabled:opacity-40 cursor-pointer"
+                  >
+                    Max
+                  </button>
+                </div>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-[#777777]">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="1"
+                  max={freelancerBalance}
+                  value={withdrawAmountInput}
+                  onChange={(e) => setWithdrawAmountInput(e.target.value)}
+                  className="w-full pl-7 pr-4 py-2.5 rounded-xl border border-[#EAE2DC] focus:border-[#F36B21] focus:outline-none text-sm font-bold text-[#171717] tabular-nums"
+                  placeholder="250.00"
+                />
+              </div>
+              {Number(withdrawAmountInput) > freelancerBalance && (
+                <p className="text-[11px] text-red-600 font-medium">
+                  Amount exceeds your available balance ({formatUsd(freelancerBalance)}).
+                </p>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -3791,25 +3838,16 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  const amount = Number(withdrawAmountInput);
-                  if (!amount || amount <= 0) {
-                    triggerToast('Invalid Amount', 'Please enter a valid withdrawal amount.');
-                    return;
-                  }
-                  if (amount > freelancerBalance) {
-                    triggerToast('Insufficient Balance', 'You do not have enough available balance.');
-                    return;
-                  }
-
-                  setFreelancerBalance((prev) => prev - amount);
-                  setIsWithdrawModalOpen(false);
-                  triggerToast('Withdrawal Initiated', `$${amount.toFixed(2)} withdrawal request submitted successfully!`);
-                }}
-                className="px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold shadow-md shadow-orange-500/20 transition-all cursor-pointer flex items-center gap-1.5"
+                disabled={isWithdrawing || freelancerBalance <= 0 || Number(withdrawAmountInput) <= 0 || Number(withdrawAmountInput) > freelancerBalance}
+                onClick={handleConfirmWithdrawal}
+                className="px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold shadow-md shadow-orange-500/20 transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <Check className="w-4 h-4" />
-                <span>Confirm Withdrawal of ${withdrawAmountInput}</span>
+                <span>
+                  {isWithdrawing
+                    ? 'Processing...'
+                    : `Confirm Withdrawal of ${formatUsd(withdrawAmountInput)}`}
+                </span>
               </button>
             </div>
           </div>
@@ -3819,8 +3857,8 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
       {/* Floating Animated Toast Notification */}
       {toast && (
         <div className="fixed top-20 right-6 z-50 bg-[#171717] text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 animate-in slide-in-from-top-4 duration-200">
-          <div className="w-6 h-6 rounded-full bg-[#F36B21] flex items-center justify-center text-white shrink-0">
-            <Check className="w-3.5 h-3.5 stroke-[3]" />
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white shrink-0 ${toast.type === 'error' ? 'bg-red-500' : 'bg-[#F36B21]'}`}>
+            {toast.type === 'error' ? <AlertCircle className="w-3.5 h-3.5 stroke-[2.5]" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
           </div>
           <div>
             <h5 className="text-xs font-bold text-white">{toast.title}</h5>
