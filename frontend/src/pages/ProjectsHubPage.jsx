@@ -873,7 +873,7 @@ export default function ProjectsHubPage({
   const escrowArc = donutTotal > 0 ? (escrowBalance / donutTotal) * donutCircumference : 0;
 
   return (
-    <div className="w-full min-h-screen bg-[#FFF9F5] text-[#171717] pb-24 relative">
+    <div className="w-full min-h-screen bg-[#FFF9F5] text-[#171717] pb-24 relative overflow-x-clip">
       {/* ========================================================
           HERO BANNER: UNBOXED 3D ARCHITECTURAL PAVILION BACKGROUND
           & OPEN-AIR TELEMETRY CARDS
@@ -988,7 +988,7 @@ export default function ProjectsHubPage({
                         <Wallet className="w-5 h-5" />
                       </div>
                       <div>
-                        <div className="text-lg font-bold text-emerald-600">${freelancerBalance.toLocaleString()}</div>
+                        <div className="text-lg font-bold text-emerald-600 tabular-nums">{formatUsd(freelancerBalance)}</div>
                         <div className="text-xs text-[#777777] font-medium">Available Payout</div>
                       </div>
                     </div>
@@ -1034,8 +1034,8 @@ export default function ProjectsHubPage({
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-lg font-extrabold text-[#171717] tracking-tight">
-                    {userRole === 'client' ? '$32,400 USD' : '$8,900 USD'}
+                  <div className="text-lg font-extrabold text-[#171717] tracking-tight tabular-nums">
+                    {userRole === 'client' ? `${formatUsd(clientEscrowHolding + pendingClearanceTotal, 0)} USD` : `${formatUsd(escrowBalance, 0)} USD`}
                   </div>
                   <span className="text-xs text-[#777777] font-medium">
                     {userRole === 'client' ? 'Escrow Protected Funds' : 'Guaranteed Milestone Escrow'}
@@ -1050,8 +1050,8 @@ export default function ProjectsHubPage({
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg font-extrabold text-[#171717] tracking-tight">
-                      {userRole === 'client' ? `${teamList.length} Members` : '$48,720 USD'}
+                    <span className="text-lg font-extrabold text-[#171717] tracking-tight tabular-nums">
+                      {userRole === 'client' ? `${teamList.length} Members` : `${formatUsd(freelancerTotalEarnings, 0)} USD`}
                     </span>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                       {userRole === 'client' ? 'Synchronized' : 'Lifetime Paid'}
@@ -1078,30 +1078,38 @@ export default function ProjectsHubPage({
       {/* ========================================================
           MAIN WORKSPACE DASHBOARD (EXPANSIVE WORKBENCH)
       ======================================================== */}
-      <section className={`mx-auto px-4 sm:px-6 lg:px-8 pt-8 transition-all duration-300 ${activeSidebarNav === 'kanban' ? 'max-w-[1720px]' : 'max-w-7xl'}`}>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <section className={`mx-auto px-4 sm:px-6 lg:px-8 pt-8 transition-all duration-300 ${activeSidebarNav === 'kanban' ? 'max-w-[1720px]' : 'max-w-[1440px]'}`}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-8 items-start">
           {/* 1. Left Sidebar Navigation */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3 xl:col-span-2 min-w-0">
             <div className="bg-white rounded-3xl border border-[#EAE2DC] p-3 space-y-1 sticky top-28 shadow-xs">
               {(userRole === 'client'
                 ? [
-                    { id: 'projects', label: 'My Projects', icon: FolderKanban, badge: String(projectList.length) },
-                    { id: 'kanban', label: 'Milestones Review', icon: Activity, badge: 'Live' },
-                    { id: 'proposals', label: 'Candidate Bids', icon: Send, badge: String(proposals.length) },
-                    { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '1' },
-                    { id: 'files', label: 'Project Files', icon: Folder, badge: String(filesList.length) },
-                    { id: 'team', label: 'Hired Team', icon: Users },
-                    { id: 'payments', label: 'Escrow & Invoices', icon: CreditCard },
-                  ]
+                  { id: 'projects', label: 'My Projects', icon: FolderKanban, badge: String(projectList.length) },
+                  { id: 'kanban', label: 'Milestones Review', icon: Activity, badge: 'Live' },
+                  { id: 'proposals', label: 'Candidate Bids', icon: Send, badge: String(proposals.length) },
+                  { id: 'messages', label: 'Messages', icon: MessageSquare, badge: String(messageThreads.length) },
+                  { id: 'files', label: 'Project Files', icon: Folder, badge: String(filesList.length) },
+                  { id: 'team', label: 'Hired Team', icon: Users },
+                  { id: 'payments', label: 'Escrow & Invoices', icon: CreditCard },
+                ]
                 : [
-                    { id: 'contracts', label: 'My Contracts', icon: Briefcase, badge: String(freelancerContracts.length) },
-                    { id: 'kanban', label: 'Milestones & Timer', icon: Clock, badge: 'Live' },
-                    { id: 'my_proposals', label: 'My Submitted Bids', icon: Send, badge: String(myProposalsList.length) },
-                    { id: 'earnings', label: 'Earnings & Wallet', icon: Wallet, badge: `$${Math.round(freelancerBalance / 1000)}k` },
-                    { id: 'messages', label: 'Client Messages', icon: MessageSquare, badge: '1' },
-                    { id: 'files', label: 'Deliverables', icon: Folder, badge: String(filesList.length) },
-                    { id: 'profile', label: 'Public Profile', icon: User },
-                  ]
+                  { id: 'contracts', label: 'My Contracts', icon: Briefcase, badge: String(freelancerContracts.length) },
+                  { id: 'kanban', label: 'Milestones & Timer', icon: Clock, badge: 'Live' },
+                  { id: 'my_proposals', label: 'My Submitted Bids', icon: Send, badge: String(myProposalsList.length) },
+                  {
+                    id: 'earnings',
+                    label: 'Earnings & Wallet',
+                    icon: Wallet,
+                    badge:
+                      freelancerBalance >= 1000
+                        ? `$${(freelancerBalance / 1000).toFixed(1).replace(/\.0$/, '')}k`
+                        : `$${Math.round(freelancerBalance)}`,
+                  },
+                  { id: 'messages', label: 'Client Messages', icon: MessageSquare, badge: String(messageThreads.length) },
+                  { id: 'files', label: 'Deliverables', icon: Folder, badge: String(filesList.length) },
+                  { id: 'profile', label: 'Public Profile', icon: User },
+                ]
               ).map((nav) => {
                 const Icon = nav.icon;
                 const isActive = activeSidebarNav === nav.id;
@@ -1109,23 +1117,21 @@ export default function ProjectsHubPage({
                   <button
                     key={nav.id}
                     onClick={() => setActiveSidebarNav(nav.id)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                      isActive
+                    className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${isActive
                         ? 'bg-[#171717] text-white shadow-xs'
                         : 'text-[#666666] hover:bg-[#FFF9F5] hover:text-[#171717]'
-                    }`}
+                      }`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Icon className="w-4 h-4" />
-                      <span>{nav.label}</span>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span className="truncate">{nav.label}</span>
                     </div>
                     {nav.badge && (
                       <span
-                        className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-bold ${
-                          isActive
+                        className={`min-w-[22px] h-5 px-1.5 rounded-full text-[10px] shrink-0 flex items-center justify-center font-bold tabular-nums ${isActive
                             ? 'bg-[#F36B21] text-white'
                             : 'bg-[#FFF3EC] text-[#F36B21]'
-                        }`}
+                          }`}
                       >
                         {nav.badge}
                       </span>
@@ -1137,21 +1143,20 @@ export default function ProjectsHubPage({
               <div className="pt-2 border-t border-[#F3ECE7]">
                 <button
                   onClick={() => setActiveSidebarNav('settings')}
-                  className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                    activeSidebarNav === 'settings'
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${activeSidebarNav === 'settings'
                       ? 'bg-[#171717] text-white shadow-xs'
                       : 'text-[#666666] hover:bg-[#FFF9F5] hover:text-[#171717]'
-                  }`}
+                    }`}
                 >
-                  <Settings className="w-4 h-4" />
-                  <span>Settings</span>
+                  <Settings className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Settings</span>
                 </button>
               </div>
             </div>
           </div>
 
           {/* 2. Center Column: DYNAMICALLY SWITCHES BASED ON ACTIVE SIDEBAR NAV */}
-          <div className={`${activeSidebarNav === 'kanban' ? 'lg:col-span-10' : 'lg:col-span-7'} space-y-6 transition-all duration-300`}>
+          <div className={`${activeSidebarNav === 'kanban' ? 'lg:col-span-9 xl:col-span-10' : 'lg:col-span-6 xl:col-span-7'} min-w-0 space-y-6 transition-all duration-300`}>
             {/* VIEW 1: MY PROJECTS */}
             {activeSidebarNav === 'projects' && (
               <>
@@ -1175,11 +1180,10 @@ export default function ProjectsHubPage({
                         <button
                           key={f.id}
                           onClick={() => setProjectStatusFilter(f.id)}
-                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                            projectStatusFilter === f.id
+                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${projectStatusFilter === f.id
                               ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
                               : 'text-[#777777] hover:text-[#171717]'
-                          }`}
+                            }`}
                         >
                           {f.label}
                         </button>
@@ -1307,11 +1311,10 @@ export default function ProjectsHubPage({
                         <button
                           key={f}
                           onClick={() => setContractsFilter(f)}
-                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                            contractsFilter === f
+                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${contractsFilter === f
                               ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
                               : 'text-[#777777] hover:text-[#171717]'
-                          }`}
+                            }`}
                         >
                           {f}
                         </button>
@@ -1360,11 +1363,10 @@ export default function ProjectsHubPage({
                                 {contract.title}
                               </h3>
                               <span
-                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
-                                  contract.status === 'Completed'
+                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${contract.status === 'Completed'
                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                     : 'bg-[#FFF3EC] text-[#F36B21] border-[#FCE2D3]'
-                                }`}
+                                  }`}
                               >
                                 ● {contract.status}
                               </span>
@@ -1376,12 +1378,12 @@ export default function ProjectsHubPage({
                             {/* Client Attribution */}
                             <div className="flex items-center gap-2 text-xs text-[#777777]">
                               <img
-                                src={contract.client.avatar}
-                                alt={contract.client.name}
+                                src={contract.client?.avatar || contract.client_avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80'}
+                                alt={contract.client?.name || contract.client_name || 'Client'}
                                 className="w-4 h-4 rounded-full object-cover"
                               />
                               <span>
-                                Client: <strong className="text-[#171717]">{contract.client.name}</strong> ({contract.client.company})
+                                Client: <strong className="text-[#171717]">{contract.client?.name || contract.client_name || 'Client'}</strong> {contract.client?.company || contract.client_company ? `(${contract.client?.company || contract.client_company})` : ''}
                               </span>
                             </div>
 
@@ -1389,9 +1391,9 @@ export default function ProjectsHubPage({
                             <div className="flex flex-wrap items-center gap-2.5 pt-1 text-[11px] text-[#888888]">
                               <span className="font-semibold text-[#171717]">{contract.rate}</span>
                               <span>•</span>
-                              <span className="text-emerald-600 font-semibold">Earned: {contract.totalEarned}</span>
+                              <span className="text-emerald-600 font-semibold">Earned: {contract.totalEarned || contract.total_earned}</span>
                               <span>•</span>
-                              <span className="text-amber-700 font-medium">Escrow: {contract.escrowLocked}</span>
+                              <span className="text-amber-700 font-medium">Escrow: {contract.escrowLocked || contract.escrow_locked}</span>
                               <span>•</span>
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3 text-[#F36B21]" />
@@ -1480,8 +1482,8 @@ export default function ProjectsHubPage({
                       <div className="flex items-center gap-4">
                         <div className="relative">
                           <img
-                            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
-                            alt="Contractor"
+                            src={currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
+                            alt={currentUser?.name || 'Contractor'}
                             className="w-14 h-14 rounded-2xl object-cover border-2 border-[#F36B21] shadow-md"
                           />
                           <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#141414]" />
@@ -1492,7 +1494,7 @@ export default function ProjectsHubPage({
                             <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-[#F36B21]/20 text-[#F36B21] border border-[#F36B21]/30">Active Sprint</span>
                           </div>
                           <p className="text-xs text-white/70 mt-1 flex flex-wrap items-center gap-2">
-                            <span>Contractor: <strong className="text-white">Arjun Mehta</strong></span>
+                            <span>Contractor: <strong className="text-white">{userRole === 'freelancer' ? (currentUser?.name || 'Arjun Mehta') : 'Arjun Mehta'}</strong></span>
                             <span className="text-white/30">•</span>
                             <span>Rate: <strong className="text-[#F36B21] font-bold">${hourlyRate}.00/hr</strong></span>
                             <span className="text-white/30">•</span>
@@ -1520,11 +1522,10 @@ export default function ProjectsHubPage({
                         <div className="flex items-center gap-2.5">
                           <button
                             onClick={() => setIsTimerRunning(!isTimerRunning)}
-                            className={`h-12 px-5 rounded-2xl flex items-center gap-2.5 text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer shadow-lg ${
-                              isTimerRunning
+                            className={`h-12 px-5 rounded-2xl flex items-center gap-2.5 text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer shadow-lg ${isTimerRunning
                                 ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/25 ring-2 ring-amber-400/50'
                                 : 'bg-[#F36B21] hover:bg-[#e05e16] text-white shadow-orange-500/30'
-                            }`}
+                              }`}
                             title={isTimerRunning ? 'Pause Session' : 'Start Session'}
                           >
                             {isTimerRunning ? (
@@ -1555,11 +1556,7 @@ export default function ProjectsHubPage({
 
                         {/* Log Hours to Milestone CTA */}
                         <button
-                          onClick={() => {
-                            const hrs = (timerSeconds / 3600).toFixed(2);
-                            const earned = ((timerSeconds / 3600) * hourlyRate).toFixed(2);
-                            triggerToast('Session Logged to Milestone', `Logged ${hrs} hrs ($${earned}) with verified escrow audit!`);
-                          }}
+                          onClick={handleLogMilestoneTime}
                           className="h-12 px-6 rounded-2xl bg-white hover:bg-[#FFF3EC] text-[#171717] font-bold text-xs sm:text-sm transition-all shadow-md hover:shadow-xl active:scale-95 flex items-center gap-2 cursor-pointer whitespace-nowrap"
                         >
                           <DollarSign className="w-4 h-4 text-[#F36B21]" />
@@ -1571,43 +1568,49 @@ export default function ProjectsHubPage({
                 </div>
 
                 {/* 2. Live Sprint Status & Quick Metrics Strip */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between shadow-xs">
-                    <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between gap-3 shadow-xs min-w-0">
+                    <div className="min-w-0">
                       <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider block">Sprint Deliverables</span>
-                      <span className="text-xl font-bold text-[#171717] mt-0.5 block">{kanbanTasks.length} Tasks</span>
+                      <span className="text-xl font-bold text-[#171717] mt-0.5 block tabular-nums">{kanbanTasks.length} Tasks</span>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-[#FFF3EC] text-[#F36B21] flex items-center justify-center font-bold">
+                    <div className="w-10 h-10 rounded-xl bg-[#FFF3EC] text-[#F36B21] flex items-center justify-center font-bold shrink-0">
                       <FolderKanban className="w-5 h-5" />
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between shadow-xs">
-                    <div>
-                      <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider block">Estimated Scope</span>
-                      <span className="text-xl font-bold text-[#171717] mt-0.5 block">70 Hours</span>
+                  <div className="bg-white rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between gap-3 shadow-xs min-w-0">
+                    <div className="min-w-0">
+                      <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider block">In Review Queue</span>
+                      <span className="text-xl font-bold text-[#171717] mt-0.5 block tabular-nums">
+                        {kanbanTasks.filter((t) => t.column === 'review').length} Deliverables
+                      </span>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
                       <Clock className="w-5 h-5" />
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between shadow-xs">
-                    <div>
+                  <div className="bg-white rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between gap-3 shadow-xs min-w-0">
+                    <div className="min-w-0">
                       <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider block">Milestone Escrow</span>
-                      <span className="text-xl font-bold text-emerald-600 mt-0.5 block">$12,450.00</span>
+                      <span className="text-xl font-bold text-emerald-600 mt-0.5 block tabular-nums truncate">
+                        {formatUsd(totalPaymentsVolume || escrowBalance)}
+                      </span>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
                       <ShieldCheck className="w-5 h-5" />
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between shadow-xs">
-                    <div>
+                  <div className="bg-white rounded-2xl border border-[#EAE2DC] p-4 flex items-center justify-between gap-3 shadow-xs min-w-0">
+                    <div className="min-w-0">
                       <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider block">Sprint Deadline</span>
-                      <span className="text-xl font-bold text-[#171717] mt-0.5 block">Nov 18, 2026</span>
+                      <span className="text-xl font-bold text-[#171717] mt-0.5 block truncate">
+                        {projectList[0]?.dueDate || 'Nov 18, 2026'}
+                      </span>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
                       <Calendar className="w-5 h-5" />
                     </div>
                   </div>
@@ -1623,7 +1626,7 @@ export default function ProjectsHubPage({
                       </span>
                     </div>
                     <p className="text-xs text-[#777777] mt-1">
-                      Move scoped deliverables across sprint stages with real-time status transitions and escrow sync.
+                      Drag and drop scoped deliverables across sprint stages with instant SQLite persistence and escrow sync.
                     </p>
                   </div>
 
@@ -1646,11 +1649,10 @@ export default function ProjectsHubPage({
                         <button
                           key={pri}
                           onClick={() => setKanbanPriorityFilter(pri)}
-                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                            kanbanPriorityFilter === pri
+                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${kanbanPriorityFilter === pri
                               ? 'bg-[#171717] text-white font-semibold shadow-xs'
                               : 'text-[#777777] hover:text-[#171717]'
-                          }`}
+                            }`}
                         >
                           {pri}
                         </button>
@@ -1677,7 +1679,6 @@ export default function ProjectsHubPage({
                       const matchesPriority = kanbanPriorityFilter === 'All' || t.priority === kanbanPriorityFilter;
                       return matchesCol && matchesSearch && matchesPriority;
                     });
-
                     const isColumnHovered = dragOverCol === col.id && draggedTaskId !== null;
 
                     return (
@@ -1686,11 +1687,10 @@ export default function ProjectsHubPage({
                         onDragOver={(e) => handleColumnDragOver(e, col.id, null)}
                         onDragLeave={handleColumnDragLeave}
                         onDrop={(e) => handleDropTarget(e, col.id, null)}
-                        className={`rounded-3xl p-5 space-y-4 min-h-[520px] flex flex-col justify-between transition-all duration-200 ${
-                          isColumnHovered
-                            ? 'bg-[#FFF3EC]/70 border-[#F36B21] ring-2 ring-[#F36B21]/20 shadow-lg'
+                        className={`rounded-3xl p-5 space-y-4 min-h-[520px] flex flex-col justify-between transition-all duration-150 border ${isColumnHovered
+                            ? 'bg-[#FFF3EC]/70 border-[#F36B21] ring-2 ring-[#F36B21]/20 shadow-[0_12px_32px_rgba(243,107,33,0.12)]'
                             : 'bg-[#FFF9F5] border-[#EAE2DC] shadow-xs'
-                        }`}
+                          }`}
                       >
                         <div className="space-y-4">
                           {/* Column Header */}
@@ -1714,7 +1714,7 @@ export default function ProjectsHubPage({
                               return (
                                 <React.Fragment key={t.id}>
                                   {isDropIndicatorBefore && (
-                                    <div className="h-1.5 rounded-full bg-[#F36B21] shadow-xs animate-pulse my-1" />
+                                    <div className="h-1.5 rounded-full bg-[#F36B21] shadow-xs animate-pulse" />
                                   )}
                                   <div
                                     draggable
@@ -1722,117 +1722,145 @@ export default function ProjectsHubPage({
                                     onDragEnd={handleCardDragEnd}
                                     onDragOver={(e) => handleColumnDragOver(e, col.id, t.id)}
                                     onDrop={(e) => handleDropTarget(e, col.id, t.id)}
-                                    className={`bg-white rounded-2xl border p-4.5 space-y-3 transition-all duration-150 group relative cursor-grab active:cursor-grabbing ${
-                                      isDraggingThis
-                                        ? 'opacity-45 scale-[0.97] border-[#F36B21] ring-2 ring-[#F36B21]/20 shadow-md'
+                                    className={`bg-white rounded-2xl border p-4.5 space-y-3 transition-all group relative cursor-grab active:cursor-grabbing select-none ${isDraggingThis
+                                        ? 'opacity-45 scale-[0.97] border-[#F36B21] ring-2 ring-[#F36B21]/30 shadow-lg'
                                         : 'border-[#EAE2DC] shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:border-[#F36B21]/60 hover:shadow-[0_12px_28px_rgba(243,107,33,0.08)]'
-                                    }`}
+                                      }`}
                                   >
-                                {/* Top Row: Drag Grip Handle, Priority Pill & Estimate */}
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <div
-                                      className="p-1 rounded-md text-[#888888] hover:text-[#F36B21] hover:bg-[#FFF3EC] transition-colors cursor-grab active:cursor-grabbing"
-                                      title="Drag deliverable card across stages"
-                                    >
-                                      <GripVertical className="w-3.5 h-3.5" />
-                                    </div>
-                                    <span
-                                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                                      t.priority === 'Urgent'
-                                        ? 'bg-rose-100 text-rose-700 border border-rose-200'
-                                        : t.priority === 'High'
-                                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                        : 'bg-slate-100 text-slate-700 border border-slate-200'
-                                    }`}
-                                  >
-                                    {t.priority}
-                                  </span>
-                                  <span className="text-[11px] text-[#666666] font-semibold flex items-center gap-1 bg-[#FFF9F5] px-2.5 py-0.5 rounded-full border border-[#EAE2DC]">
-                                    <Clock className="w-3 h-3 text-[#F36B21]" />
-                                    {t.estimate}
-                                  </span>
-                                </div>
-
-                                {/* Task Title */}
-                                <h4 className="text-sm font-bold text-[#171717] leading-snug group-hover:text-[#F36B21] transition-colors">
-                                  {t.title}
-                                </h4>
-
-                                {/* Project Name & Subtasks / Progress Indicator */}
-                                <div className="space-y-1.5 pt-1">
-                                  <p className="text-xs text-[#777777] font-medium flex items-center gap-1.5">
-                                    <FolderKanban className="w-3.5 h-3.5 text-[#888888]" />
-                                    <span className="truncate">{t.project}</span>
-                                  </p>
-                                  {t.subtasks && (
-                                    <div className="flex items-center justify-between text-[10px] text-[#888888] font-medium pt-1 border-t border-[#F7F2EE]">
-                                      <span>Checklist: {t.subtasks}</span>
-                                      <span className="text-emerald-600 font-semibold">Ready</span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Footer: Contractor Profile & Move Action Controls */}
-                                <div className="flex items-center justify-between pt-3 border-t border-[#F3ECE7]">
-                                  <div className="flex items-center gap-2">
-                                    <img
-                                      src={t.assignee}
-                                      alt="Assignee"
-                                      className="w-6 h-6 rounded-full object-cover border border-[#EAE2DC] shadow-xs"
-                                    />
-                                    <span className="text-[11px] font-semibold text-[#171717] truncate max-w-[110px]">
-                                      {t.assigneeName || 'Assigned'}
-                                    </span>
-                                  </div>
-
-                                  {/* Direction Shift Controls */}
-                                  <div className="flex items-center gap-1.5">
-                                    {col.id !== 'backlog' && (
-                                      <button
-                                        onClick={() => moveTask(t.id, 'prev')}
-                                        className="px-2 py-1 rounded-lg bg-[#FFF9F5] hover:bg-[#FFF3EC] border border-[#EAE2DC] text-[#777777] hover:text-[#171717] text-[11px] font-medium flex items-center gap-0.5 transition-colors cursor-pointer"
-                                        title="Move to previous stage"
-                                      >
-                                        <ChevronLeft className="w-3.5 h-3.5" />
-                                        <span className="hidden sm:inline">Prev</span>
-                                      </button>
-                                    )}
-                                    {col.id !== 'done' ? (
-                                      <button
-                                        onClick={() => moveTask(t.id, 'next')}
-                                        className="px-2.5 py-1 rounded-lg bg-[#FFF3EC] hover:bg-[#F36B21] text-[#F36B21] hover:text-white text-[11px] font-semibold flex items-center gap-0.5 transition-all shadow-xs cursor-pointer"
-                                        title="Move to next stage"
-                                      >
-                                        <span>Next</span>
-                                        <ChevronRight className="w-3.5 h-3.5" />
-                                      </button>
-                                    ) : (
-                                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold flex items-center gap-1">
-                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                        <span>Done</span>
+                                    {/* Top Row: Grab Handle + Priority Pill + Estimate */}
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-1.5">
+                                        <GripVertical
+                                          className="w-4 h-4 text-[#CCCCCC] group-hover:text-[#F36B21] transition-colors shrink-0"
+                                          title="Drag to move card"
+                                        />
+                                        <span
+                                          className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${t.priority === 'Urgent'
+                                              ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                                              : t.priority === 'High'
+                                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                                : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                            }`}
+                                        >
+                                          {t.priority}
+                                        </span>
+                                      </div>
+                                      <span className="text-[11px] text-[#666666] font-semibold flex items-center gap-1 bg-[#FFF9F5] px-2.5 py-0.5 rounded-full border border-[#EAE2DC]">
+                                        <Clock className="w-3 h-3 text-[#F36B21]" />
+                                        {t.estimate}
                                       </span>
-                                    )}
-                                    {col.id === 'done' && (
-                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-200">
-                                        <CheckCircle2 className="w-3.5 h-3.5" />
-                                        <span>Done</span>
-                                      </span>
-                                    )}
+                                    </div>
+
+                                    {/* Task Title */}
+                                    <h4 className="text-sm font-bold text-[#171717] leading-snug group-hover:text-[#F36B21] transition-colors">
+                                      {t.title}
+                                    </h4>
+
+                                    {/* Project Name & Subtasks / Progress Indicator */}
+                                    <div className="space-y-1.5 pt-1">
+                                      <p className="text-xs text-[#777777] font-medium flex items-center gap-1.5">
+                                        <FolderKanban className="w-3.5 h-3.5 text-[#888888]" />
+                                        <span className="truncate">{t.project}</span>
+                                      </p>
+                                      {t.subtasks && (
+                                        <div className="flex items-center justify-between text-[10px] text-[#888888] font-medium pt-1 border-t border-[#F7F2EE]">
+                                          <span>Checklist: {t.subtasks}</span>
+                                          <span className="text-emerald-600 font-semibold">Ready</span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Footer: Contractor Profile & Move Action Controls */}
+                                    <div className="flex items-center justify-between pt-3 border-t border-[#F3ECE7]">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <img
+                                          src={t.assignee}
+                                          alt="Assignee"
+                                          draggable={false}
+                                          className="w-6 h-6 rounded-full object-cover border border-[#EAE2DC] shadow-xs shrink-0"
+                                        />
+                                        <span className="text-[11px] font-semibold text-[#171717] truncate max-w-[100px]">
+                                          {t.assigneeName || t.assignee_name || 'Assigned'}
+                                        </span>
+                                      </div>
+
+                                      {/* Direction Shift & Delete Controls */}
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        {col.id !== 'backlog' && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              moveTask(t.id, 'prev');
+                                            }}
+                                            className="px-2 py-1 rounded-lg bg-[#FFF9F5] hover:bg-[#FFF3EC] border border-[#EAE2DC] text-[#777777] hover:text-[#171717] text-[11px] font-medium flex items-center gap-0.5 transition-colors cursor-pointer"
+                                            title="Move to previous stage"
+                                          >
+                                            <ChevronLeft className="w-3.5 h-3.5" />
+                                            <span className="hidden sm:inline">Prev</span>
+                                          </button>
+                                        )}
+                                        {col.id !== 'done' && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              moveTask(t.id, 'next');
+                                            }}
+                                            className="px-2.5 py-1 rounded-lg bg-[#FFF3EC] hover:bg-[#F36B21] text-[#F36B21] hover:text-white text-[11px] font-semibold flex items-center gap-0.5 transition-all shadow-xs cursor-pointer"
+                                            title="Move to next stage"
+                                          >
+                                            <span>Next</span>
+                                            <ChevronRight className="w-3.5 h-3.5" />
+                                          </button>
+                                        )}
+                                        {col.id === 'done' && (
+                                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-200">
+                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                            <span>Done</span>
+                                          </span>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteTask(t.id, t.title);
+                                          }}
+                                          className="p-1 rounded-lg text-[#BBBBBB] hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                                          title="Delete task"
+                                        >
+                                          <X className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
-                                  </div>
-                                </div>
-                              </React.Fragment>
-                            );
-                          })}
+                                </React.Fragment>
+                              );
+                            })}
 
                             {colTasks.length === 0 && (
-                              <div className="text-center py-12 px-4 border-2 border-dashed border-[#EAE2DC] rounded-2xl bg-white/50 space-y-2">
-                                <span className="text-xs font-semibold text-[#888888] block">No deliverables in this stage</span>
-                                <p className="text-[11px] text-[#AAAAAA]">
-                                  {kanbanSearch || kanbanPriorityFilter !== 'All' ? 'Try adjusting your filters' : 'Add a task card to get started'}
+                              <div
+                                className={`text-center py-12 px-4 border-2 border-dashed rounded-2xl space-y-2 transition-colors ${isColumnHovered
+                                    ? 'border-[#F36B21] bg-white text-[#F36B21]'
+                                    : 'border-[#EAE2DC] bg-white/50 text-[#888888]'
+                                  }`}
+                              >
+                                <span className="text-xs font-semibold block">
+                                  {isColumnHovered ? `Drop to move into ${col.title}` : 'No deliverables in this stage'}
+                                </span>
+                                <p className="text-[11px] opacity-80">
+                                  {isColumnHovered
+                                    ? 'Release mouse button to sync status'
+                                    : kanbanSearch || kanbanPriorityFilter !== 'All'
+                                      ? 'Try adjusting your filters'
+                                      : 'Drag a card here or add a new deliverable'}
                                 </p>
+                              </div>
+                            )}
+
+                            {isColumnHovered && colTasks.length > 0 && dragOverTaskId === null && (
+                              <div className="py-3 px-4 rounded-2xl border-2 border-dashed border-[#F36B21]/60 bg-white/80 text-center text-xs font-semibold text-[#F36B21]">
+                                Drop here to move into {col.title}
                               </div>
                             )}
                           </div>
@@ -1873,11 +1901,10 @@ export default function ProjectsHubPage({
                       <button
                         key={status}
                         onClick={() => setProposalFilter(status)}
-                        className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                          proposalFilter === status
+                        className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${proposalFilter === status
                             ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
                             : 'text-[#777777] hover:text-[#171717]'
-                        }`}
+                          }`}
                       >
                         {status}
                       </button>
@@ -1894,20 +1921,20 @@ export default function ProjectsHubPage({
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-3.5">
                           <img
-                            src={prop.candidate.avatar}
-                            alt={prop.candidate.name}
+                            src={prop.candidate?.avatar || prop.candidate_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80'}
+                            alt={prop.candidate?.name || prop.candidate_name || 'Candidate'}
                             className="w-12 h-12 rounded-full object-cover border-2 border-[#FCE2D3]"
                           />
                           <div>
                             <div className="flex items-center gap-2">
                               <h3 className="text-sm sm:text-base font-bold text-[#171717]">
-                                {prop.candidate.name}
+                                {prop.candidate?.name || prop.candidate_name}
                               </h3>
                               <span className="flex items-center gap-1 text-xs font-semibold text-amber-500">
-                                ★ {prop.candidate.rating}
+                                ★ {prop.candidate?.rating || prop.candidate_rating || 5.0}
                               </span>
                             </div>
-                            <p className="text-xs text-[#777777]">{prop.candidate.title}</p>
+                            <p className="text-xs text-[#777777]">{prop.candidate?.title || prop.candidate_title || 'Specialist'}</p>
                           </div>
                         </div>
 
@@ -1929,13 +1956,12 @@ export default function ProjectsHubPage({
                       <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-[#F3ECE7]">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              prop.status === 'Accepted'
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${prop.status === 'Accepted'
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                 : prop.status === 'In Review'
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                : 'bg-slate-50 text-slate-700 border border-slate-200'
-                            }`}
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  : 'bg-slate-50 text-slate-700 border border-slate-200'
+                              }`}
                           >
                             ● Status: {prop.status}
                           </span>
@@ -1999,13 +2025,13 @@ export default function ProjectsHubPage({
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#F3ECE7]">
                         <div className="flex items-center gap-3.5">
                           <img
-                            src={myProp.clientAvatar}
-                            alt={myProp.clientName}
+                            src={myProp.clientAvatar || myProp.client_avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80'}
+                            alt={myProp.clientName || myProp.client_name || 'Client'}
                             className="w-12 h-12 rounded-2xl object-cover border border-[#EAE2DC]"
                           />
                           <div>
-                            <h3 className="text-sm sm:text-base font-bold text-[#171717]">{myProp.projectTitle}</h3>
-                            <p className="text-xs text-[#777777]">Client: {myProp.clientName}</p>
+                            <h3 className="text-sm sm:text-base font-bold text-[#171717]">{myProp.projectTitle || myProp.project_title}</h3>
+                            <p className="text-xs text-[#777777]">Client: {myProp.clientName || myProp.client_name}</p>
                           </div>
                         </div>
 
@@ -2040,7 +2066,7 @@ export default function ProjectsHubPage({
                             <MessageSquare className="w-3.5 h-3.5" />
                             <span>Message Client</span>
                           </button>
-                          {myProp.status.includes('Active') && (
+                          {(myProp.status.includes('Active') || myProp.status === 'Accepted') && (
                             <button
                               onClick={() => setActiveSidebarNav('contracts')}
                               className="px-4 py-2 rounded-full bg-[#171717] hover:bg-[#F36B21] text-white text-xs font-semibold transition-all shadow-xs cursor-pointer"
@@ -2117,19 +2143,25 @@ export default function ProjectsHubPage({
 
                 {/* Payout History Ledger */}
                 <div className="bg-white rounded-3xl border border-[#EAE2DC] p-6 shadow-xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-[#F3ECE7]">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#F3ECE7]">
                     <div>
-                      <h3 className="text-sm font-bold text-[#171717]">Recent Payout Transactions</h3>
-                      <p className="text-xs text-[#888888]">Official escrow disbursements to your verified Stripe account</p>
+                      <h3 className="text-sm font-bold text-[#171717]">Recent Payout & Ledger Transactions</h3>
+                      <p className="text-xs text-[#888888]">Live SQLite wallet ledger & escrow disbursements</p>
                     </div>
 
                     <button
                       onClick={() => {
-                        if (paymentsList && paymentsList.length > 0) {
-                          setActiveInvoicePayment(paymentsList[0]);
-                        }
+                        const first = paymentsList[0] || {
+                          id: 'TAX-2026',
+                          milestone: '2026 Annual Escrow Summary',
+                          project: 'Workverse Workspace',
+                          recipient: currentUser?.name || 'Arjun Mehta',
+                          amount: formatUsd(freelancerTotalEarnings),
+                          date: 'Today',
+                        };
+                        setActiveInvoicePayment(first);
                       }}
-                      className="px-4 py-2 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] text-xs font-semibold text-[#171717] hover:text-[#F36B21] transition-colors flex items-center gap-1.5 cursor-pointer"
+                      className="px-4 py-2 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] text-xs font-semibold text-[#171717] hover:text-[#F36B21] transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
                     >
                       <Printer className="w-3.5 h-3.5" />
                       <span>Generate Tax Statement</span>
@@ -2138,24 +2170,47 @@ export default function ProjectsHubPage({
 
                   <div className="divide-y divide-[#F3ECE7] text-xs">
                     {[
-                      { id: 'PAY-881', client: 'CloudScale AI', milestone: 'Sprint 03: Telemetry Engine', amount: '$1,650.00', date: 'Nov 05, 2026', method: 'Stripe Instant (•••• 4921)' },
-                      { id: 'PAY-842', client: 'Studio Arc', milestone: 'Final Milestone: Token Signoff', amount: '$2,800.00', date: 'Oct 28, 2026', method: 'Stripe Instant (•••• 4921)' },
-                      { id: 'PAY-799', client: 'FinTech Labs', milestone: 'Milestone 2: Postgres Schema', amount: '$1,200.00', date: 'Oct 15, 2026', method: 'Stripe Instant (•••• 4921)' },
+                      ...walletTransactions.map((wt) => {
+                        const isDebit = wt.type === 'withdrawal';
+                        const methodLabel = formatWalletMethodLabel(wt.method);
+                        return {
+                          id: wt.id,
+                          client: methodLabel,
+                          milestone: isDebit ? `Withdrawal via ${methodLabel}` : (wt.note || `${wt.type} credit`),
+                          project: 'Workverse Wallet Ledger',
+                          recipient: currentUser?.name || 'Arjun Mehta',
+                          amount: `${isDebit ? '-' : '+'}${formatUsd(wt.amount)}`,
+                          isDebit,
+                          date: formatLedgerDate(wt.created_at),
+                        };
+                      }),
+                      ...paymentsList
+                        .filter((p) => p.status === 'Released')
+                        .map((p) => ({
+                          id: p.id,
+                          client: p.project,
+                          milestone: p.milestone,
+                          project: p.project,
+                          recipient: p.recipient,
+                          amount: p.amount,
+                          isDebit: false,
+                          date: p.date,
+                        })),
                     ].map((tx) => (
                       <div key={tx.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FFF9F5] px-2 rounded-xl transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
-                            <Check className="w-4 h-4" />
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold shrink-0 ${tx.isDebit ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                            {tx.isDebit ? <ArrowUpRight className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                           </div>
-                          <div>
-                            <span className="font-bold text-[#171717] block">{tx.milestone}</span>
-                            <span className="text-[#777777] text-[11px]">Client: {tx.client} • Ref: {tx.id}</span>
+                          <div className="min-w-0">
+                            <span className="font-bold text-[#171717] block truncate">{tx.milestone}</span>
+                            <span className="text-[#777777] text-[11px] block truncate">Source: {tx.client} • Ref: {tx.id}</span>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between sm:justify-end gap-5">
+                        <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
                           <div className="text-left sm:text-right">
-                            <span className="font-bold text-emerald-600 block">{tx.amount}</span>
+                            <span className={`font-bold block tabular-nums ${tx.isDebit ? 'text-amber-700' : 'text-emerald-600'}`}>{tx.amount}</span>
                             <span className="text-[10px] text-[#888888]">{tx.date}</span>
                           </div>
 
@@ -2163,16 +2218,15 @@ export default function ProjectsHubPage({
                             onClick={() => {
                               setActiveInvoicePayment({
                                 id: tx.id,
-                                projectTitle: tx.milestone,
-                                contractor: { name: 'Arjun Mehta', title: 'Fullstack Lead' },
+                                project: tx.project || tx.client,
+                                recipient: tx.recipient || currentUser?.name || 'Arjun Mehta',
                                 milestone: tx.milestone,
                                 amount: tx.amount,
-                                status: 'Paid',
+                                status: 'Released',
                                 date: tx.date,
-                                invoiceNumber: `INV-${tx.id}`,
                               });
                             }}
-                            className="px-3 py-1.5 rounded-lg border border-[#EAE2DC] hover:border-[#F36B21] text-[11px] font-semibold text-[#777777] hover:text-[#171717] hover:bg-[#FFF3EC] transition-all flex items-center gap-1 cursor-pointer"
+                            className="px-3 py-1.5 rounded-lg border border-[#EAE2DC] hover:border-[#F36B21] text-[11px] font-semibold text-[#777777] hover:text-[#171717] hover:bg-[#FFF3EC] transition-all flex items-center gap-1 cursor-pointer shrink-0"
                           >
                             <FileText className="w-3 h-3 text-[#F36B21]" />
                             <span>Invoice</span>
@@ -2198,24 +2252,24 @@ export default function ProjectsHubPage({
                 <div className="p-6 rounded-3xl bg-[#FFF9F5] border border-[#EAE2DC] flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                   <div className="flex items-center gap-4">
                     <img
-                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
-                      alt="Arjun Mehta"
+                      src={currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
+                      alt={currentUser?.name || 'Freelancer'}
                       className="w-18 h-18 rounded-2xl object-cover border-2 border-[#F36B21] shadow-md"
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-bold text-[#171717]">Arjun Mehta</h3>
+                        <h3 className="text-lg font-bold text-[#171717]">{currentUser?.name || 'Arjun Mehta'}</h3>
                         <span className="px-2.5 py-0.5 rounded-full bg-[#FFF3EC] text-[#F36B21] text-[10px] font-bold border border-[#FCE2D3]">
-                          Top Rated Plus
+                          Verified Talent
                         </span>
                       </div>
-                      <p className="text-xs text-[#777777] mt-0.5">Lead Fullstack Architect & Cloud Specialist</p>
+                      <p className="text-xs text-[#777777] mt-0.5">{currentUser?.title || 'Senior Full Stack & Cloud Architect'}</p>
                       <div className="flex items-center gap-3 pt-1 text-xs text-[#888888]">
-                        <span className="text-amber-500 font-bold">★ 4.9 (128 reviews)</span>
+                        <span className="text-amber-500 font-bold">★ 4.9 (Verified)</span>
                         <span>•</span>
                         <span className="text-emerald-600 font-semibold">99% Job Success</span>
                         <span>•</span>
-                        <span className="font-bold text-[#171717]">$45.00/hr</span>
+                        <span className="font-bold text-[#171717]">${(currentUser?.hourly_rate || hourlyRate).toFixed(2)}/hr</span>
                       </div>
                     </div>
                   </div>
@@ -2246,9 +2300,8 @@ export default function ProjectsHubPage({
                         <button
                           key={thread.id}
                           onClick={() => setActiveThreadId(thread.id)}
-                          className={`w-full p-3.5 text-left flex items-start gap-3 transition-colors cursor-pointer ${
-                            isSelected ? 'bg-white shadow-xs border-l-4 border-l-[#F36B21]' : 'hover:bg-white'
-                          }`}
+                          className={`w-full p-3.5 text-left flex items-start gap-3 transition-colors cursor-pointer ${isSelected ? 'bg-white shadow-xs border-l-4 border-l-[#F36B21]' : 'hover:bg-white'
+                            }`}
                         >
                           <div className="relative shrink-0">
                             <img
@@ -2305,17 +2358,15 @@ export default function ProjectsHubPage({
                           className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${
-                              isMe
+                            className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${isMe
                                 ? 'bg-[#171717] text-white shadow-xs rounded-br-none'
                                 : 'bg-white border border-[#EAE2DC] text-[#171717] shadow-xs rounded-bl-none'
-                            }`}
+                              }`}
                           >
                             <p>{msg.text}</p>
                             <span
-                              className={`text-[9px] block text-right mt-1.5 ${
-                                isMe ? 'text-white/60' : 'text-[#888888]'
-                              }`}
+                              className={`text-[9px] block text-right mt-1.5 ${isMe ? 'text-white/60' : 'text-[#888888]'
+                                }`}
                             >
                               {msg.time}
                             </span>
@@ -2382,18 +2433,27 @@ export default function ProjectsHubPage({
                               <span>•</span>
                               <span>{file.size}</span>
                               <span>•</span>
-                              <span>Uploaded by {file.uploadedBy} ({file.date})</span>
+                              <span>Uploaded by {file.uploadedBy || file.uploaded_by || 'Workverse'} ({file.date})</span>
                             </div>
                           </div>
                         </div>
 
-                        <button
-                          onClick={() => handleSimulateDownload(file.name)}
-                          className="px-4 py-2 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] hover:text-[#F36B21] bg-white text-xs font-semibold flex items-center gap-1.5 transition-colors self-start sm:self-auto cursor-pointer shadow-xs"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>Download</span>
-                        </button>
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <button
+                            onClick={() => handleSimulateDownload(file.name, `Workverse Deliverable\nFile: ${file.name}\nProject: ${file.project}\nSize: ${file.size}\nUploaded by: ${file.uploadedBy || file.uploaded_by || 'Workverse'}\nDate: ${file.date}`)}
+                            className="px-4 py-2 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] hover:text-[#F36B21] bg-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Download</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteFile(file.id, file.name)}
+                            className="p-2 rounded-full border border-[#EAE2DC] hover:border-red-300 hover:bg-red-50 text-[#888888] hover:text-red-600 transition-colors cursor-pointer"
+                            title="Delete file"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2469,11 +2529,10 @@ export default function ProjectsHubPage({
                       <button
                         key={st}
                         onClick={() => setPaymentFilter(st)}
-                        className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                          paymentFilter === st
+                        className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${paymentFilter === st
                             ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
                             : 'text-[#777777] hover:text-[#171717]'
-                        }`}
+                          }`}
                       >
                         {st}
                       </button>
@@ -2483,20 +2542,20 @@ export default function ProjectsHubPage({
 
                 {/* Top Balances Bar */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="p-5 rounded-3xl bg-white border border-[#EAE2DC] shadow-xs space-y-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#888888]">Escrow Holding</span>
-                    <div className="text-2xl font-extrabold text-[#171717]">$24,500.00</div>
+                  <div className="p-5 rounded-3xl bg-white border border-[#EAE2DC] shadow-xs space-y-1 min-w-0 overflow-hidden">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#888888] block">Escrow Holding</span>
+                    <div className="text-2xl font-extrabold text-[#171717] tabular-nums truncate">{formatUsd(clientEscrowHolding)}</div>
                     <span className="text-[10px] text-emerald-600 font-semibold">● 100% Guaranteed</span>
                   </div>
-                  <div className="p-5 rounded-3xl bg-white border border-[#EAE2DC] shadow-xs space-y-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#888888]">Released to Date</span>
-                    <div className="text-2xl font-extrabold text-[#171717]">$8,200.00</div>
-                    <span className="text-[10px] text-[#777777]">3 Completed Milestones</span>
+                  <div className="p-5 rounded-3xl bg-white border border-[#EAE2DC] shadow-xs space-y-1 min-w-0 overflow-hidden">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#888888] block">Released to Date</span>
+                    <div className="text-2xl font-extrabold text-[#171717] tabular-nums truncate">{formatUsd(clientReleasedTotal)}</div>
+                    <span className="text-[10px] text-[#777777]">{clientReleasedCount} Completed Milestone{clientReleasedCount === 1 ? '' : 's'}</span>
                   </div>
-                  <div className="p-5 rounded-3xl bg-white border border-[#EAE2DC] shadow-xs space-y-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#888888]">Pending Approval</span>
-                    <div className="text-2xl font-extrabold text-[#F36B21]">$1,200.00</div>
-                    <span className="text-[10px] text-amber-600 font-semibold">1 Awaiting Signoff</span>
+                  <div className="p-5 rounded-3xl bg-white border border-[#EAE2DC] shadow-xs space-y-1 min-w-0 overflow-hidden">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#888888] block">Pending Approval</span>
+                    <div className="text-2xl font-extrabold text-[#F36B21] tabular-nums truncate">{formatUsd(pendingClearanceTotal)}</div>
+                    <span className="text-[10px] text-amber-600 font-semibold">{pendingClearanceCount} Awaiting Signoff</span>
                   </div>
                 </div>
 
@@ -2523,13 +2582,12 @@ export default function ProjectsHubPage({
                           <div className="text-right">
                             <span className="text-base font-extrabold text-[#171717]">{pay.amount}</span>
                             <span
-                              className={`text-[10px] px-2 py-0.5 rounded-full block font-semibold border ${
-                                pay.status === 'Released'
+                              className={`text-[10px] px-2 py-0.5 rounded-full block font-semibold border ${pay.status === 'Released'
                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                   : pay.status === 'In Escrow'
-                                  ? 'bg-[#FFF3EC] text-[#F36B21] border-[#FCE2D3]'
-                                  : 'bg-amber-50 text-amber-700 border-amber-200'
-                              }`}
+                                    ? 'bg-[#FFF3EC] text-[#F36B21] border-[#FCE2D3]'
+                                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                                }`}
                             >
                               {pay.status}
                             </span>
@@ -2613,14 +2671,12 @@ export default function ProjectsHubPage({
                       <button
                         type="button"
                         onClick={() => setAutoEscrowRelease(!autoEscrowRelease)}
-                        className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                          autoEscrowRelease ? 'bg-[#F36B21]' : 'bg-[#EAE2DC]'
-                        }`}
+                        className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${autoEscrowRelease ? 'bg-[#F36B21]' : 'bg-[#EAE2DC]'
+                          }`}
                       >
                         <span
-                          className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-0.5 transition-transform ${
-                            autoEscrowRelease ? 'right-0.5' : 'left-0.5'
-                          }`}
+                          className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-0.5 transition-transform ${autoEscrowRelease ? 'right-0.5' : 'left-0.5'
+                            }`}
                         />
                       </button>
                     </div>
@@ -2633,14 +2689,12 @@ export default function ProjectsHubPage({
                       <button
                         type="button"
                         onClick={() => setTwoFactorAuth(!twoFactorAuth)}
-                        className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                          twoFactorAuth ? 'bg-[#F36B21]' : 'bg-[#EAE2DC]'
-                        }`}
+                        className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${twoFactorAuth ? 'bg-[#F36B21]' : 'bg-[#EAE2DC]'
+                          }`}
                       >
                         <span
-                          className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-0.5 transition-transform ${
-                            twoFactorAuth ? 'right-0.5' : 'left-0.5'
-                          }`}
+                          className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-0.5 transition-transform ${twoFactorAuth ? 'right-0.5' : 'left-0.5'
+                            }`}
                         />
                       </button>
                     </div>
@@ -2661,7 +2715,7 @@ export default function ProjectsHubPage({
 
           {/* 3. Right Sidebar: Role-Specific Telemetry (Client vs Freelancer) */}
           {activeSidebarNav !== 'kanban' && (
-            <div className="lg:col-span-3 space-y-5 animate-in fade-in duration-200">
+            <div className="lg:col-span-3 min-w-0 space-y-5 animate-in fade-in duration-200">
               {userRole === 'client' ? (
                 <>
                   {/* Client Card 1: Project Overview (Donut Chart & Legend) */}
@@ -2753,21 +2807,15 @@ export default function ProjectsHubPage({
                     </h3>
 
                     <div className="space-y-2.5 pt-1 text-xs">
-                      <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#F36B21]" />
-                          <span className="font-semibold text-[#171717]">SaaS Dashboard</span>
+                      {projectList.slice(0, 3).map((p, idx) => (
+                        <div key={p.id} className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${idx === 0 ? 'bg-[#F36B21]' : 'bg-amber-500'}`} />
+                            <span className="font-semibold text-[#171717] truncate">{p.title}</span>
+                          </div>
+                          <span className="text-[10px] font-medium text-[#777777] shrink-0">{p.deadline}</span>
                         </div>
-                        <span className="text-[10px] font-medium text-[#777777]">Nov 12, 2026</span>
-                      </div>
-
-                      <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                          <span className="font-semibold text-[#171717]">Brand Website</span>
-                        </div>
-                        <span className="text-[10px] font-medium text-[#777777]">Nov 18, 2026</span>
-                      </div>
+                      ))}
                     </div>
                   </div>
 
@@ -2875,21 +2923,15 @@ export default function ProjectsHubPage({
                     </h3>
 
                     <div className="space-y-2.5 pt-1 text-xs">
-                      <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#F36B21]" />
-                          <span className="font-semibold text-[#171717]">SaaS Dashboard (P2)</span>
+                      {freelancerContracts.slice(0, 3).map((c, idx) => (
+                        <div key={c.id} className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${idx === 0 ? 'bg-[#F36B21]' : 'bg-slate-400'}`} />
+                            <span className="font-semibold text-[#171717] truncate">{c.title}</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-amber-600 shrink-0">{c.deadline}</span>
                         </div>
-                        <span className="text-[10px] font-medium text-amber-600 font-bold">Nov 12</span>
-                      </div>
-
-                      <div className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC]">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-                          <span className="font-semibold text-[#171717]">PostgreSQL Indexing</span>
-                        </div>
-                        <span className="text-[10px] font-medium text-[#777777]">Nov 20</span>
-                      </div>
+                      ))}
                     </div>
                   </div>
 
@@ -2965,13 +3007,12 @@ export default function ProjectsHubPage({
               ].map((st) => (
                 <div key={st.s} className="flex items-center gap-2 flex-1">
                   <div
-                    className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
-                      wizardStep === st.s
+                    className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${wizardStep === st.s
                         ? 'bg-[#F36B21] text-white shadow-xs'
                         : wizardStep > st.s
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-[#FFF3EC] text-[#888888]'
-                    }`}
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-[#FFF3EC] text-[#888888]'
+                      }`}
                   >
                     {wizardStep > st.s ? '✓' : st.s}
                   </div>
