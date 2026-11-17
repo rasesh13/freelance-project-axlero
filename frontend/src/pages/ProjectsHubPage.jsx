@@ -1678,10 +1678,19 @@ export default function ProjectsHubPage({
                       return matchesCol && matchesSearch && matchesPriority;
                     });
 
+                    const isColumnHovered = dragOverCol === col.id && draggedTaskId !== null;
+
                     return (
                       <div
                         key={col.id}
-                        className="bg-[#FFF9F5] border border-[#EAE2DC] rounded-3xl p-5 space-y-4 min-h-[520px] flex flex-col justify-between shadow-xs transition-all"
+                        onDragOver={(e) => handleColumnDragOver(e, col.id, null)}
+                        onDragLeave={handleColumnDragLeave}
+                        onDrop={(e) => handleDropTarget(e, col.id, null)}
+                        className={`rounded-3xl p-5 space-y-4 min-h-[520px] flex flex-col justify-between transition-all duration-200 ${
+                          isColumnHovered
+                            ? 'bg-[#FFF3EC]/70 border-[#F36B21] ring-2 ring-[#F36B21]/20 shadow-lg'
+                            : 'bg-[#FFF9F5] border-[#EAE2DC] shadow-xs'
+                        }`}
                       >
                         <div className="space-y-4">
                           {/* Column Header */}
@@ -1697,14 +1706,31 @@ export default function ProjectsHubPage({
 
                           {/* Task Cards Container */}
                           <div className="space-y-3.5">
-                            {colTasks.map((t) => (
-                              <div
-                                key={t.id}
-                                className="bg-white rounded-2xl border border-[#EAE2DC] p-4.5 space-y-3 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:border-[#F36B21]/60 hover:shadow-[0_12px_28px_rgba(243,107,33,0.08)] transition-all group relative"
-                              >
-                                {/* Top Row: Priority Pill, Estimate & Checklist Progress */}
+                            {colTasks.map((t) => {
+                              const isDraggingThis = draggedTaskId === t.id;
+
+                              return (
+                                <div
+                                  key={t.id}
+                                  draggable
+                                  onDragStart={(e) => handleCardDragStart(e, t.id)}
+                                  onDragEnd={handleCardDragEnd}
+                                  className={`bg-white rounded-2xl border p-4.5 space-y-3 transition-all duration-150 group relative cursor-grab active:cursor-grabbing ${
+                                    isDraggingThis
+                                      ? 'opacity-45 scale-[0.97] border-[#F36B21] ring-2 ring-[#F36B21]/20 shadow-md'
+                                      : 'border-[#EAE2DC] shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:border-[#F36B21]/60 hover:shadow-[0_12px_28px_rgba(243,107,33,0.08)]'
+                                  }`}
+                                >
+                                {/* Top Row: Drag Grip Handle, Priority Pill & Estimate */}
                                 <div className="flex items-center justify-between gap-2">
-                                  <span
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <div
+                                      className="p-1 rounded-md text-[#888888] hover:text-[#F36B21] hover:bg-[#FFF3EC] transition-colors cursor-grab active:cursor-grabbing"
+                                      title="Drag deliverable card across stages"
+                                    >
+                                      <GripVertical className="w-3.5 h-3.5" />
+                                    </div>
+                                    <span
                                     className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                                       t.priority === 'Urgent'
                                         ? 'bg-rose-100 text-rose-700 border border-rose-200'
@@ -1788,8 +1814,10 @@ export default function ProjectsHubPage({
                                     )}
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
 
                             {colTasks.length === 0 && (
                               <div className="text-center py-12 px-4 border-2 border-dashed border-[#EAE2DC] rounded-2xl bg-white/50 space-y-2">
