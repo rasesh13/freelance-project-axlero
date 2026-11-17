@@ -279,6 +279,9 @@ const completedLength =
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [newFileProject, setNewFileProject] = useState('SaaS Dashboard Development');
+  const [newFileSize, setNewFileSize] = useState('6.4 MB');
+  const [fileCategoryFilter, setFileCategoryFilter] = useState('All');
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [downloadSuccessToast, setDownloadSuccessToast] = useState(null);
 
   // Team State
@@ -2536,9 +2539,14 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
               <div className="space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
                   <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-[#171717]">Project Deliverables & Files</h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl sm:text-2xl font-bold text-[#171717]">Project Deliverables & Files</h2>
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#FFF3EC] text-[#F36B21] text-xs font-bold border border-[#FCE2D3]">
+                        {filesList.length} Files
+                      </span>
+                    </div>
                     <p className="text-xs text-[#888888] mt-0.5">
-                      Central repository for design tokens, source code archives, escrow receipts, and benchmark specs.
+                      Central encrypted repository for design tokens, source archives, escrow receipts, and benchmark specs.
                     </p>
                   </div>
                   <button
@@ -2550,9 +2558,38 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                   </button>
                 </div>
 
+                {/* File Category Filter Tabs */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  {['All', 'PDF Documents', 'Figma & Design', 'Code Archives', 'Receipts'].map((cat) => {
+                    const isSelected = fileCategoryFilter === cat;
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => setFileCategoryFilter(cat)}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#171717] text-white shadow-xs'
+                            : 'bg-white border border-[#EAE2DC] text-[#777777] hover:border-[#F36B21] hover:text-[#171717]'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <div className="bg-white rounded-3xl border border-[#EAE2DC] shadow-xs overflow-hidden">
                   <div className="divide-y divide-[#F3ECE7]">
-                    {filesList.map((file) => (
+                    {filesList
+                      .filter((f) => {
+                        if (fileCategoryFilter === 'All') return true;
+                        if (fileCategoryFilter === 'PDF Documents') return f.name.toLowerCase().endsWith('.pdf') || f.type === 'pdf';
+                        if (fileCategoryFilter === 'Figma & Design') return f.name.toLowerCase().endsWith('.fig') || f.type === 'figma';
+                        if (fileCategoryFilter === 'Code Archives') return f.name.toLowerCase().endsWith('.zip') || f.type === 'archive';
+                        if (fileCategoryFilter === 'Receipts') return f.name.toLowerCase().includes('receipt') || f.name.toLowerCase().includes('signoff');
+                        return true;
+                      })
+                      .map((file) => (
                       <div
                         key={file.id}
                         className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#FFF9F5]/40 transition-colors"
@@ -3447,10 +3484,39 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                 </select>
               </div>
 
-              <div className="border-2 border-dashed border-[#FCE2D3] rounded-2xl p-6 text-center bg-[#FFF9F5]">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
+                  Deliverable Size Preset
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['1.8 MB', '6.4 MB', '24.0 MB', '85.5 MB'].map((sz) => (
+                    <button
+                      key={sz}
+                      type="button"
+                      onClick={() => setNewFileSize(sz)}
+                      className={`py-1.5 rounded-xl text-xs font-semibold border text-center transition-colors cursor-pointer ${
+                        newFileSize === sz
+                          ? 'bg-[#FFF3EC] text-[#F36B21] border-[#FCE2D3] ring-1 ring-[#F36B21]'
+                          : 'bg-[#FFF9F5] text-[#666666] border-[#EAE2DC] hover:border-[#FCE2D3]'
+                      }`}
+                    >
+                      {sz}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-2 border-dashed border-[#FCE2D3] rounded-2xl p-5 text-center bg-[#FFF9F5] transition-colors hover:bg-[#FFF3EC]/40">
                 <UploadCloud className="w-8 h-8 text-[#F36B21] mx-auto mb-2" />
-                <p className="text-xs font-semibold text-[#171717]">Drag and drop files here</p>
-                <p className="text-[10px] text-[#888888] mt-1">Supports PDF, ZIP, FIG, PNG up to 250MB</p>
+                <p className="text-xs font-semibold text-[#171717]">
+                  {newFileName ? `Ready: ${newFileName} (${newFileSize})` : 'Drag and drop deliverable files here'}
+                </p>
+                <p className="text-[10px] text-[#888888] mt-1">Supports PDF, ZIP, FIG, PNG, JSON up to 250MB</p>
+                {isUploadingFile && (
+                  <div className="mt-3 w-full bg-[#EAE2DC] rounded-full h-1.5 overflow-hidden">
+                    <div className="bg-[#F36B21] h-1.5 rounded-full animate-pulse w-3/4" />
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">
