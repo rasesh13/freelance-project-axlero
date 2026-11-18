@@ -20,6 +20,15 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '2mb' }));
 
+// Security Headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
 // Request logger
 app.use((req, res, next) => {
   const start = Date.now();
@@ -1748,10 +1757,44 @@ app.use((err, req, res, next) => {
 });
 
 // Start listening dual-stack (supports both localhost and 127.0.0.1)
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`=======================================================`);
   console.log(`🚀 WORKVERSE PRODUCTION BACKEND RUNNING ON:`);
   console.log(`👉 http://127.0.0.1:${PORT}`);
   console.log(`👉 http://localhost:${PORT}`);
   console.log(`=======================================================`);
 });
+
+// Graceful Shutdown handling for containers and process managers
+function handleGracefulShutdown(signal) {
+  console.log(`\n[${new Date().toISOString()}] Received ${signal}. Initiating graceful shutdown...`);
+  server.close(() => {
+    console.log(`[${new Date().toISOString()}] HTTP server closed successfully.`);
+    try {
+      if (db && typeof db.close === 'function') {
+        db.close();
+        console.log(`[${new Date().toISOString()}] SQLite database connection closed cleanly.`);
+      }
+    } catch (e) {
+      console.error('Error closing database:', e);
+    }
+    process.exit(0);
+  });
+
+  setTimeout(() => {
+    console.error(`[${new Date().toISOString()}] Could not close connections in time, forcefully shutting down.`);
+    process.exit(1);
+  }, 5000).unref();
+}
+
+process.on('SIGINT', () => handleGracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => handleGracefulShutdown('SIGTERM'));
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[UNHANDLED REJECTION]', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION]', err);
+});
+
+module.exports = { app, server };
