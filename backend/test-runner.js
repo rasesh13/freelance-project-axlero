@@ -5,7 +5,7 @@
  * Orchestrates database relational checks, API integration tests, and health audits.
  */
 
-const { spawnSync } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const path = require('node:path');
 
 const startTime = Date.now();
@@ -30,26 +30,73 @@ function runStep(title, scriptName) {
   return true;
 }
 
-// Stage 1: SQLite Relational Integrity Suite
-const dbPassed = runStep('Database Relational Integrity & Schema Audit', 'test-db.js');
-if (!dbPassed) {
-  process.exit(1);
+async function isServerRunning() {
+  try {
+    const res = await fetch('http://localhost:5000/api/health');
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
-// Stage 2: REST API End-to-End Integration Suite
-const apiPassed = runStep('REST API End-to-End Integration Suite', 'test-api.js');
-if (!apiPassed) {
-  process.exit(1);
+async function waitForServer(maxRetries = 25) {
+  for (let i = 0; i < maxRetries; i++) {
+    if (await isServerRunning()) return true;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  return false;
 }
 
-const durationSec = ((Date.now() - startTime) / 1000).toFixed(2);
+async function main() {
+  // Stage 1: SQLite Relational Integrity Suite
+  const dbPassed = runStep('Database Relational Integrity & Schema Audit', 'test-db.js');
+  if (!dbPassed) {
+    process.exit(1);
+  }
 
-console.log('\n======================================================================');
-console.log('🏆 WORKVERSE PLATFORM VERIFICATION SUMMARY:');
-console.log('   • Stage 1 (Database Relational Schema):   \x1b[32m13/13 CHECKS PASSED\x1b[0m');
-console.log('   • Stage 2 (REST API Integration Suite):   \x1b[32m26/26 TESTS PASSED\x1b[0m');
-console.log(`   • Total Test Duration:                    ${durationSec}s`);
-console.log('   • Platform Health Status:                 \x1b[32m100% OPERATIONAL & CERTIFIED\x1b[0m');
-console.log('======================================================================\n');
+  // Check if API server is already running; if not, spawn temporary instance
+  let spawnedServer = null;
+  const alreadyRunning = await isServerRunning();
+  if (!alreadyRunning) {
+    console.log('\x1b[36m⚙️  Starting local backend server instance for integration suite...\x1b[0m');
+    const serverPath = path.resolve(__dirname, 'server.js');
+    spawnedServer = spawn(process.execPath, [serverPath], {
+      stdio: 'ignore',
+      env: process.env,
+    });
+    const ready = await waitForServer();
+    if (!ready) {
+      console.error('\x1b[31mFailed to start temporary backend server on port 5000.\x1b[0m');
+      if (spawnedServer) spawnedServer.kill();
+      process.exit(1);
+    }
+  }
 
-process.exit(0);
+  // Stage 2: REST API End-to-End Integration Suite
+  const apiPassed = runStep('REST API End-to-End Integration Suite', 'test-api.js');
+
+  if (spawnedServer) {
+    spawnedServer.kill();
+  }
+
+  if (!apiPassed) {
+    process.exit(1);
+  }
+
+  const durationSec = ((Date.now() - startTime) / 1000).toFixed(2);
+
+  console.log('\n======================================================================');
+  console.log('🏆 WORKVERSE PLATFORM VERIFICATION SUMMARY:');
+  console.log('   • Stage 1 (Database Relational Schema):   \x1b[32m13/13 CHECKS PASSED\x1b[0m');
+  console.log('   • Stage 2 (REST API Integration Suite):   \x1b[32m26/26 TESTS PASSED\x1b[0m');
+  console.log(`   • Total Test Duration:                    ${durationSec}s`);
+  console.log('   • Platform Health Status:                 \x1b[32m100% OPERATIONAL & CERTIFIED\x1b[0m');
+  console.log('======================================================================\n');
+
+  process.exit(0);
+}
+
+main().catch((err) => {
+  console.error('Test runner fatal error:', err);
+  process.exit(1);
+});

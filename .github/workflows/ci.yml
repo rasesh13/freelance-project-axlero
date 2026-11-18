@@ -1,0 +1,50 @@
+name: Workverse CI Platform Verification
+
+on:
+  push:
+    branches: [ main, rasesh ]
+  pull_request:
+    branches: [ main, rasesh ]
+
+jobs:
+  verify:
+    name: Build & Verify (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: 📦 Install Backend Dependencies
+        run: |
+          cd backend
+          npm install
+
+      - name: 📦 Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: 🗄️ Run Database Relational Schema & WAL Integrity Audit
+        run: |
+          cd backend
+          npm run test:db
+
+      - name: 🚀 Run Full Platform Test Suite (REST API Integration)
+        run: |
+          cd backend
+          npm test
+
+      - name: ⚡ Verify Frontend Production Bundle Build
+        run: |
+          cd frontend
+          npm run build
