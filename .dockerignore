@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log
+dist
+.git
+.github
+.gemini
+*.log
+.DS_Store
+Thumbs.db
