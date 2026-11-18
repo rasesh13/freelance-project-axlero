@@ -24,7 +24,9 @@
 
   <br />
 
-  <img src="https://img.shields.io/badge/Version-1.0.0-F36B21?style=flat-square" alt="Version 1.0.0" />
+  <img src="https://img.shields.io/badge/Version-1.1.0-F36B21?style=flat-square" alt="Version 1.1.0" />
+  <img src="https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white" alt="GitHub Actions CI" />
+  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready" />
   <img src="https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 19" />
   <img src="https://img.shields.io/badge/Build-Vite%208-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite 8" />
   <img src="https://img.shields.io/badge/Backend-Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
@@ -353,6 +355,39 @@ Workverse supports two primary platform personas.
 
 Follow these steps to run Workverse locally.
 
+### ⚡ Unified Quick Start (Recommended)
+
+From the project root, launch both the Express backend API and Vite frontend client concurrently:
+
+```bash
+# 1. Install dependencies
+npm --prefix backend install
+npm --prefix frontend install
+
+# 2. Start full-stack development environment concurrently
+npm run dev
+```
+
+- **Client Web App**: [http://localhost:5173](http://localhost:5173)
+- **REST API & Swagger Docs**: [http://localhost:5000/api](http://localhost:5000/api)
+
+Run the automated platform test suite (39 automated checks):
+
+```bash
+npm test
+```
+
+### 🐳 Run with Docker & Docker Compose
+
+Workverse includes a production multi-stage container configuration:
+
+```bash
+# Build and run the containerized platform
+docker compose up --build
+```
+
+---
+
 ### Prerequisites
 
 Make sure you have installed:
@@ -588,6 +623,7 @@ freelance-project-axlero/
   | 08 | Task checklists, messaging, and dispute workflows. |
   | 09 | Automated testing and database integrity verification. |
   | 10 | Architecture documentation, API reference, and v1.0.0 release preparation. |
+  | 11 | CI/CD GitHub Actions pipeline, Docker containerization, root monorepo scripts, and backend security hardening. |
 </details>
 
 ### Release Checklist
@@ -601,6 +637,10 @@ freelance-project-axlero/
 - [x] Backend integration testing
 - [x] Database integrity checks
 - [x] Developer documentation
+- [x] Multi-stage Docker containerization & Docker Compose orchestration
+- [x] GitHub Actions automated CI matrix pipeline
+- [x] Root monorepo development scripts (`npm run dev`)
+- [x] Backend security headers & graceful shutdown lifecycle
 
 ---
 
