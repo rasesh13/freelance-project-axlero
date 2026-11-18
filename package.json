@@ -1,0 +1,29 @@
+{
+  "name": "workverse-platform",
+  "version": "1.1.0",
+  "description": "Workverse Unified Freelance Marketplace & Project Management Workspace",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "dev:backend": "npm --prefix backend start",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "start": "npm --prefix backend start",
+    "build": "npm --prefix frontend run build",
+    "test": "npm --prefix backend test",
+    "test:db": "npm --prefix backend run test:db",
+    "test:api": "npm --prefix backend run test:api",
+    "test:health": "npm --prefix backend run test:health",
+    "lint": "npm --prefix frontend run lint"
+  },
+  "keywords": [
+    "workverse",
+    "freelance-marketplace",
+    "project-management",
+    "react19",
+    "vite",
+    "express5",
+    "sqlite-wal"
+  ],
+  "author": "Workverse Core Engineering",
+  "license": "ISC"
+}
