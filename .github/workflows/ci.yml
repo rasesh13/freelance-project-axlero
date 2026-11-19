@@ -2,49 +2,48 @@ name: Workverse CI Platform Verification
 
 on:
   push:
-    branches: [ main, rasesh ]
+    branches: [main, rasesh, vinita]
   pull_request:
-    branches: [ main, rasesh ]
+    branches: [main, rasesh]
 
 jobs:
   verify:
-    name: Build & Verify (Node ${{ matrix.node-version }})
+    name: Build & Verify (Node 22.x)
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [20.x, 22.x]
-
     steps:
-      - name: 📥 Checkout Repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
 
-      - name: 📦 Install Backend Dependencies
-        run: |
-          cd backend
-          npm install
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci
 
-      - name: 📦 Install Frontend Dependencies
-        run: |
-          cd frontend
-          npm install
+      - name: Initialize SQLite Database
+        working-directory: backend
+        run: node -e "require('./db')"
 
-      - name: 🗄️ Run Database Relational Schema & WAL Integrity Audit
-        run: |
-          cd backend
-          npm run test:db
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
 
-      - name: 🚀 Run Full Platform Test Suite (REST API Integration)
-        run: |
-          cd backend
-          npm test
+      - name: Run Database Integrity Tests
+        working-directory: backend
+        run: npm run test:db
 
-      - name: ⚡ Verify Frontend Production Bundle Build
-        run: |
-          cd frontend
-          npm run build
+      - name: Run Backend API Tests
+        working-directory: backend
+        run: npm test
+
+      - name: Build Frontend
+        working-directory: frontend
+        run: npm run build
