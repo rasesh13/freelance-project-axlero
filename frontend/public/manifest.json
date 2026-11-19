@@ -1,10 +1,19 @@
 {
+  "name": "Workverse Freelance Platform & PM Workspace",
   "short_name": "Workverse",
-  "name": "Workverse - Modern Freelance Marketplace",
-  "icons": [],
+  "description": "Unified Freelance Marketplace & Project Management Workspace with Escrow Financials",
   "start_url": "/",
+  "display": "standalone",
   "background_color": "#FFF9F5",
   "theme_color": "#F36B21",
-  "display": "standalone"
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "finance"]
 }
-
