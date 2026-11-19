@@ -363,6 +363,35 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.get('/api/system/metrics', (req, res) => {
+  const mem = process.memoryUsage();
+  const dbPing = db.prepare('SELECT 1 as ok').get();
+  res.json({
+    status: 'ok',
+    uptime: {
+      seconds: Math.floor(process.uptime()),
+      formatted: `${Math.floor(process.uptime() / 3600)}h ${Math.floor((process.uptime() % 3600) / 60)}m ${Math.floor(process.uptime() % 60)}s`,
+    },
+    memory: {
+      rssMB: +(mem.rss / 1024 / 1024).toFixed(2),
+      heapTotalMB: +(mem.heapTotal / 1024 / 1024).toFixed(2),
+      heapUsedMB: +(mem.heapUsed / 1024 / 1024).toFixed(2),
+      externalMB: +(mem.external / 1024 / 1024).toFixed(2),
+    },
+    system: {
+      platform: process.platform,
+      arch: process.arch,
+      nodeVersion: process.version,
+      pid: process.pid,
+    },
+    database: {
+      engine: 'SQLite 3 (Built-in WAL Mode)',
+      healthy: dbPing?.ok === 1,
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get('/api/stats', (req, res) => {
   res.json(getDatabaseStats());
 });

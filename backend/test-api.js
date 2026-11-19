@@ -87,6 +87,14 @@ async function runApiTestSuite() {
     assert.strictEqual(typeof res.data.uptimeSeconds, 'number');
   });
 
+  await test('GET /api/system/metrics returns memory, process & database telemetry', async () => {
+    const res = await request('/api/system/metrics');
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.status, 'ok');
+    assert(res.data.memory.heapUsedMB > 0, 'Heap used should be positive');
+    assert.strictEqual(res.data.database.healthy, true);
+  });
+
   await test('GET /api returns service metadata and openapi link', async () => {
     const res = await request('/api');
     assert.strictEqual(res.status, 200);
