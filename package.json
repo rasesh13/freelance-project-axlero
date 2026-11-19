@@ -1,6 +1,6 @@
 {
   "name": "workverse-platform",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Workverse Unified Freelance Marketplace & Project Management Workspace",
   "private": true,
   "scripts": {
