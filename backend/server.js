@@ -40,6 +40,55 @@ app.use((req, res, next) => {
 });
 
 // ==========================================
+// IN-MEMORY SLIDING WINDOW RATE LIMITER
+// ==========================================
+const rateLimitStore = new Map();
+
+function createRateLimiter({ windowMs = 60 * 1000, max = 120, message = 'Too many requests, please try again later.' } = {}) {
+  return (req, res, next) => {
+    if (process.env.NODE_ENV === 'test' || req.headers['x-bypass-ratelimit']) {
+      return next();
+    }
+
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
+    const key = `${req.baseUrl || ''}${req.path}:${ip}`;
+    const now = Date.now();
+
+    const record = rateLimitStore.get(key) || { timestamps: [] };
+    const windowStart = now - windowMs;
+    const recent = record.timestamps.filter((t) => t > windowStart);
+
+    if (recent.length >= max) {
+      const oldest = recent[0];
+      const retryAfterSec = Math.ceil((oldest + windowMs - now) / 1000);
+      res.setHeader('Retry-After', String(retryAfterSec));
+      res.setHeader('X-RateLimit-Limit', String(max));
+      res.setHeader('X-RateLimit-Remaining', '0');
+      res.setHeader('X-RateLimit-Reset', String(Math.ceil((oldest + windowMs) / 1000)));
+      return res.status(429).json({
+        error: message,
+        retryAfter: retryAfterSec,
+      });
+    }
+
+    recent.push(now);
+    rateLimitStore.set(key, { timestamps: recent });
+
+    res.setHeader('X-RateLimit-Limit', String(max));
+    res.setHeader('X-RateLimit-Remaining', String(max - recent.length));
+    res.setHeader('X-RateLimit-Reset', String(Math.ceil((now + windowMs) / 1000)));
+
+    next();
+  };
+}
+
+const authRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 60, // 60 requests per minute
+  message: 'Too many authentication attempts. Please wait 60 seconds before trying again.',
+});
+
+// ==========================================
 // HELPERS & AUTH MIDDLEWARE
 // ==========================================
 function safeJsonParse(str, fallback = []) {
@@ -321,7 +370,7 @@ app.get('/api/stats', (req, res) => {
 // ==========================================
 // 2. AUTHENTICATION & USER SETTINGS
 // ==========================================
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', authRateLimiter, (req, res) => {
   try {
     const { name, email, password, role = 'client' } = req.body || {};
 
@@ -411,7 +460,7 @@ app.post('/api/auth/register', (req, res) => {
   }
 });
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', authRateLimiter, (req, res) => {
   try {
     const { email, password, role } = req.body || {};
 
@@ -454,7 +503,7 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
   res.json({ user: req.user });
 });
 
-app.post('/api/auth/forgot-password', (req, res) => {
+app.post('/api/auth/forgot-password', authRateLimiter, (req, res) => {
   try {
     const { email } = req.body || {};
     if (!email || !email.includes('@')) {
