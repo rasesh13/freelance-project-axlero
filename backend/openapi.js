@@ -37,6 +37,49 @@ function getOpenApiSpec(port = 5000) {
       '/api/health': {
         get: { tags: ['System'], summary: 'Health & SQLite connection check', responses: { 200: { description: 'OK' } } },
       },
+      '/api/system/metrics': {
+        get: {
+          tags: ['System'],
+          summary: 'Real-time server uptime, memory telemetry, and SQLite database health',
+          responses: {
+            200: {
+              description: 'System telemetry metrics',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      status: { type: 'string', example: 'ok' },
+                      uptime: {
+                        type: 'object',
+                        properties: {
+                          seconds: { type: 'integer', example: 1240 },
+                          formatted: { type: 'string', example: '0h 20m 40s' },
+                        },
+                      },
+                      memory: {
+                        type: 'object',
+                        properties: {
+                          rssMB: { type: 'number', example: 64.2 },
+                          heapTotalMB: { type: 'number', example: 42.1 },
+                          heapUsedMB: { type: 'number', example: 28.5 },
+                        },
+                      },
+                      database: {
+                        type: 'object',
+                        properties: {
+                          engine: { type: 'string', example: 'SQLite 3 (Built-in WAL Mode)' },
+                          healthy: { type: 'boolean', example: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       '/api/stats': {
         get: { tags: ['System'], summary: 'Live row counts across all 18 SQLite tables', responses: { 200: { description: 'OK' } } },
       },
@@ -60,7 +103,11 @@ function getOpenApiSpec(port = 5000) {
               },
             },
           },
-          responses: { 200: { description: 'JWT Token + User Object' }, 401: { description: 'Invalid credentials' } },
+          responses: {
+            200: { description: 'JWT Token + User Object' },
+            401: { description: 'Invalid credentials' },
+            429: { description: 'Too many authentication attempts (Rate limit: 60 req/min)' },
+          },
         },
       },
       '/api/auth/register': {
@@ -75,7 +122,11 @@ function getOpenApiSpec(port = 5000) {
               },
             },
           },
-          responses: { 201: { description: 'Created' }, 409: { description: 'Email already registered' } },
+          responses: {
+            201: { description: 'Created' },
+            409: { description: 'Email already registered' },
+            429: { description: 'Too many registration attempts (Rate limit: 60 req/min)' },
+          },
         },
       },
       '/api/auth/me': {
