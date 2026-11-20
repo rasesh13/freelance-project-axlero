@@ -24,7 +24,7 @@
 
   <br />
 
-  <img src="https://img.shields.io/badge/Version-1.2.0-F36B21?style=flat-square" alt="Version 1.2.0" />
+  <img src="https://img.shields.io/badge/Version-1.3.0-F36B21?style=flat-square" alt="Version 1.3.0" />
   <img src="https://img.shields.io/badge/PWA-Ready-5A0FC8?style=flat-square&logo=pwa&logoColor=white" alt="PWA Ready" />
   <img src="https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white" alt="GitHub Actions CI" />
   <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready" />
@@ -626,6 +626,7 @@ freelance-project-axlero/
   | 10 | Architecture documentation, API reference, and v1.0.0 release preparation. |
   | 11 | CI/CD GitHub Actions pipeline, Docker containerization, root monorepo scripts, and backend security hardening. |
   | 12 | PWA offline service worker, API sliding-window rate limiting, Vite bundle code-splitting, and telemetry metrics. |
+  | 13 | React Error Boundary, offline network indicators & API retry, SQLite snapshot backups, and OpenAPI 3.0 synchronization. |
 </details>
 
 ### Release Checklist
@@ -647,6 +648,10 @@ freelance-project-axlero/
 - [x] Sliding-window API rate limiting for authentication security
 - [x] Vite manual chunk code-splitting optimization (<400KB per vendor chunk)
 - [x] Server telemetry and system resource metrics endpoint (`/api/system/metrics`)
+- [x] React Error Boundary with diagnostic recovery UI
+- [x] Client-side network status detection & exponential backoff API retry
+- [x] Automated SQLite WAL snapshot backup & rotation runner (`npm run backup`)
+- [x] OpenAPI 3.0 specification sync with telemetry & rate limiting schemas
 
 ---
 
