@@ -10,7 +10,15 @@ import PricingPage from './pages/PricingPage';
 import ResourcesPage from './pages/ResourcesPage';
 import AuthPage from './pages/AuthPage';
 import FreelancerProfilePage from './pages/FreelancerProfilePage';
-import { getStoredUser, authGetMe, authLogout, getAuthToken, fetchTalentById, fetchProjects } from './api/client';
+import {
+  getStoredUser,
+  authGetMe,
+  authLogout,
+  getAuthToken,
+  fetchTalentById,
+  fetchProjects,
+  subscribeNetworkStatus,
+} from './api/client';
 
 const PROTECTED_PAGES = new Set(['projects']);
 
@@ -43,6 +51,14 @@ export default function App() {
       return 'client';
     }
   });
+
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+
+  useEffect(() => {
+    return subscribeNetworkStatus((online) => {
+      setIsOnline(online);
+    });
+  }, []);
 
   // Verify session and hydrate initial defaults from live backend on mount
   useEffect(() => {
@@ -329,6 +345,14 @@ export default function App() {
       {/* Footer on content pages */}
       {currentPage !== 'auth' && (
         <Footer setCurrentPage={navigateToPage} />
+      )}
+
+      {/* Offline Connectivity Notification Pill */}
+      {!isOnline && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#171717] text-white px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2.5 text-xs font-medium border border-white/10 animate-bounce">
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          <span>Offline mode active. Cached assets available.</span>
+        </div>
       )}
     </div>
   );

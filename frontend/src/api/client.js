@@ -44,7 +44,7 @@ export function setStoredUser(user) {
   }
 }
 
-async function request(endpoint, options = {}) {
+async function request(endpoint, options = {}, retries = 2) {
   const token = getAuthToken();
   const headers = {
     'Content-Type': 'application/json',
@@ -55,31 +55,55 @@ async function request(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  try {
+    const res = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers,
+    });
 
-  const contentType = res.headers.get('content-type');
-  const isJson = contentType && contentType.includes('application/json');
-  const data = isJson ? await res.json() : await res.text();
+    const contentType = res.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
+    const data = isJson ? await res.json() : await res.text();
 
-  if (!res.ok) {
-    const errMsg = (data && data.error) || (data && data.message) || `HTTP error ${res.status}`;
-    throw new Error(errMsg);
+    if (!res.ok) {
+      if (retries > 0 && [502, 503, 504].includes(res.status) && (!options.method || options.method === 'GET')) {
+        await new Promise((r) => setTimeout(r, 400));
+        return request(endpoint, options, retries - 1);
+      }
+      const errMsg = (data && data.error) || (data && data.message) || `HTTP error ${res.status}`;
+      throw new Error(errMsg);
+    }
+
+    if (
+      typeof window !== 'undefined' &&
+      options.method &&
+      ['POST', 'PATCH', 'PUT', 'DELETE'].includes(options.method.toUpperCase()) &&
+      !endpoint.startsWith('/notifications') &&
+      !endpoint.startsWith('/auth/')
+    ) {
+      window.dispatchEvent(new CustomEvent('workverse:refresh-notifications'));
+    }
+
+    return data;
+  } catch (err) {
+    if (retries > 0 && (!options.method || options.method === 'GET') && err.name === 'TypeError') {
+      await new Promise((r) => setTimeout(r, 500));
+      return request(endpoint, options, retries - 1);
+    }
+    throw err;
   }
+}
 
-  if (
-    typeof window !== 'undefined' &&
-    options.method &&
-    ['POST', 'PATCH', 'PUT', 'DELETE'].includes(options.method.toUpperCase()) &&
-    !endpoint.startsWith('/notifications') &&
-    !endpoint.startsWith('/auth/')
-  ) {
-    window.dispatchEvent(new CustomEvent('workverse:refresh-notifications'));
-  }
-
-  return data;
+export function subscribeNetworkStatus(callback) {
+  if (typeof window === 'undefined') return () => {};
+  const handleOnline = () => callback(true);
+  const handleOffline = () => callback(false);
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('offline', handleOffline);
+  return () => {
+    window.removeEventListener('online', handleOnline);
+    window.removeEventListener('offline', handleOffline);
+  };
 }
 
 // ==========================================
