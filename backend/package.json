@@ -8,7 +8,9 @@
     "test": "node test-runner.js",
     "test:api": "node test-api.js",
     "test:db": "node test-db.js",
-    "test:health": "node -e \"fetch('http://localhost:5000/api/health').then(r=>r.json()).then(d=>{console.log('Status:', d.status, '| DB:', d.database); process.exit(d.status==='ok'?0:1)})\""
+    "test:health": "node -e \"fetch('http://localhost:5000/api/health').then(r=>r.json()).then(d=>{console.log('Status:', d.status, '| DB:', d.database); process.exit(d.status==='ok'?0:1)})\"",
+    "backup": "node backup.js",
+    "backup:list": "node backup.js --list"
   },
   "keywords": [
     "workverse",
