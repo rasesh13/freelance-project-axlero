@@ -1,24 +1,35 @@
-::: {align="center"}
+<div align="center">
+
 # 🟠 WORKVERSE
 
-### API Reference & Developer Handbook
+### API REFERENCE · DEVELOPER HANDBOOK
 
-**REST API · Node.js · Express · SQLite**
+**Discover. Collaborate. Deliver.**
 
-Discover. Collaborate. Deliver.
-
-A practical reference for integrating with the Workverse freelance
-marketplace and project-management platform.
+A complete integration guide for the Workverse freelance marketplace and project-management platform.
 
 ![API](https://img.shields.io/badge/API-REST-F36B21?style=for-the-badge)
 ![Node](https://img.shields.io/badge/Node.js-Backend-171717?style=for-the-badge&logo=node.js)
 ![Express](https://img.shields.io/badge/Express-5-171717?style=for-the-badge&logo=express)
 ![Database](https://img.shields.io/badge/Database-SQLite-003B57?style=for-the-badge&logo=sqlite)
-:::
+![Auth](https://img.shields.io/badge/Auth-JWT-orange?style=for-the-badge)
+
+</div>
+
+---
+
+> [!IMPORTANT]
+> This is the **GitHub Markdown edition** of Workverse API docs. GitHub supports badges, tables, code blocks, collapsible sections, and Mermaid diagrams—but it does not execute custom CSS animations. The floating shapes and animated background are available in the companion HTML edition.
+
+<div align="center">
+
+**API QUICK LINKS** · [Swagger UI](http://localhost:5000/docs) · [OpenAPI JSON](http://localhost:5000/openapi.json) · [Health](http://localhost:5000/api/health)
+
+</div>
 
 ------------------------------------------------------------------------
 
-## Contents
+## 🧭 Documentation Navigation
 
 -   [01 · Introduction](#01--introduction)
 -   [02 · Local setup](#02--local-setup)
@@ -35,7 +46,7 @@ marketplace and project-management platform.
 
 ------------------------------------------------------------------------
 
-## 01 · Introduction
+## 01 · 🌐 Introduction
 
 Workverse exposes a JSON-based REST API for the platform's core
 workflows: account access, talent discovery, projects, Kanban tasks,
@@ -73,7 +84,7 @@ wallet activity, and notifications.
 
 ------------------------------------------------------------------------
 
-## 02 · Local setup
+## 02 · ⚙️ Local Setup
 
 ### Prerequisites
 
@@ -128,7 +139,7 @@ It does not replace full integration testing.
 
 ------------------------------------------------------------------------
 
-## 03 · API conventions
+## 03 · 📐 API Conventions
 
 ### HTTP methods
 
@@ -185,7 +196,7 @@ exposure. Review data sensitivity and access policy before deployment.
 
 ------------------------------------------------------------------------
 
-## 04 · Authentication
+## 04 · 🔐 Authentication
 
 Workverse uses JSON Web Tokens (JWT) for protected routes. Registration
 and login return a token that the client can send on subsequent
@@ -276,7 +287,7 @@ delivery and token-verification flow is added.
 
 ------------------------------------------------------------------------
 
-## 05 · Endpoint reference
+## 05 · 🧩 Endpoint Reference
 
 The tables below summarize the routes documented by the current backend.
 For exact request schemas and any route-specific constraints, use the
@@ -649,7 +660,7 @@ Optional query parameter: `role`.
 
 ------------------------------------------------------------------------
 
-## 06 · Request examples
+## 06 · 💻 Request Examples
 
 ### Create a project with cURL
 
@@ -711,7 +722,7 @@ console.log(projects);
 
 ------------------------------------------------------------------------
 
-## 07 · Responses and errors
+## 07 · 📬 Responses & Errors
 
 Responses are JSON. The exact response shape depends on the endpoint.
 
@@ -751,7 +762,7 @@ route uses an identical response envelope.
 
 ------------------------------------------------------------------------
 
-## 08 · Rate limiting
+## 08 · 🚦 Rate Limiting
 
 The backend includes an in-memory sliding-window limiter for
 authentication endpoints.
@@ -780,7 +791,7 @@ and are not shared between multiple server instances.
 
 ------------------------------------------------------------------------
 
-## 09 · Data and persistence
+## 09 · 🗄️ Data & Persistence
 
 Workverse uses SQLite for application persistence.
 
@@ -816,7 +827,7 @@ Workverse uses SQLite for application persistence.
 
 ------------------------------------------------------------------------
 
-## 10 · Security notes
+## 10 · 🛡️ Security Notes
 
 ### Implemented backend controls
 
@@ -858,7 +869,7 @@ Before exposing the API publicly:
 
 ------------------------------------------------------------------------
 
-## 11 · Testing
+## 11 · 🧪 Testing
 
 Run commands from the repository root or use the `--prefix` option.
 
@@ -893,7 +904,7 @@ operations.
 
 ------------------------------------------------------------------------
 
-## 12 · Project structure
+## 12 · 🗂️ Project Structure
 
 ``` text
 WORKVERSE/
@@ -938,6 +949,17 @@ WORKVERSE/
 ------------------------------------------------------------------------
 
 ::: {align="center"}
+## ✨ Markdown vs. Animated HTML
+
+<details>
+<summary><strong>Why this file cannot have floating animated objects</strong></summary>
+
+GitHub sanitizes Markdown and does not allow custom stylesheet rules or JavaScript to run inside repository Markdown. This edition uses GitHub-native elements to keep the design polished and accessible: badges, emoji section markers, callout quotes, tables, fenced code, links, and collapsible details. For animated floating gradients, cursor effects, and motion, open the companion `API_DOCUMENTATION.html` file locally in a browser.
+
+</details>
+
+---
+
 ## 🟠 WORKVERSE
 
 **Discover. Collaborate. Deliver.**
