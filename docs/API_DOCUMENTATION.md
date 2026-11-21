@@ -1,970 +1,1293 @@
+# <div align="center">❄️ WORKVERSE</div>
+
 <div align="center">
 
-# 🟠 WORKVERSE
+# API DOCUMENTATION
 
-### API REFERENCE · DEVELOPER HANDBOOK
+### Developer Reference · Integration Guide · API Handbook
 
 **Discover. Collaborate. Deliver.**
 
-A complete integration guide for the Workverse freelance marketplace and project-management platform.
+A comprehensive developer guide to the Workverse API ecosystem.
 
-![API](https://img.shields.io/badge/API-REST-F36B21?style=for-the-badge)
-![Node](https://img.shields.io/badge/Node.js-Backend-171717?style=for-the-badge&logo=node.js)
-![Express](https://img.shields.io/badge/Express-5-171717?style=for-the-badge&logo=express)
-![Database](https://img.shields.io/badge/Database-SQLite-003B57?style=for-the-badge&logo=sqlite)
-![Auth](https://img.shields.io/badge/Auth-JWT-orange?style=for-the-badge)
+<br/>
+
+![REST API](https://img.shields.io/badge/REST_API-Developer_Interface-38BDF8?style=for-the-badge)
+![Backend](https://img.shields.io/badge/Backend-Node.js-818CF8?style=for-the-badge&logo=node.js&logoColor=white)
+![Framework](https://img.shields.io/badge/Framework-Express-22D3EE?style=for-the-badge)
+![Database](https://img.shields.io/badge/Database-SQLite-67E8F9?style=for-the-badge&logo=sqlite)
+![Authentication](https://img.shields.io/badge/Security-JWT-6366F1?style=for-the-badge)
 
 </div>
 
 ---
 
-> [!IMPORTANT]
-> This is the **GitHub Markdown edition** of Workverse API docs. GitHub supports badges, tables, code blocks, collapsible sections, and Mermaid diagrams—but it does not execute custom CSS animations. The floating shapes and animated background are available in the companion HTML edition.
-
 <div align="center">
 
-**API QUICK LINKS** · [Swagger UI](http://localhost:5000/docs) · [OpenAPI JSON](http://localhost:5000/openapi.json) · [Health](http://localhost:5000/api/health)
+> **One platform. Endless possibilities.**
+>
+> Workverse brings clients, freelancers, projects, collaboration,
+> and productivity together through a unified platform.
 
 </div>
 
-------------------------------------------------------------------------
+---
 
-## 🧭 Documentation Navigation
+# ◈ CONTENTS
 
--   [01 · Introduction](#01--introduction)
--   [02 · Local setup](#02--local-setup)
--   [03 · API conventions](#03--api-conventions)
--   [04 · Authentication](#04--authentication)
--   [05 · Endpoint reference](#05--endpoint-reference)
--   [06 · Request examples](#06--request-examples)
--   [07 · Responses and errors](#07--responses-and-errors)
--   [08 · Rate limiting](#08--rate-limiting)
--   [09 · Data and persistence](#09--data-and-persistence)
--   [10 · Security notes](#10--security-notes)
--   [11 · Testing](#11--testing)
--   [12 · Project structure](#12--project-structure)
+| Section | Description |
+|---|---|
+| [01 — Overview](#-01-overview) | Introduction to Workverse |
+| [02 — Architecture](#-02-system-architecture) | Backend architecture |
+| [03 — Getting Started](#-03-getting-started) | Installation and setup |
+| [04 — Configuration](#-04-configuration) | Environment configuration |
+| [05 — API Fundamentals](#-05-api-fundamentals) | Request and response conventions |
+| [06 — Authentication](#-06-authentication) | JWT authentication |
+| [07 — API Reference](#-07-api-reference) | Endpoint documentation |
+| [08 — Error Handling](#-08-error-handling) | Errors and status codes |
+| [09 — Integration Examples](#-09-integration-examples) | API usage examples |
+| [10 — Database](#-10-database-overview) | Persistence layer |
+| [11 — Security](#-11-security-guidelines) | Security considerations |
+| [12 — Testing](#-12-testing) | Testing and verification |
+| [13 — Project Structure](#-13-project-structure) | Code organization |
+| [14 — FAQ](#-14-frequently-asked-questions) | Troubleshooting |
 
-------------------------------------------------------------------------
+---
 
-## 01 · 🌐 Introduction
+# ◈ 01. OVERVIEW
 
-Workverse exposes a JSON-based REST API for the platform's core
-workflows: account access, talent discovery, projects, Kanban tasks,
-contracts, proposals, messaging, deliverables, team collaboration,
-wallet activity, and notifications.
+## What is Workverse?
 
-  Property                  Value
-  ------------------------- --------------------------------------
-  API base path             `/api`
-  Local base URL            `http://localhost:5000/api`
-  Runtime                   Node.js
-  HTTP framework            Express 5
-  Persistence               SQLite
-  Database mode             Write-Ahead Logging (WAL)
-  Authentication            JWT Bearer token
-  Request/response format   JSON
-  Interactive API docs      `http://localhost:5000/docs`
-  OpenAPI document          `http://localhost:5000/openapi.json`
+Workverse is a collaborative freelancing and project-management platform designed to bridge the gap between clients and skilled professionals.
 
-> **Implementation-first documentation:** This guide describes the
-> backend behavior represented by the current project source. It does
-> not imply that an external payment gateway, binary file-storage
-> service, email delivery provider, or production-grade authorization
-> policy is configured.
+The platform provides an integrated environment where users can discover opportunities, manage projects, collaborate with teams, track progress, handle project workflows, and manage their professional activities.
 
-### Service URLs
+Its backend API acts as the communication layer between the frontend application and the platform's data and business logic.
 
-  Resource               Local URL
-  ---------------------- --------------------------------------
-  API metadata           `http://localhost:5000/api`
-  Health check           `http://localhost:5000/api/health`
-  Swagger UI             `http://localhost:5000/docs`
-  Alternate docs route   `http://localhost:5000/api/docs`
-  OpenAPI JSON           `http://localhost:5000/openapi.json`
+### Core objectives
 
-------------------------------------------------------------------------
+- Simplify freelancer and client interaction.
+- Centralize project management.
+- Support collaborative workflows.
+- Improve task organization and tracking.
+- Facilitate communication.
+- Provide structured project lifecycle management.
+- Offer a scalable foundation for future platform features.
 
-## 02 · ⚙️ Local Setup
+---
 
-### Prerequisites
+## ✦ Core Modules
 
--   Node.js installed
--   npm installed
--   Git
--   A terminal (PowerShell, Command Prompt, or integrated VS Code
-    terminal)
+<table>
+<tr>
+<td width="50%">
 
-### Start the backend
+### 🔐 Authentication
 
-From the repository root:
+Identity verification, user registration, login, and protected resources.
 
-``` bash
+</td>
+<td width="50%">
+
+### 👥 Talent Discovery
+
+Discover freelancers, professionals, and potential collaborators.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+### 📁 Project Management
+
+Create, manage, organize, and monitor projects.
+
+</td>
+<td>
+
+### 📋 Kanban Management
+
+Manage tasks, workflow stages, and project progress.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+### 🤝 Contracts
+
+Manage agreements and contractual workflows.
+
+</td>
+<td>
+
+### 💬 Communication
+
+Enable communication between clients and freelancers.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+### 💰 Payment & Wallet
+
+Support payment-related and financial workflows.
+
+</td>
+<td>
+
+### 🔔 Notifications
+
+Keep users informed about activities and updates.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+### ⏱️ Time Tracking
+
+Track work duration and project activity.
+
+</td>
+<td>
+
+### 📎 Deliverables
+
+Organize and manage project submissions.
+
+</td>
+</tr>
+</table>
+
+---
+
+# ◈ 02. SYSTEM ARCHITECTURE
+
+## High-Level Architecture
+
+```mermaid
+flowchart TD
+
+    A["👤 User"] --> B["🖥️ Frontend Application"]
+
+    B --> C["🌐 REST API"]
+
+    C --> D["⚙️ Express Server"]
+
+    D --> E["🔐 Authentication Layer"]
+
+    D --> F["🛣️ API Routes"]
+
+    F --> G["🧠 Business Logic"]
+
+    G --> H["🗄️ Database"]
+
+    G --> I["📁 File Handling"]
+
+    G --> J["🔔 Notification Services"]
+```
+
+### Architecture Components
+
+| Component | Responsibility |
+|---|---|
+| Frontend | User interface and interaction |
+| REST API | Communication between frontend and backend |
+| Express Server | HTTP request handling |
+| Authentication | Identity verification and authorization |
+| API Routes | Endpoint organization |
+| Business Logic | Application functionality |
+| Database | Persistent data storage |
+| Services | Specialized operations |
+
+---
+
+## Request Lifecycle
+
+```mermaid
+sequenceDiagram
+
+    participant U as User
+    participant F as Frontend
+    participant A as API
+    participant M as Middleware
+    participant D as Database
+
+    U->>F: Perform Action
+    F->>A: HTTP Request
+    A->>M: Validate Request
+    M->>M: Authentication
+    M->>A: Authorized Request
+    A->>D: Database Operation
+    D-->>A: Result
+    A-->>F: JSON Response
+    F-->>U: Update Interface
+```
+
+### How a request works
+
+1. A user performs an action in the frontend.
+2. The frontend creates an HTTP request.
+3. The request is sent to the API.
+4. Middleware validates the request.
+5. Authentication is checked if required.
+6. The backend processes the operation.
+7. The database is queried or updated.
+8. The API returns a JSON response.
+9. The frontend updates its interface.
+
+---
+
+# ◈ 03. GETTING STARTED
+
+## Prerequisites
+
+Before running the application, make sure the following are installed:
+
+| Requirement | Purpose |
+|---|---|
+| Node.js | JavaScript runtime |
+| npm | Dependency management |
+| Git | Version control |
+| Code Editor | Development environment |
+
+---
+
+## Installation
+
+### Step 1 — Clone the repository
+
+```bash
+git clone YOUR_REPOSITORY_URL
+```
+
+### Step 2 — Navigate to the project
+
+```bash
+cd freelance-project-axlero-main
+```
+
+### Step 3 — Navigate to the backend
+
+```bash
 cd backend
+```
+
+### Step 4 — Install dependencies
+
+```bash
 npm install
+```
+
+### Step 5 — Configure environment variables
+
+Create the required environment configuration file.
+
+```bash
+touch .env
+```
+
+Add the configuration required by the backend.
+
+### Step 6 — Start the backend
+
+```bash
 npm start
 ```
 
-The backend listens on port `5000` by default. The port can be
-overridden with the `PORT` environment variable.
+---
 
-### Start the frontend
+## Local Development
 
-Open a second terminal:
+Once the backend is running, the API can be accessed through the configured local server.
 
-``` bash
-cd frontend
-npm install
-npm run dev
+```text
+http://localhost:5000
 ```
 
-The Vite development server proxies `/api` requests to
-`http://127.0.0.1:5000` in the local configuration.
+> Replace the host and port with the values configured for your environment.
 
-### Verify backend health
+---
 
-PowerShell:
+# ◈ 04. CONFIGURATION
 
-``` powershell
-Invoke-RestMethod http://localhost:5000/api/health
+## Environment Variables
+
+Environment variables allow the application to be configured without hardcoding sensitive values into the source code.
+
+| Variable | Description |
+|---|---|
+| `PORT` | Port on which the backend runs |
+| `JWT_SECRET` | Secret used for JWT signing and verification |
+| `NODE_ENV` | Application environment |
+
+### Example configuration
+
+```env
+PORT=5000
+JWT_SECRET=replace_with_secure_secret
+NODE_ENV=development
 ```
 
-cURL:
+> ⚠️ Never expose production secrets or commit sensitive credentials to GitHub.
 
-``` bash
-curl http://localhost:5000/api/health
+---
+
+# ◈ 05. API FUNDAMENTALS
+
+## Base URL
+
+### Local Development
+
+```text
+http://localhost:5000
 ```
 
-A successful response indicates that the API health route is reachable.
-It does not replace full integration testing.
+### API Prefix
 
-------------------------------------------------------------------------
+```text
+/api
+```
 
-## 03 · 📐 API Conventions
+> Confirm the exact prefix against your backend route registration.
 
-### HTTP methods
+---
 
-  Method     Intended use
-  ---------- ----------------------------------------
-  `GET`      Read a resource or collection
-  `POST`     Create a resource or execute an action
-  `PATCH`    Partially update an existing resource
-  `PUT`      Replace/update settings
-  `DELETE`   Remove a resource
+## HTTP Methods
 
-### Request format
+| Method | Purpose | Typical Usage |
+|---|---|---|
+| `GET` | Retrieve data | Fetch projects |
+| `POST` | Create or execute | Create a project |
+| `PUT` | Replace/update | Replace resource details |
+| `PATCH` | Partially update | Update selected fields |
+| `DELETE` | Remove | Delete a resource |
 
-Send JSON bodies with:
+---
 
-``` http
+## Request Format
+
+The API generally communicates using JSON.
+
+```http
 Content-Type: application/json
 ```
 
-Example:
+### Example JSON request
 
-``` http
-POST /api/projects
-Content-Type: application/json
-Authorization: Bearer <JWT>
-```
-
-### Path parameters
-
-A segment beginning with `:` is a path parameter.
-
-For example, `/api/projects/:id` uses the actual project identifier in
-place of `:id`:
-
-``` http
-GET /api/projects/proj-123
-```
-
-### Query parameters
-
-Filters are supplied in the URL after `?` and joined with `&`:
-
-``` http
-GET /api/talents?search=react&category=Development
-```
-
-### Authentication notation
-
--   **Public** --- route does not invoke JWT authentication middleware.
--   **Bearer** --- send a valid JWT in the `Authorization` header.
-
-A public route is not necessarily suitable for unrestricted production
-exposure. Review data sensitivity and access policy before deployment.
-
-------------------------------------------------------------------------
-
-## 04 · 🔐 Authentication
-
-Workverse uses JSON Web Tokens (JWT) for protected routes. Registration
-and login return a token that the client can send on subsequent
-requests.
-
-### Authentication flow
-
-1.  Register an account or sign in.
-2.  Read the `token` value from the response.
-3.  Keep the token in an appropriately protected client-side storage
-    strategy.
-4.  Send it with protected API requests.
-5.  Handle expired or invalid tokens by returning the user to the
-    sign-in flow.
-
-### Authorization header
-
-``` http
-Authorization: Bearer YOUR_JWT_TOKEN
-Content-Type: application/json
-```
-
-### Roles
-
-The application recognizes these user roles:
-
--   `client`
--   `freelancer`
-
-### Register
-
-`POST /api/auth/register`
-
-Creates an account.
-
-Example request shape:
-
-``` json
+```json
 {
-  "name": "Taylor Morgan",
-  "email": "taylor@example.com",
-  "password": "ChooseAStrongPassword123",
-  "role": "freelancer"
+  "name": "Website Development",
+  "description": "Develop a modern web application"
 }
 ```
 
-The backend validates required registration fields and returns a
-created-account response with a JWT and user profile. Use the live
-Swagger schema for the exact accepted registration fields.
+---
 
-### Login
+## Response Format
 
-`POST /api/auth/login`
-
-``` json
-{
-  "email": "taylor@example.com",
-  "password": "ChooseAStrongPassword123",
-  "role": "freelancer"
-}
-```
-
-Successful login returns a token and user object.
-
-### Current user
-
-`GET /api/auth/me` --- **Bearer**
-
-``` bash
-curl http://localhost:5000/api/auth/me \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-### Forgot password
-
-`POST /api/auth/forgot-password`
-
-``` json
-{
-  "email": "taylor@example.com"
-}
-```
-
-**Current behavior note:** The route returns a password-reset
-acknowledgement and account-existence indicator/message. Do not treat it
-as a complete email-based password-reset workflow unless an email
-delivery and token-verification flow is added.
-
-------------------------------------------------------------------------
-
-## 05 · 🧩 Endpoint Reference
-
-The tables below summarize the routes documented by the current backend.
-For exact request schemas and any route-specific constraints, use the
-running Swagger UI and `backend/openapi.js`.
-
-### 5.1 System & monitoring
-
-  Method   Endpoint        Description                          Access
-  -------- --------------- ------------------------------------ --------
-  `GET`    `/api`          API service metadata                 Public
-  `GET`    `/api/health`   Server/database health information   Public
-  `GET`    `/api/stats`    Platform/database statistics         Public
-
-### 5.2 Authentication & settings
-
-  -----------------------------------------------------------------------------------
-  Method            Endpoint                      Description       Access
-  ----------------- ----------------------------- ----------------- -----------------
-  `POST`            `/api/auth/register`          Register an       Public
-                                                  account           
-
-  `POST`            `/api/auth/login`             Authenticate a    Public
-                                                  user              
-
-  `GET`             `/api/auth/me`                Retrieve current  Bearer
-                                                  user              
-
-  `POST`            `/api/auth/forgot-password`   Request reset     Public
-                                                  acknowledgement   
-
-  `GET`             `/api/settings`               Retrieve user     Bearer
-                                                  workspace         
-                                                  settings          
-
-  `PUT`             `/api/settings`               Update workspace  Bearer
-                                                  preferences       
-  -----------------------------------------------------------------------------------
-
-### 5.3 Talent discovery
-
-  Method   Endpoint             Description                       Access
-  -------- -------------------- --------------------------------- --------
-  `GET`    `/api/talents`       List and filter talent profiles   Public
-  `GET`    `/api/talents/:id`   Retrieve one talent profile       Public
-
-Supported list filters:
-
-  Parameter      Purpose
-  -------------- -------------------------------------
-  `search`       Match talent name, title, or skills
-  `category`     Filter by professional category
-  `experience`   Filter by experience level
+API responses should be interpreted according to the actual response returned by each endpoint.
 
 Example:
 
-``` http
-GET /api/talents?search=react&category=Development&experience=Intermediate
-```
-
-### 5.4 Projects
-
-  Method     Endpoint              Description                Access
-  ---------- --------------------- -------------------------- --------
-  `GET`      `/api/projects`       List projects              Public
-  `GET`      `/api/projects/:id`   Retrieve project details   Public
-  `POST`     `/api/projects`       Create a project           Bearer
-  `PATCH`    `/api/projects/:id`   Update project fields      Bearer
-  `DELETE`   `/api/projects/:id`   Delete a project           Bearer
-
-List filters:
-
-  Parameter    Purpose
-  ------------ -------------------------------------
-  `status`     Filter by project status
-  `category`   Filter by project category
-  `search`     Match title, description, or skills
-
-Create-project example:
-
-``` json
+```json
 {
-  "title": "SaaS Analytics Dashboard",
-  "category": "Web Development",
-  "description": "Build a responsive analytics dashboard.",
-  "budget": "$4,500",
-  "budgetType": "Fixed Price",
-  "duration": "2 - 3 Weeks",
-  "deadline": "Dec 20, 2026",
-  "skills": ["React", "Node.js"],
-  "team": []
+  "success": true,
+  "message": "Operation completed successfully",
+  "data": {}
 }
 ```
 
-Update-project example:
+> Response structures may differ between endpoints. Refer to the individual endpoint documentation.
 
-``` json
-{
-  "status": "In Progress",
-  "progress": 60,
-  "deadline": "Dec 25, 2026"
-}
+---
+
+# ◈ 06. AUTHENTICATION
+
+## Authentication Overview
+
+Workverse uses authentication to identify users and protect resources that require access privileges.
+
+Authentication establishes the identity of the user.
+
+Authorization determines what the authenticated user is permitted to do.
+
+### Authentication Flow
+
+```mermaid
+flowchart TD
+
+    A["User"] --> B["Submit Credentials"]
+
+    B --> C["Authentication API"]
+
+    C --> D{"Valid Credentials?"}
+
+    D -->|Yes| E["Generate Authentication Token"]
+
+    E --> F["Return Token"]
+
+    F --> G["Access Protected API"]
+
+    D -->|No| H["Authentication Error"]
 ```
 
-### 5.5 Kanban & task management
+---
 
-  --------------------------------------------------------------------------------
-  Method            Endpoint                   Description       Access
-  ----------------- -------------------------- ----------------- -----------------
-  `GET`             `/api/kanban`              Retrieve Kanban   Bearer
-                                               tasks             
+## JWT Authentication
 
-  `POST`            `/api/kanban`              Create a task     Bearer
+JSON Web Tokens provide a mechanism for securely transmitting identity-related information.
 
-  `PATCH`           `/api/kanban/:id/column`   Move a task to    Bearer
-                                               another column    
+A token is typically issued after successful authentication.
 
-  `DELETE`          `/api/kanban/:id`          Delete a task     Bearer
-  --------------------------------------------------------------------------------
+Protected endpoints may require the token to be included with each request.
 
-Create-task example:
+### Authorization Header
 
-``` json
-{
-  "title": "Implement authentication",
-  "project": "SaaS Dashboard",
-  "column": "backlog",
-  "priority": "High",
-  "estimate": "4 hrs"
-}
+```http
+Authorization: Bearer YOUR_ACCESS_TOKEN
 ```
 
-Move-task example:
+### Example
 
-``` http
-PATCH /api/kanban/kb-123/column
+```bash
+curl -X GET http://localhost:5000/api/protected-resource \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
-``` json
-{
-  "column": "review"
-}
-```
+---
 
-Supported columns: `backlog`, `progress`, `review`, `done`.
+## Authentication Requirements
 
-### 5.6 Contracts & proposals
+| Request Type | Authentication |
+|---|---|
+| Public endpoints | Not required |
+| Protected endpoints | Required |
+| User-specific endpoints | Required |
+| Administrative endpoints | Required with appropriate authorization |
 
-  -----------------------------------------------------------------------------------
-  Method            Endpoint                      Description       Access
-  ----------------- ----------------------------- ----------------- -----------------
-  `GET`             `/api/contracts`              List contracts    Bearer
+The actual authentication requirements must be verified for each endpoint.
 
-  `POST`            `/api/contracts`              Create a contract Bearer
+---
 
-  `GET`             `/api/proposals`              List proposals    Bearer
+# ◈ 07. API REFERENCE
 
-  `POST`            `/api/proposals`              Submit a proposal Bearer
+> This section should contain the exact routes, parameters, payloads,
+> and responses implemented by the backend.
 
-  `PATCH`           `/api/proposals/:id/status`   Update proposal   Bearer
-                                                  status            
-  -----------------------------------------------------------------------------------
+Endpoints are grouped according to their functional responsibilities.
 
-Proposal example:
+---
 
-``` json
-{
-  "project_id": "proj-123",
-  "project_title": "SaaS Dashboard",
-  "bid_amount": "$1,500",
-  "duration": "3 Weeks",
-  "pitch": "I will deliver production-ready code.",
-  "cover_letter": "I am interested in this project."
-}
-```
+## 🔐 7.1 AUTHENTICATION API
 
-Documented proposal statuses: `pending`, `accepted`, `rejected`.
+Authentication endpoints are responsible for user identity, registration, login, and access control.
 
-### 5.7 Time tracking
+### Available operations
 
-  Method   Endpoint           Description             Access
-  -------- ------------------ ----------------------- --------
-  `POST`   `/api/time/log`    Record a time session   Bearer
-  `GET`    `/api/time/logs`   Retrieve time logs      Bearer
-
-Example:
-
-``` json
-{
-  "seconds": 3600,
-  "project_title": "SaaS Dashboard",
-  "hourly_rate": 45,
-  "formatted_time": "01:00:00"
-}
-```
-
-The backend calculates the recorded amount using the supplied duration
-and hourly rate.
-
-### 5.8 Wallet & payments
-
-  -----------------------------------------------------------------------------------
-  Method            Endpoint                      Description       Access
-  ----------------- ----------------------------- ----------------- -----------------
-  `GET`             `/api/wallet`                 Retrieve wallet   Bearer
-                                                  and ledger        
-                                                  information       
-
-  `POST`            `/api/wallet/withdraw`        Submit a          Bearer
-                                                  withdrawal        
-                                                  request           
-
-  `GET`             `/api/payments`               Retrieve payment  Bearer
-                                                  records           
-
-  `PATCH`           `/api/payments/:id/release`   Release a         Bearer
-                                                  payment/escrow    
-                                                  record            
-  -----------------------------------------------------------------------------------
-
-Withdrawal example:
-
-``` json
-{
-  "amount": 500,
-  "method": "stripe"
-}
-```
-
-> **Financial integration note:** These API operations manage
-> application-side wallet/payment records. Do not assume that they move
-> real money or connect to Stripe (or another payment processor) without
-> a separately configured and verified payment integration.
-
-### 5.9 Messaging
-
-  -----------------------------------------------------------------------
-  Method            Endpoint          Description       Access
-  ----------------- ----------------- ----------------- -----------------
-  `GET`             `/api/messages`   Retrieve message  Bearer
-                                      conversations     
-
-  `POST`            `/api/messages`   Send a message or Bearer
-                                      create a thread   
-  -----------------------------------------------------------------------
-
-Example:
-
-``` json
-{
-  "thread_id": "thread-123",
-  "text": "Hello! Let's discuss the project.",
-  "project": "SaaS Dashboard"
-}
-```
-
-### 5.10 Files & deliverables
-
-  Method     Endpoint           Description              Access
-  ---------- ------------------ ------------------------ --------
-  `GET`      `/api/files`       Retrieve file records    Bearer
-  `POST`     `/api/files`       Register file metadata   Bearer
-  `DELETE`   `/api/files/:id`   Delete a file record     Bearer
-
-Example:
-
-``` json
-{
-  "name": "project-report.pdf",
-  "size": "2.5 MB",
-  "project": "SaaS Dashboard"
-}
-```
-
-**Important:** The documented `POST /api/files` operation registers file
-metadata. It is not, by itself, a multipart/binary file upload service.
-
-### 5.11 Team management
-
-  Method   Endpoint      Description             Access
-  -------- ------------- ----------------------- --------
-  `GET`    `/api/team`   Retrieve team members   Bearer
-  `POST`   `/api/team`   Add a team member       Bearer
-
-Example:
-
-``` json
-{
-  "name": "Jordan Lee",
-  "email": "jordan@example.com",
-  "role": "Contributor",
-  "project": "SaaS Dashboard"
-}
-```
-
-### 5.12 Subscription & pricing
-
-  Method   Endpoint               Description                Access
-  -------- ---------------------- -------------------------- --------
-  `GET`    `/api/pricing`         Retrieve pricing plans     Public
-  `POST`   `/api/subscriptions`   Change subscription plan   Bearer
-
-Example:
-
-``` json
-{
-  "planId": "pro",
-  "billingCycle": "monthly"
-}
-```
-
-### 5.13 Resources & bookmarks
-
-  Method   Endpoint                  Description                    Access
-  -------- ------------------------- ------------------------------ --------
-  `GET`    `/api/resources`          Retrieve knowledge resources   Public
-  `GET`    `/api/bookmarks`          Retrieve saved bookmarks       Bearer
-  `POST`   `/api/bookmarks/toggle`   Add/remove a bookmark          Bearer
-
-Bookmark example:
-
-``` json
-{
-  "itemType": "talent",
-  "itemId": "talent-123"
-}
-```
-
-Optional query parameter: `type`.
-
-### 5.14 Newsletter & search
-
-  -------------------------------------------------------------------------
-  Method            Endpoint            Description       Access
-  ----------------- ------------------- ----------------- -----------------
-  `POST`            `/api/newsletter`   Subscribe an      Public
-                                        email to the      
-                                        newsletter        
-
-  `GET`             `/api/search`       Search platform   Public
-                                        content           
-  -------------------------------------------------------------------------
-
-Example:
-
-``` http
-GET /api/search?q=react
-```
-
-### 5.15 Notifications
-
-  -------------------------------------------------------------------------------------
-  Method            Endpoint                        Description       Access
-  ----------------- ------------------------------- ----------------- -----------------
-  `GET`             `/api/notifications`            Retrieve          Bearer
-                                                    notifications     
-
-  `PATCH`           `/api/notifications/read-all`   Mark scoped       Bearer
-                                                    notifications as  
-                                                    read              
-
-  `PATCH`           `/api/notifications/:id/read`   Mark one          Bearer
-                                                    notification as   
-                                                    read              
-
-  `DELETE`          `/api/notifications/:id`        Delete a          Bearer
-                                                    notification      
-  -------------------------------------------------------------------------------------
-
-Optional query parameter: `role`.
-
-------------------------------------------------------------------------
-
-## 06 · 💻 Request Examples
-
-### Create a project with cURL
-
-``` bash
-curl -X POST http://localhost:5000/api/projects \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{
-    "title": "SaaS Analytics Dashboard",
-    "category": "Web Development",
-    "description": "Build a responsive analytics dashboard.",
-    "budget": "$4,500",
-    "budgetType": "Fixed Price",
-    "skills": ["React", "Node.js"]
-  }'
-```
-
-### Fetch projects with PowerShell
-
-``` powershell
-Invoke-RestMethod `
-  -Uri "http://localhost:5000/api/projects?category=Web%20Development" `
-  -Method Get
-```
-
-### Call a protected route with PowerShell
-
-``` powershell
-$token = "YOUR_JWT_TOKEN"
-
-$headers = @{
-  Authorization = "Bearer $token"
-}
-
-Invoke-RestMethod `
-  -Uri "http://localhost:5000/api/auth/me" `
-  -Headers $headers `
-  -Method Get
-```
-
-### Example JavaScript fetch
-
-``` javascript
-const response = await fetch("http://localhost:5000/api/projects", {
-  method: "GET",
-  headers: {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  },
-});
-
-if (!response.ok) {
-  throw new Error(`API request failed: ${response.status}`);
-}
-
-const projects = await response.json();
-console.log(projects);
-```
-
-------------------------------------------------------------------------
-
-## 07 · 📬 Responses & Errors
-
-Responses are JSON. The exact response shape depends on the endpoint.
-
-### Common HTTP status codes
-
-  Status   Meaning                 Typical cause
-  -------- ----------------------- ---------------------------------------------
-  `200`    OK                      Request completed
-  `201`    Created                 Resource created
-  `400`    Bad Request             Missing or invalid input
-  `401`    Unauthorized            Missing/invalid credentials or failed login
-  `404`    Not Found               Resource or route not found
-  `429`    Too Many Requests       Rate limit reached
-  `500`    Internal Server Error   Unexpected server-side failure
-
-### Error example
-
-``` json
-{
-  "error": "Project not found"
-}
-```
-
-Some endpoints return additional fields such as `success`, `message`,
-`project`, `task`, `token`, or `user`. Clients should not assume every
-route uses an identical response envelope.
-
-### Recommended client handling
-
--   Check `response.ok` before treating a response as successful.
--   Parse the JSON body when available.
--   Display a useful message for `400` validation errors.
--   On `401`, re-authenticate or refresh the user's session.
--   On `404`, show a not-found state.
--   On `429`, respect the `Retry-After` header.
--   Avoid exposing raw internal exception details to end users.
-
-------------------------------------------------------------------------
-
-## 08 · 🚦 Rate Limiting
-
-The backend includes an in-memory sliding-window limiter for
-authentication endpoints.
-
-  -----------------------------------------------------------------------
-  Setting                             Current behavior
-  ----------------------------------- -----------------------------------
-  Protected operation group           Authentication routes using the
-                                      limiter
-
-  Window                              60 seconds
-
-  Maximum                             60 requests per window
-
-  Exceeded response                   `429 Too Many Requests`
-
-  Retry information                   `Retry-After` header
-
-  Additional headers                  `X-RateLimit-Limit`,
-                                      `X-RateLimit-Remaining`,
-                                      `X-RateLimit-Reset`
-  -----------------------------------------------------------------------
-
-The limiter is in-memory. Its counters reset when the process restarts
-and are not shared between multiple server instances.
-
-------------------------------------------------------------------------
-
-## 09 · 🗄️ Data & Persistence
-
-Workverse uses SQLite for application persistence.
-
-### Persistence characteristics
-
--   Database initialization is handled by `backend/db.js`.
--   The database file is stored at `backend/database.sqlite`.
--   Write-Ahead Logging (WAL) mode is enabled.
--   Foreign-key enforcement is enabled.
--   Database access uses Node.js `DatabaseSync`.
-
-### Main data domains
-
-  Domain                   Responsibility
-  ------------------------ ----------------------------------
-  Users                    Account and profile records
-  Talents                  Freelancer directory
-  Projects                 Project listings and details
-  Kanban tasks             Task board state
-  Contracts                Contract and milestone records
-  Proposals                Freelancer submissions
-  Messages                 Conversation and message records
-  Files                    Deliverable metadata
-  Team members             Workspace team records
-  Payments                 Escrow/payment records
-  Time logs                Tracked work sessions
-  Wallet transactions      Wallet ledger activity
-  Notifications            User notifications
-  Bookmarks                Saved talents/projects/resources
-  Pricing plans            Subscription plan information
-  Resources                Knowledge-base content
-  Newsletter subscribers   Newsletter sign-ups
-
-------------------------------------------------------------------------
-
-## 10 · 🛡️ Security Notes
-
-### Implemented backend controls
-
-The current backend source includes:
-
--   JWT-based authentication middleware.
--   Password hashing and comparison using `bcryptjs`.
--   CORS middleware.
--   JSON request parsing with a 2 MB body limit.
--   Basic HTTP security headers.
--   Authentication-route rate limiting.
--   Request logging.
-
-### Deployment checklist
-
-Before exposing the API publicly:
-
--   [ ] Set a long, random `JWT_SECRET` through environment
-    configuration.
--   [ ] Do not use the development fallback JWT secret in production.
--   [ ] Restrict CORS to trusted frontend origins.
--   [ ] Serve the API over HTTPS.
--   [ ] Review authorization and resource ownership checks on every
-    protected route.
--   [ ] Validate and sanitize all user-controlled input.
--   [ ] Avoid returning passwords, token secrets, or private account
-    data.
--   [ ] Use a shared rate-limit store if deploying multiple backend
-    instances.
--   [ ] Configure backups and recovery for the SQLite database.
--   [ ] Integrate a real payment provider before processing real funds.
--   [ ] Implement a complete email/token-based password-reset workflow
-    before describing password recovery as fully operational.
-
-> **Authorization reminder:** Authentication confirms who is making a
-> request. It does not automatically prove that the user owns the
-> requested project, contract, payment, file, or message. Resource-level
-> authorization must be reviewed separately.
-
-------------------------------------------------------------------------
-
-## 11 · 🧪 Testing
-
-Run commands from the repository root or use the `--prefix` option.
-
-### Complete backend test suite
-
-``` bash
-npm test --prefix backend
-```
-
-### Individual test groups
-
-``` bash
-npm run test:api --prefix backend
-npm run test:db --prefix backend
-npm run test:health --prefix backend
-```
-
-### Suggested verification workflow
-
-1.  Start the backend.
-2.  Check `/api/health`.
-3.  Open Swagger UI.
-4.  Register or sign in with a test account.
-5.  Copy the returned JWT.
-6.  Authorize protected endpoints.
-7.  Exercise successful and invalid requests.
-8.  Verify persisted changes in the database.
-9.  Run the automated test suite.
-
-Use test accounts and non-production data when validating write
-operations.
-
-------------------------------------------------------------------------
-
-## 12 · 🗂️ Project Structure
-
-``` text
-WORKVERSE/
-├── backend/
-│   ├── server.js           # Express application and API routes
-│   ├── db.js               # SQLite setup and database operations
-│   ├── openapi.js          # OpenAPI specification
-│   ├── dashboard.js        # Dashboard and documentation rendering
-│   ├── package.json
-│   ├── test-api.js
-│   ├── test-db.js
-│   └── test-runner.js
-│
-├── frontend/
-│   ├── src/
-│   │   ├── api/
-│   │   ├── components/
-│   │   └── pages/
-│   ├── package.json
-│   └── vite.config.js
-│
-├── docs/
-│   └── API_DOCUMENTATION.md
-│
-├── docker-compose.yml
-├── package.json
-└── README.md
-```
-
-### Key developer files
-
-  File                        Purpose
-  --------------------------- --------------------------------------------
-  `backend/server.js`         Route handlers, middleware, authentication
-  `backend/db.js`             SQLite schema and persistence
-  `backend/openapi.js`        OpenAPI schema used by API docs
-  `backend/test-api.js`       API integration tests
-  `backend/test-db.js`        Database tests
-  `backend/test-runner.js`    Combined test runner
-  `frontend/vite.config.js`   Frontend development proxy
-
-------------------------------------------------------------------------
-
-::: {align="center"}
-## ✨ Markdown vs. Animated HTML
+| Operation | HTTP Method | Purpose |
+|---|---|---|
+| Registration | `POST` | Create a user account |
+| Login | `POST` | Authenticate a user |
+| Profile | `GET` | Retrieve profile information |
+| Profile Update | `PUT/PATCH` | Update user information |
+| Logout | `POST` | End authentication session, if implemented |
 
 <details>
-<summary><strong>Why this file cannot have floating animated objects</strong></summary>
+<summary><strong>Register User</strong></summary>
 
-GitHub sanitizes Markdown and does not allow custom stylesheet rules or JavaScript to run inside repository Markdown. This edition uses GitHub-native elements to keep the design polished and accessible: badges, emoji section markers, callout quotes, tables, fenced code, links, and collapsible details. For animated floating gradients, cursor effects, and motion, open the companion `API_DOCUMENTATION.html` file locally in a browser.
+### Endpoint
+
+```http
+POST /api/auth/register
+```
+
+### Purpose
+
+Creates a new user account.
+
+### Request Body
+
+```json
+{
+  "name": "Example User",
+  "email": "user@example.com",
+  "password": "your_password"
+}
+```
+
+### Expected behavior
+
+1. Validate the submitted fields.
+2. Verify that the user information meets the required constraints.
+3. Create the user.
+4. Return an appropriate response.
+
+> Replace the route and fields with the exact implementation from the backend.
+
+</details>
+
+<details>
+<summary><strong>Login</strong></summary>
+
+### Endpoint
+
+```http
+POST /api/auth/login
+```
+
+### Purpose
+
+Authenticates an existing user.
+
+### Request Body
+
+```json
+{
+  "email": "user@example.com",
+  "password": "your_password"
+}
+```
+
+### Expected behavior
+
+1. Accept the authentication credentials.
+2. Verify the user.
+3. Validate the password.
+4. Generate an authentication token if successful.
+5. Return the authentication result.
 
 </details>
 
 ---
 
-## 🟠 WORKVERSE
+## 👥 7.2 TALENT DISCOVERY
 
-**Discover. Collaborate. Deliver.**
+Talent Discovery provides functionality for clients to discover and evaluate potential freelancers.
 
-API Documentation · Developer Reference
+### Functionalities
 
-*Build better workflows. Connect people. Deliver meaningful work.*
-:::
+- Freelancer discovery
+- Freelancer profiles
+- Skills
+- Experience information
+- Search and filtering
+- Profile details
+
+<details>
+<summary><strong>Retrieve Talent</strong></summary>
+
+### Endpoint
+
+```http
+GET /api/talent
+```
+
+### Purpose
+
+Retrieve talent-related information.
+
+### Authentication
+
+Depends on the actual implementation.
+
+### Query Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `search` | String | Search query |
+| `skill` | String | Filter by skill |
+| `page` | Number | Pagination page |
+| `limit` | Number | Number of records |
+
+> Parameters shown above are illustrative. Document only those actually supported by your backend.
+
+</details>
+
+---
+
+## 📁 7.3 PROJECT MANAGEMENT
+
+Project Management provides the foundation for creating and managing professional projects.
+
+### Core operations
+
+| Operation | Purpose |
+|---|---|
+| Create Project | Create a new project |
+| Retrieve Projects | Fetch project information |
+| Update Project | Modify project details |
+| Delete Project | Remove a project |
+| Project Details | Retrieve individual project information |
+
+<details>
+<summary><strong>Create Project</strong></summary>
+
+### Endpoint
+
+```http
+POST /api/projects
+```
+
+### Purpose
+
+Creates a new project.
+
+### Request Body
+
+```json
+{
+  "title": "Web Application Development",
+  "description": "Build a responsive web application",
+  "budget": 5000
+}
+```
+
+### Response
+
+The API returns the result of the creation operation.
+
+</details>
+
+<details>
+<summary><strong>Retrieve Projects</strong></summary>
+
+### Endpoint
+
+```http
+GET /api/projects
+```
+
+### Purpose
+
+Retrieves project information.
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": []
+}
+```
+
+</details>
+
+---
+
+## 📋 7.4 KANBAN & TASK MANAGEMENT
+
+The Kanban module provides a visual workflow for organizing tasks.
+
+### Typical Workflow
+
+```mermaid
+flowchart LR
+
+    A["Backlog"] --> B["To Do"]
+
+    B --> C["In Progress"]
+
+    C --> D["Review"]
+
+    D --> E["Completed"]
+```
+
+### Functionalities
+
+- Task creation
+- Task updates
+- Task assignment
+- Workflow management
+- Task status changes
+- Project-level task organization
+
+<details>
+<summary><strong>Task Management</strong></summary>
+
+Document task endpoints according to their actual backend implementation.
+
+| Method | Purpose |
+|---|---|
+| `GET` | Retrieve tasks |
+| `POST` | Create a task |
+| `PUT/PATCH` | Update task |
+| `DELETE` | Remove task |
+
+</details>
+
+---
+
+## 🤝 7.5 CONTRACT MANAGEMENT
+
+The Contract module handles agreements and project-related contractual information.
+
+### Core functionalities
+
+- Contract creation
+- Contract retrieval
+- Contract status
+- Contract updates
+- Contract lifecycle management
+
+### Contract Lifecycle
+
+```mermaid
+flowchart TD
+
+    A["Contract Draft"] --> B["Review"]
+
+    B --> C["Pending Approval"]
+
+    C --> D["Active"]
+
+    D --> E["Completed"]
+
+    D --> F["Cancelled"]
+```
+
+> The lifecycle shown is conceptual. The actual statuses depend on the backend implementation.
+
+---
+
+## ⏱️ 7.6 TIME TRACKING
+
+Time Tracking supports the recording and management of work associated with projects.
+
+### Functionalities
+
+- Track work duration
+- Associate time with projects
+- Retrieve work records
+- Monitor work activity
+- Calculate tracked time
+
+### Typical Workflow
+
+```mermaid
+sequenceDiagram
+
+    participant U as Freelancer
+    participant A as API
+    participant D as Database
+
+    U->>A: Start Tracking
+    A->>D: Create Time Entry
+    D-->>A: Entry Created
+    A-->>U: Tracking Response
+
+    U->>A: Stop Tracking
+    A->>D: Update Time Entry
+    D-->>A: Updated Record
+    A-->>U: Time Summary
+```
+
+---
+
+## 💰 7.7 WALLET & PAYMENTS
+
+Financial functionality is organized around the platform's payment-related workflows.
+
+### Core functionalities
+
+- Wallet information
+- Balance information
+- Transaction history
+- Payment operations
+- Payment status
+
+> Financial operations should always be verified against server-side authorization and validation.
+
+---
+
+## 💬 7.8 MESSAGING
+
+Messaging enables communication between users.
+
+### Functionalities
+
+- Conversation management
+- Message sending
+- Message retrieval
+- Conversation history
+- User communication
+
+### Communication Workflow
+
+```mermaid
+sequenceDiagram
+
+    participant A as User A
+    participant API as Workverse API
+    participant D as Database
+    participant B as User B
+
+    A->>API: Send Message
+    API->>D: Store Message
+    D-->>API: Confirmation
+    API-->>A: Message Created
+    API-->>B: Message Available
+```
+
+---
+
+## 🔔 7.9 NOTIFICATIONS
+
+The notification module keeps users informed about relevant platform activity.
+
+### Possible notification categories
+
+- Project updates
+- Contract activity
+- Task changes
+- Messages
+- Platform activity
+- User-specific events
+
+### Notification lifecycle
+
+```mermaid
+flowchart LR
+
+    A["Event Occurs"] --> B["Notification Generated"]
+
+    B --> C["Notification Stored"]
+
+    C --> D["Delivered to User"]
+
+    D --> E["Viewed"]
+
+    E --> F["Marked Read"]
+```
+
+---
+
+## 📎 7.10 DELIVERABLES
+
+Deliverables represent work submitted or shared as part of a project.
+
+### Functionalities
+
+- Deliverable submission
+- Deliverable retrieval
+- Project association
+- Submission status
+- Delivery tracking
+
+---
+
+## 👨‍👩‍👧 7.11 TEAM MANAGEMENT
+
+Team functionality supports collaborative work environments.
+
+### Functionalities
+
+- Team creation
+- Team members
+- Member management
+- Team projects
+- Collaboration workflows
+
+---
+
+## ⭐ 7.12 BOOKMARKS
+
+Bookmarks enable users to save resources for future access.
+
+### Functionalities
+
+- Save resources
+- Retrieve saved resources
+- Remove bookmarks
+- Manage saved items
+
+---
+
+# ◈ 08. ERROR HANDLING
+
+## HTTP Status Codes
+
+| Status Code | Name | Meaning |
+|---|---|---|
+| `200` | OK | Request completed successfully |
+| `201` | Created | Resource successfully created |
+| `204` | No Content | Successful request without response body |
+| `400` | Bad Request | Invalid request |
+| `401` | Unauthorized | Authentication required or invalid |
+| `403` | Forbidden | Access denied |
+| `404` | Not Found | Resource not found |
+| `409` | Conflict | Request conflicts with current state |
+| `422` | Unprocessable Entity | Validation failure |
+| `429` | Too Many Requests | Rate limit exceeded |
+| `500` | Internal Server Error | Server-side failure |
+
+> Include only status codes that are actually used or handled by your application.
+
+---
+
+## Error Response
+
+Example:
+
+```json
+{
+  "success": false,
+  "message": "Something went wrong"
+}
+```
+
+Actual error formats may vary depending on the endpoint.
+
+---
+
+## Error Troubleshooting
+
+| Error | Possible Cause | Resolution |
+|---|---|---|
+| `401 Unauthorized` | Missing or invalid token | Authenticate again |
+| `403 Forbidden` | Insufficient permissions | Verify user authorization |
+| `404 Not Found` | Incorrect URL or missing resource | Verify route and resource ID |
+| `400 Bad Request` | Invalid payload | Check request body |
+| `500 Internal Server Error` | Backend exception | Inspect server logs |
+
+---
+
+# ◈ 09. INTEGRATION EXAMPLES
+
+## Example 1 — GET Request
+
+```javascript
+const response = await fetch(
+  "http://localhost:5000/api/example"
+);
+
+const data = await response.json();
+
+console.log(data);
+```
+
+---
+
+## Example 2 — POST Request
+
+```javascript
+const response = await fetch(
+  "http://localhost:5000/api/example",
+  {
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+      name: "Example"
+    })
+  }
+);
+
+const data = await response.json();
+
+console.log(data);
+```
+
+---
+
+## Example 3 — Authenticated Request
+
+```javascript
+const token = localStorage.getItem("token");
+
+const response = await fetch(
+  "http://localhost:5000/api/protected",
+  {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  }
+);
+
+const data = await response.json();
+
+console.log(data);
+```
+
+---
+
+## Example 4 — Error Handling
+
+```javascript
+async function fetchData() {
+
+  try {
+
+    const response = await fetch(
+      "http://localhost:5000/api/example"
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `HTTP Error: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+
+    console.log(data);
+
+  } catch (error) {
+
+    console.error(
+      "API Request Failed:",
+      error.message
+    );
+
+  }
+
+}
+```
+
+---
+
+# ◈ 10. DATABASE OVERVIEW
+
+Workverse uses a persistence layer to store application information.
+
+The database is responsible for maintaining application data such as:
+
+- User records
+- Projects
+- Tasks
+- Contracts
+- Messages
+- Notifications
+- Financial records
+- Teams
+- Deliverables
+
+### Database Interaction
+
+```mermaid
+flowchart TD
+
+    A["API Request"] --> B["Business Logic"]
+
+    B --> C["Validation"]
+
+    C --> D["Database Query"]
+
+    D --> E["Database"]
+
+    E --> F["Query Result"]
+
+    F --> G["Response Formatting"]
+
+    G --> H["API Response"]
+```
+
+---
+
+# ◈ 11. SECURITY GUIDELINES
+
+## Authentication Security
+
+- Protect authentication credentials.
+- Use secure token handling.
+- Validate authentication on protected routes.
+- Prevent unauthorized access.
+
+## Input Validation
+
+- Validate request body.
+- Validate query parameters.
+- Validate path parameters.
+- Reject malformed requests.
+
+## Authorization
+
+Authentication does not automatically grant permission to access every resource.
+
+The backend should verify that the authenticated user is authorized to perform the requested action.
+
+## Sensitive Information
+
+Never expose:
+
+- Passwords
+- Private credentials
+- JWT signing secrets
+- Internal configuration
+- Sensitive user information
+- Database credentials
+
+## Production Recommendations
+
+- Use HTTPS.
+- Use secure environment variables.
+- Implement appropriate rate limiting.
+- Validate all incoming data.
+- Use secure authentication practices.
+- Maintain error logging.
+- Avoid exposing internal stack traces.
+
+---
+
+# ◈ 12. TESTING
+
+## Testing Objectives
+
+API testing should verify:
+
+- Successful requests
+- Authentication
+- Authorization
+- Request validation
+- Database interactions
+- Response structure
+- Error handling
+- Edge cases
+
+## Testing Workflow
+
+```mermaid
+flowchart TD
+
+    A["Prepare Test Environment"] --> B["Send API Request"]
+
+    B --> C["Validate Response"]
+
+    C --> D["Verify Database"]
+
+    D --> E["Test Error Conditions"]
+
+    E --> F["Record Results"]
+```
+
+## Example Test Checklist
+
+- [ ] Registration works
+- [ ] Login works
+- [ ] Invalid credentials are rejected
+- [ ] Protected endpoints require authentication
+- [ ] Unauthorized users cannot access restricted resources
+- [ ] Request validation works
+- [ ] CRUD operations function correctly
+- [ ] Database updates are correct
+- [ ] Error responses are handled correctly
+
+---
+
+# ◈ 13. PROJECT STRUCTURE
+
+The project is organized into frontend and backend components.
+
+```text
+WORKVERSE/
+│
+├── backend/
+│   ├── routes/
+│   ├── middleware/
+│   ├── controllers/
+│   ├── services/
+│   ├── database/
+│   ├── models/
+│   ├── utils/
+│   └── server.js
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── hooks/
+│   │   └── utils/
+│   │
+│   └── public/
+│
+├── docs/
+│   └── API_DOCUMENTATION.md
+│
+├── README.md
+│
+└── package.json
+```
+
+> The tree above is illustrative. Update it to reflect the exact repository structure.
+
+---
+
+# ◈ 14. FREQUENTLY ASKED QUESTIONS
+
+<details>
+<summary><strong>How do I access the API locally?</strong></summary>
+
+Start the backend server and use the configured localhost URL.
+
+</details>
+
+<details>
+<summary><strong>Why am I receiving a 401 response?</strong></summary>
+
+The request may be missing a valid authentication token. Check the authorization header and ensure your token is valid.
+
+</details>
+
+<details>
+<summary><strong>Why am I receiving a 404 response?</strong></summary>
+
+Verify the endpoint URL, route prefix, resource identifier, and HTTP method.
+
+</details>
+
+<details>
+<summary><strong>Can I access protected endpoints without logging in?</strong></summary>
+
+Protected endpoints require valid authentication and, where applicable, sufficient authorization.
+
+</details>
+
+<details>
+<summary><strong>How should I handle API errors?</strong></summary>
+
+Check the HTTP status code and response body. Use appropriate error handling in your client application.
+
+</details>
+
+---
+
+# ◈ API DOCUMENTATION DISCLAIMER
+
+This document serves as a developer reference for the Workverse API.
+
+Endpoint availability, authentication requirements, request schemas,
+response formats, and supported operations must be verified against
+the current backend implementation.
+
+---
+
+<div align="center">
+
+# ❄️ WORKVERSE
+
+### Discover. Collaborate. Deliver.
+
+**Built for modern collaboration.**
+
+<br/>
+
+<sub>API Documentation · Developer Reference · Workverse</sub>
+
+<br/>
+
+![Navy](https://img.shields.io/badge/Deep_Navy-0B1120?style=flat-square)
+![Ice](https://img.shields.io/badge/Ice_Blue-38BDF8?style=flat-square)
+![Indigo](https://img.shields.io/badge/Electric_Indigo-6366F1?style=flat-square)
+![Cyan](https://img.shields.io/badge/Cyan-22D3EE?style=flat-square)
+
+</div>
