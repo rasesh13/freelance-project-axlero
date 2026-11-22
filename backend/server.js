@@ -1819,6 +1819,42 @@ app.delete('/api/notifications/:id', authenticateToken, (req, res) => {
 });
 
 // ==========================================
+// 10C. WORKSPACE DATA EXPORT & IMPORT
+// ==========================================
+app.get('/api/workspace/export', (req, res) => {
+  try {
+    const projects = db.prepare('SELECT * FROM projects ORDER BY created_at DESC').all().map(formatProjectRow);
+    const kanbanTasks = db.prepare('SELECT * FROM kanban_tasks ORDER BY created_at DESC').all();
+    const contracts = db.prepare('SELECT * FROM contracts ORDER BY created_at DESC').all().map(formatContractRow);
+    const proposals = db.prepare('SELECT * FROM proposals ORDER BY created_at DESC').all().map(formatProposalRow);
+    const files = db.prepare('SELECT * FROM files ORDER BY created_at DESC').all();
+
+    res.json({
+      platform: 'Workverse',
+      version: '1.4.0',
+      exportedAt: new Date().toISOString(),
+      summary: {
+        projectsCount: projects.length,
+        tasksCount: kanbanTasks.length,
+        contractsCount: contracts.length,
+        proposalsCount: proposals.length,
+        filesCount: files.length,
+      },
+      data: {
+        projects,
+        kanbanTasks,
+        contracts,
+        proposals,
+        files,
+      },
+    });
+  } catch (err) {
+    console.error('Workspace export error:', err);
+    res.status(500).json({ error: 'Failed to export workspace data' });
+  }
+});
+
+// ==========================================
 // 11. CLEAN 404 & GLOBAL ERROR MIDDLEWARE
 // ==========================================
 app.use('/api', (req, res) => {

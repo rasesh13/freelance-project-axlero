@@ -342,6 +342,15 @@ async function runApiTestSuite() {
     assert(res.data.projects.length > 0);
   });
 
+  await test('GET /api/workspace/export returns complete structured workspace JSON snapshot', async () => {
+    const res = await request('/api/workspace/export');
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.platform, 'Workverse');
+    assert(Array.isArray(res.data.data.projects), 'Projects should be array');
+    assert(Array.isArray(res.data.data.kanbanTasks), 'Kanban tasks should be array');
+    assert(res.data.summary.projectsCount >= 0);
+  });
+
   // -------------------------------------------------------------------------
   // 8. TEARDOWN & CLEANUP
   // -------------------------------------------------------------------------
