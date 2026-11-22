@@ -920,4 +920,5 @@ seedDatabase();
 
 module.exports = {
   db,
+  seedDatabase,
 };

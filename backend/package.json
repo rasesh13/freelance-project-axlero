@@ -10,7 +10,9 @@
     "test:db": "node test-db.js",
     "test:health": "node -e \"fetch('http://localhost:5000/api/health').then(r=>r.json()).then(d=>{console.log('Status:', d.status, '| DB:', d.database); process.exit(d.status==='ok'?0:1)})\"",
     "backup": "node backup.js",
-    "backup:list": "node backup.js --list"
+    "backup:list": "node backup.js --list",
+    "db:seed": "node seed.js",
+    "db:seed:fresh": "node seed.js --fresh"
   },
   "keywords": [
     "workverse",
