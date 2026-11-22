@@ -189,7 +189,13 @@ export default function ProjectsHubPage({
   // Projects State
   const [projectStatusFilter, setProjectStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [projectList, setProjectList] = useState(PROJECTS || []);
+  const [projectList, setProjectList] = useState(() => {
+    try {
+      return typeof PROJECTS !== 'undefined' && Array.isArray(PROJECTS) ? PROJECTS : [];
+    } catch {
+      return [];
+    }
+  });
 
 // Project Overview Statistics
 const totalProjects = projectList.length;
