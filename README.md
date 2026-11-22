@@ -19,7 +19,9 @@ Discover talent. Find meaningful work. Collaborate with clients and teams. Manag
   <a href="#-api-reference">API Reference</a>
 </p>
 
-![Version](https://img.shields.io/badge/version-1.3.0-F36B21?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.4.0-F36B21?style=flat-square)
+![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=flat-square&logo=pwa&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Frontend](https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react&logoColor=black)
 ![Build](https://img.shields.io/badge/Build-Vite%208-646CFF?style=flat-square&logo=vite&logoColor=white)
 ![Backend](https://img.shields.io/badge/Backend-Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white)
@@ -484,18 +486,42 @@ freelance-project-axlero/
 
 ## 🧭 Development Highlights
 
-The project has evolved through iterative development, with work across the following areas:
+The project has evolved through a structured 14-day development lifecycle, delivering a production-grade full-stack workspace:
 
-- Core marketplace interface and responsive navigation.
-- Find Talent and Find Work experiences.
-- Projects Hub, project setup, and Kanban workflows.
-- Express REST API and SQLite persistence.
-- JWT-based authentication.
-- Proposals, contracts, messaging, and workspace settings.
-- Wallet, escrow, and payment-related workflows.
-- API documentation and automated verification.
-- GitHub Actions CI workflow.
-- Docker configuration and PWA-related capabilities.
+<details open>
+  <summary><strong>🗓️ Milestone Roadmap (Days 1 – 14)</strong></summary>
+
+  | Day | Milestone |
+  |:---:|---|
+  | 01 | Core marketplace interface, design system tokens, GSAP animations, and responsive navigation. |
+  | 02 | Find Talent and Find Work discovery directories, filters, and profile cards. |
+  | 03 | Projects Hub, 3-step project wizard, stopwatch time tracker, and Kanban sprint board. |
+  | 04 | Express 5 REST API, SQLite WAL persistence engine, and Swagger UI documentation. |
+  | 05 | JWT authentication, session hydration, and client/freelancer role personas. |
+  | 06 | Live escrow wallet telemetry, SVG donut analytics, and Projects Hub sub-navigation tabs. |
+  | 07 | Milestone delivery board, native HTML5 drag-and-drop, and SQLite database sync. |
+  | 08 | Deliverable task checklists, split-pane messaging drawer, and escrow dispute workflows. |
+  | 09 | Automated test runner, SQLite integrity audit, and health verification CLI. |
+  | 10 | System architecture documentation, OpenAPI 3.0 catalog, and v1.0.0 release. |
+  | 11 | Multi-stage Docker containerization, GitHub Actions CI matrix, and root monorepo scripts. |
+  | 12 | PWA offline service worker, sliding-window rate limiting, and Vite bundle code-splitting. |
+  | 13 | Global React Error Boundary, offline connectivity toast, and automated SQLite backup runner. |
+  | 14 | Database B-tree relational indexing, workspace JSON export/import, seed CLI, and client TTL caching. |
+</details>
+
+### Production Checklist
+
+- [x] Full-stack REST API with SQLite WAL persistence
+- [x] High-performance relational B-tree indexes across all foreign key query paths
+- [x] JWT authentication with sliding-window brute-force rate limiting
+- [x] React Error Boundary with diagnostic recovery UI
+- [x] Workspace JSON snapshot export endpoint (`/api/workspace/export`)
+- [x] Standalone database seeding and clean reset runner (`npm run db:seed`)
+- [x] In-memory client API response TTL caching for static directories
+- [x] PWA offline manifest & stale-while-revalidate service worker
+- [x] Multi-stage Docker containerization & Docker Compose orchestration
+- [x] Automated CI/CD pipeline via GitHub Actions
+- [x] 43/43 platform checks passed (DB integrity + API integration + atomic backups)
 
 ---
 
