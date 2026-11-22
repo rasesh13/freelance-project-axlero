@@ -1291,3 +1291,648 @@ the current backend implementation.
 ![Cyan](https://img.shields.io/badge/Cyan-22D3EE?style=flat-square)
 
 </div>
+
+---
+
+# ◈ 15. COMPLETE API ENDPOINT DIRECTORY
+
+This section provides a consolidated reference of the API routes currently exposed by the Workverse backend. It complements the module walkthrough above by making it easier to locate an endpoint, understand its access requirements, and identify the operation it performs.
+
+> **Important:** This directory reflects the route handlers implemented in `backend/server.js`. The endpoint names, HTTP methods, and authentication requirements below are based on the current backend code.
+
+## ✦ Endpoint Summary
+
+| Module | Method | Endpoint | Access |
+|---|---|---|---|
+| System | GET | `/` | Public |
+| System | GET | `/api` | Public |
+| System | GET | `/api/health` | Public |
+| System | GET | `/api/system/metrics` | Public |
+| System | GET | `/api/stats` | Public |
+| Documentation | GET | `/docs`, `/docs/`, `/api/docs`, `/api-docs`, `/swagger` | Public |
+| Documentation | GET | `/openapi.json`, `/api/openapi.json` | Public |
+| Authentication | POST | `/api/auth/register` | Public / rate-limited |
+| Authentication | POST | `/api/auth/login` | Public / rate-limited |
+| Authentication | GET | `/api/auth/me` | JWT required |
+| Authentication | POST | `/api/auth/forgot-password` | Public / rate-limited |
+| Settings | GET | `/api/settings` | Public route in current implementation |
+| Settings | PUT | `/api/settings` | JWT required |
+| Talent | GET | `/api/talents` | Public |
+| Talent | GET | `/api/talents/:id` | Public |
+| Projects | GET | `/api/projects` | Public |
+| Projects | GET | `/api/projects/:id` | Public |
+| Projects | POST | `/api/projects` | JWT required |
+| Projects | PATCH | `/api/projects/:id` | JWT required |
+| Projects | DELETE | `/api/projects/:id` | JWT required |
+| Kanban | GET | `/api/kanban` | JWT required |
+| Kanban | POST | `/api/kanban` | JWT required |
+| Kanban | PATCH | `/api/kanban/:id/column` | JWT required |
+| Kanban | DELETE | `/api/kanban/:id` | JWT required |
+| Contracts | GET | `/api/contracts` | JWT required |
+| Contracts | POST | `/api/contracts` | JWT required |
+| Proposals | GET | `/api/proposals` | JWT required |
+| Proposals | POST | `/api/proposals` | JWT required |
+| Proposals | PATCH | `/api/proposals/:id/status` | JWT required |
+| Time tracking | POST | `/api/time/log` | JWT required |
+| Time tracking | GET | `/api/time/logs` | JWT required |
+| Wallet | GET | `/api/wallet` | JWT required |
+| Wallet | POST | `/api/wallet/withdraw` | JWT required |
+| Messages | GET | `/api/messages` | JWT required |
+| Messages | POST | `/api/messages` | JWT required |
+| Files | GET | `/api/files` | JWT required |
+| Files | POST | `/api/files` | JWT required |
+| Files | DELETE | `/api/files/:id` | JWT required |
+| Team | GET | `/api/team` | JWT required |
+| Team | POST | `/api/team` | JWT required |
+| Payments | GET | `/api/payments` | JWT required |
+| Payments | PATCH | `/api/payments/:id/release` | JWT required |
+| Pricing | GET | `/api/pricing` | Public |
+| Subscriptions | POST | `/api/subscriptions` | JWT required |
+| Resources | GET | `/api/resources` | Public |
+| Bookmarks | GET | `/api/bookmarks` | JWT required |
+| Bookmarks | POST | `/api/bookmarks/toggle` | JWT required |
+| Newsletter | POST | `/api/newsletter` | Public |
+| Search | GET | `/api/search` | Public |
+| Notifications | GET | `/api/notifications` | JWT required |
+| Notifications | PATCH | `/api/notifications/read-all` | JWT required |
+| Notifications | PATCH | `/api/notifications/:id/read` | JWT required |
+| Notifications | DELETE | `/api/notifications/:id` | JWT required |
+| Export | GET | `/api/workspace/export` | Public route in current implementation |
+
+---
+
+# ◈ 16. SYSTEM & SERVICE ENDPOINTS
+
+## 16.1 Root Service Information
+
+### `GET /`
+
+Returns service metadata and database statistics. If the request accepts HTML, the server responds with the dashboard view; otherwise, a JSON service response is returned.
+
+**Response information includes:**
+- Service name
+- Documentation URL
+- OpenAPI specification URL
+- Database statistics
+
+## 16.2 API Information
+
+### `GET /api`
+
+Provides a JSON overview of the API, documentation locations, and database statistics. This endpoint is useful for quick discovery when integrating a client.
+
+## 16.3 Health Check
+
+### `GET /api/health`
+
+Checks whether the backend is responding and whether SQLite can execute a basic database query.
+
+**Response fields:** `status`, `database`, `message`, `port`, `uptimeSeconds`, and `timestamp`.
+
+A successful health check indicates that the server is reachable and its database ping completed successfully.
+
+## 16.4 System Telemetry
+
+### `GET /api/system/metrics`
+
+Returns operational metrics for the running Node.js process and database.
+
+| Field | Description |
+|---|---|
+| `uptime.seconds` | Process uptime in seconds |
+| `uptime.formatted` | Human-readable uptime |
+| `memory.rssMB` | Resident memory size in MB |
+| `memory.heapTotalMB` | Allocated JavaScript heap in MB |
+| `memory.heapUsedMB` | Heap currently used in MB |
+| `memory.externalMB` | External memory usage in MB |
+| `system.platform` | Operating system platform |
+| `system.arch` | CPU architecture |
+| `system.nodeVersion` | Node.js runtime version |
+| `system.pid` | Process identifier |
+| `database.engine` | SQLite engine and persistence mode |
+| `database.healthy` | Database ping result |
+| `timestamp` | Metric collection time |
+
+## 16.5 Database Statistics
+
+### `GET /api/stats`
+
+Returns the database statistics calculated by the backend, including row-count information for supported tables. Use this endpoint for administrative or dashboard-level summaries rather than retrieving individual records.
+
+
+---
+
+# ◈ 17. AUTHENTICATION & ACCOUNT WORKFLOWS
+
+## 17.1 Registration
+
+### `POST /api/auth/register`
+
+Creates a user account.
+
+**Request body**
+
+```json
+{
+  "name": "Riya Kapoor",
+  "email": "riya@example.com",
+  "password": "password123",
+  "role": "freelancer"
+}
+```
+
+**Validation rules currently applied**
+- `name` must be present and non-empty.
+- `email` must contain an `@` character.
+- `password` must contain at least six characters.
+- `role` must be `client` or `freelancer`; when omitted, it defaults to `client`.
+- Email is trimmed and normalized to lowercase before storage.
+
+**Expected outcomes**
+- `201 Created` when account creation succeeds.
+- `400 Bad Request` when validation fails.
+- `409 Conflict` when the email is already registered.
+- `429 Too Many Requests` when the authentication rate limiter blocks the request.
+
+## 17.2 Login
+
+### `POST /api/auth/login`
+
+Authenticates the supplied credentials and returns a JWT token for subsequent protected calls.
+
+
+**Request body**
+
+```json
+{
+  "email": "riya@example.com",
+  "password": "password123",
+  "role": "freelancer"
+}
+```
+
+The client should store the returned token securely and attach it to protected requests as a Bearer token. Login attempts are rate-limited.
+
+## 17.3 Current User
+
+### `GET /api/auth/me`
+
+Requires a valid JWT. Returns the authenticated account/profile information associated with the token. This endpoint is useful when restoring a session after a page refresh.
+
+## 17.4 Password Reset Request
+
+### `POST /api/auth/forgot-password`
+
+Accepts an email address and queues or records a password-reset verification request. This route is rate-limited. The current API documents a reset-request workflow; clients should not assume a password is changed directly by this endpoint.
+
+**Request body**
+
+```json
+{
+  "email": "riya@example.com"
+}
+```
+
+## 17.5 Settings
+
+### `GET /api/settings`
+
+Returns the current settings object used by the application.
+
+### `PUT /api/settings`
+
+Updates workspace and notification preferences. The route requires JWT authentication.
+
+**Example request**
+
+```json
+{
+  "workspaceName": "Workverse Studio",
+  "billingEmail": "billing@example.com",
+  "autoEscrowRelease": true,
+}
+```
+
+Settings may include workspace identity, billing preferences, notification behavior, and related configuration supported by the backend. Send only fields supported by the current implementation.
+
+---
+
+# ◈ 18. TALENT & PROJECT DISCOVERY
+
+## 18.1 Talent Directory
+
+### `GET /api/talents`
+
+Returns the talent directory. Optional query parameters can narrow the result:
+
+| Parameter | Description |
+|---|---|
+| `search` | Search term used to filter talent results |
+| `category` | Category or specialization filter |
+
+**Example**
+
+```http
+GET /api/talents?search=design&category=UI%2FUX
+```
+
+## 18.2 Talent Profile
+
+### `GET /api/talents/:id`
+
+Returns the talent profile matching the supplied identifier. If no matching profile is available, the endpoint returns a not-found response.
+
+## 18.3 Project Directory
+
+### `GET /api/projects`
+
+Returns project listings. Query parameters support filtering:
+
+| Parameter | Description |
+|---|---|
+| `status` | Filter by project status; defaults to the API's all-status view |
+| `search` | Search project text/details |
+
+## 18.4 Project Details
+
+### `GET /api/projects/:id`
+
+Returns a single project by identifier, including its project details and related data provided by the backend.
+
+## 18.5 Create Project
+
+### `POST /api/projects`
+
+Creates a project listing. Authentication is required.
+
+**Example request**
+
+```json
+{
+  "title": "Realtime Telemetry API",
+  "category": "Web Development",
+  "description": "Build a telemetry service for a web application.",
+  "budget": "$2,400",
+}
+```
+
+The server validates and creates the project using the supplied project brief information. A successful creation returns the created project and a `201`-style response.
+
+## 18.6 Update Project
+
+### `PATCH /api/projects/:id`
+
+Updates supported properties of an existing project. Authentication is required. Use the project identifier in the URL and include the fields to be changed in the JSON body.
+
+## 18.7 Delete Project
+
+### `DELETE /api/projects/:id`
+
+Deletes a project record identified by its ID. Authentication is required. Clients should refresh their project list after a successful deletion.
+
+
+---
+
+# ◈ 19. KANBAN & DELIVERY WORKFLOW
+
+## 19.1 Retrieve Kanban Cards
+
+### `GET /api/kanban`
+
+Returns the Kanban cards available to the authenticated workspace. Authentication is required.
+
+## 19.2 Create Kanban Card
+
+### `POST /api/kanban`
+
+Creates a new task card.
+
+**Example request**
+
+```json
+{
+  "title": "Implement authentication flow",
+  "projectId": "project-001",
+  "column": "To Do",
+  "priority": "High"
+}
+```
+
+The exact accepted fields depend on the task creation handler. Include the title and only properties supported by the backend.
+
+## 19.3 Move Card Between Columns
+
+### `PATCH /api/kanban/:id/column`
+
+Updates the column or workflow stage for the specified card. This endpoint is intended for Kanban drag-and-drop interactions.
+
+**Example request**
+
+```json
+{
+  "column": "In Progress"
+}
+```
+
+## 19.4 Delete Card
+
+### `DELETE /api/kanban/:id`
+
+Removes a Kanban card by ID. Authentication is required.
+
+---
+
+# ◈ 20. CONTRACTS, PROPOSALS & HIRING
+
+## 20.1 Contracts
+
+### `GET /api/contracts`
+
+Returns contract records available to the authenticated user/workspace.
+
+### `POST /api/contracts`
+
+Creates a contract or hiring agreement from the submitted contract details. The endpoint is protected by JWT authentication. Ensure that the request contains the contract fields required by the backend handler.
+
+## 20.2 Proposals
+
+### `GET /api/proposals`
+
+Returns proposal records for the authenticated workspace.
+
+### `POST /api/proposals`
+
+Creates a proposal submission. The request body should contain the proposal details accepted by the current server handler.
+
+## 20.3 Proposal Status
+
+### `PATCH /api/proposals/:id/status`
+
+Updates the status of an existing proposal. Use the proposal ID in the route and the status value in the JSON request body. Authentication is required.
+
+
+---
+
+# ◈ 21. TIME TRACKING
+
+## 21.1 Create Time Log
+
+### `POST /api/time/log`
+
+Creates a time-log entry for an authenticated user. This is used to persist tracked work sessions.
+
+## 21.2 Retrieve Time Logs
+
+### `GET /api/time/logs`
+
+Returns time-log entries for the authenticated workspace/user context. Use this endpoint to populate activity history, timesheets, and reporting screens.
+
+---
+
+# ◈ 22. WALLET, PAYMENTS & WITHDRAWALS
+
+## 22.1 Wallet Summary
+
+### `GET /api/wallet`
+
+Returns wallet information associated with the authenticated account, including balance and related wallet data provided by the backend.
+
+## 22.2 Withdrawal Request
+
+### `POST /api/wallet/withdraw`
+
+Submits a withdrawal request. Authentication is required. The backend validates the request and updates or records the withdrawal according to its current implementation.
+
+## 22.3 Payment Records
+
+### `GET /api/payments`
+
+Returns payment records associated with the authenticated context.
+
+## 22.4 Release Escrow Payment
+
+### `PATCH /api/payments/:id/release`
+
+Releases the payment or escrow amount associated with the payment record. This operation is protected by JWT authentication and should be performed only when the relevant delivery/payment workflow is ready for release.
+
+
+---
+
+# ◈ 23. MESSAGING, FILES & TEAM COLLABORATION
+
+## 23.1 Messages
+
+### `GET /api/messages`
+
+Returns message records for the authenticated user/workspace. The frontend can use this to load the conversation view.
+
+### `POST /api/messages`
+
+Creates or sends a message. Authentication is required. The JSON request must include the message content and relevant recipient/conversation information accepted by the server.
+
+## 23.2 Files & Deliverables
+
+### `GET /api/files`
+
+Returns file/deliverable metadata available to the authenticated workspace.
+
+### `POST /api/files`
+
+Creates a file/deliverable record. The current endpoint is protected; it should not be assumed to upload arbitrary binary file content unless the implementation explicitly supports that payload.
+
+### `DELETE /api/files/:id`
+
+Deletes the specified file/deliverable record. Authentication is required.
+
+## 23.3 Team
+
+### `GET /api/team`
+
+Returns team members or team records for the authenticated context.
+
+### `POST /api/team`
+
+Adds a team record/member using the fields supported by the backend handler. Authentication is required.
+
+---
+
+# ◈ 24. PLATFORM CATALOG & SUBSCRIPTIONS
+
+## 24.1 Pricing
+
+### `GET /api/pricing`
+
+Returns pricing plan/catalog information. This endpoint is public and can be used to render the pricing page.
+
+## 24.2 Subscription
+
+### `POST /api/subscriptions`
+
+Creates a subscription record or initiates the subscription workflow for the authenticated account. Authentication is required.
+
+## 24.3 Resources
+
+### `GET /api/resources`
+
+Returns the platform resources/catalog entries. The endpoint can be used to populate resource discovery pages.
+
+## 24.4 Bookmarks
+
+### `GET /api/bookmarks`
+
+Returns the authenticated user's bookmarked items.
+
+### `POST /api/bookmarks/toggle`
+
+Adds or removes a bookmark based on the item details supplied to the endpoint. Authentication is required. The frontend should interpret the response as the updated bookmark state rather than blindly adding a duplicate.
+
+## 24.5 Newsletter
+
+### `POST /api/newsletter`
+
+Accepts newsletter subscription information. This route is public; validate user-provided email input on the client and handle server validation errors.
+
+---
+
+# ◈ 25. SEARCH & NOTIFICATIONS
+
+## 25.1 Unified Search
+
+### `GET /api/search`
+
+Searches across supported platform content such as talents, projects, and resources.
+
+| Parameter | Description |
+|---|---|
+| `q` | Search keyword or phrase |
+
+**Example**
+
+```http
+GET /api/search?q=react
+```
+
+## 25.2 Notifications
+
+### `GET /api/notifications`
+
+Returns notifications associated with the authenticated user.
+
+### `PATCH /api/notifications/read-all`
+
+Marks all notifications in the authenticated context as read.
+
+### `PATCH /api/notifications/:id/read`
+
+Marks one notification as read.
+
+### `DELETE /api/notifications/:id`
+
+Deletes a notification by ID.
+
+Notifications should be fetched after authentication and refreshed after relevant actions. The read endpoints allow the client to keep the notification UI synchronized with backend state.
+
+---
+
+# ◈ 26. WORKSPACE EXPORT
+
+## 26.1 Export Workspace Data
+
+### `GET /api/workspace/export`
+
+Provides the workspace export response as implemented by the backend. Clients should handle the returned content type and response body appropriately. This endpoint is currently not protected by the authentication middleware in the route declaration, so integrations should treat the export as sensitive and avoid exposing it publicly through a frontend proxy or shared link.
+
+---
+
+# ◈ 27. REQUEST & RESPONSE EXAMPLES
+
+The following examples demonstrate the standard request structure used by the API. Replace the base URL, identifiers, and values with those belonging to your environment.
+
+## 27.1 Authenticated Request
+
+```bash
+curl -X GET http://localhost:5000/api/auth/me \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Accept: application/json"
+```
+
+## 27.2 Create a Project
+
+```bash
+curl -X POST http://localhost:5000/api/projects \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Realtime Telemetry API",
+    "category": "Web Development",
+    "description": "Build a telemetry service for a web application.",
+    "budget": "$2,400"
+  }'
+```
+
+## 27.3 Move a Kanban Card
+
+```bash
+curl -X PATCH http://localhost:5000/api/kanban/CARD_ID/column \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"column":"In Progress"}'
+```
+
+## 27.4 Mark a Notification as Read
+
+```bash
+curl -X PATCH http://localhost:5000/api/notifications/NOTIFICATION_ID/read \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+## 27.5 Search the Platform
+
+```bash
+curl "http://localhost:5000/api/search?q=react" \
+  -H "Accept: application/json"
+```
+
+---
+
+# ◈ 28. INTEGRATION CHECKLIST
+
+Before connecting a frontend, mobile client, or external integration, verify the following:
+
+- [ ] Base URL is configured for the target environment.
+- [ ] Requests sending JSON include `Content-Type: application/json`.
+- [ ] JWT-protected requests include `Authorization: Bearer <token>`.
+- [ ] Login and registration errors are handled without assuming a successful response.
+- [ ] IDs returned by the backend are used rather than hard-coded sample identifiers.
+- [ ] List views handle empty arrays and missing optional values.
+- [ ] Create/update/delete operations refresh or update the corresponding UI state.
+- [ ] Requests that can be rate-limited handle `429 Too Many Requests` gracefully.
+- [ ] Sensitive values and tokens are not written to logs or committed to source control.
+- [ ] The client does not assume that every endpoint is role-restricted unless the server enforces it.
+- [ ] The client handles network failures, server errors, and malformed/unexpected responses.
+- [ ] Exported workspace data is treated as sensitive.
+
+---
+
+# ◈ 29. API DOCUMENTATION & SPECIFICATION ACCESS
+
+The backend exposes its documentation interface and OpenAPI document directly through the server.
+
+| Resource | URL |
+|---|---|
+| Interactive API documentation | `http://localhost:5000/docs` |
+| Alternative documentation route | `http://localhost:5000/api/docs` |
+| OpenAPI JSON | `http://localhost:5000/openapi.json` |
+| OpenAPI JSON alternative | `http://localhost:5000/api/openapi.json` |
+
+The OpenAPI JSON can be imported into compatible API clients and documentation tools. The interactive documentation page is generated from the backend's OpenAPI specification, allowing developers to inspect available operations and request examples.
+
+---
+
+# ◈ 30. FINAL NOTES
+
+Workverse is organized around a set of connected workflows: account access, talent discovery, project creation and management, proposal and contract handling, task execution, time tracking, collaboration, payments, and workspace utilities.
+
+For the most accurate behavior of individual endpoints, use the route implementation in `backend/server.js` together with the OpenAPI specification exposed by the running backend. Request examples in this guide are illustrative and should be adapted to the exact fields accepted by each handler.
+
+> **Build with clarity. Integrate with confidence. Deliver with Workverse.**
