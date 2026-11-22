@@ -44,7 +44,34 @@ export function setStoredUser(user) {
   }
 }
 
+const apiCache = new Map();
+const CACHE_TTL_MS = 60 * 1000;
+
+function getCached(key) {
+  const item = apiCache.get(key);
+  if (!item) return null;
+  if (Date.now() - item.timestamp > CACHE_TTL_MS) {
+    apiCache.delete(key);
+    return null;
+  }
+  return item.data;
+}
+
+function setCached(key, data) {
+  apiCache.set(key, { data, timestamp: Date.now() });
+}
+
+export function clearApiCache() {
+  apiCache.clear();
+}
+
 async function request(endpoint, options = {}, retries = 2) {
+  const isGet = !options.method || options.method.toUpperCase() === 'GET';
+  if (options.cache && isGet) {
+    const cached = getCached(endpoint);
+    if (cached !== null) return cached;
+  }
+
   const token = getAuthToken();
   const headers = {
     'Content-Type': 'application/json',
@@ -66,7 +93,7 @@ async function request(endpoint, options = {}, retries = 2) {
     const data = isJson ? await res.json() : await res.text();
 
     if (!res.ok) {
-      if (retries > 0 && [502, 503, 504].includes(res.status) && (!options.method || options.method === 'GET')) {
+      if (retries > 0 && [502, 503, 504].includes(res.status) && isGet) {
         await new Promise((r) => setTimeout(r, 400));
         return request(endpoint, options, retries - 1);
       }
@@ -74,9 +101,17 @@ async function request(endpoint, options = {}, retries = 2) {
       throw new Error(errMsg);
     }
 
+    if (options.cache && isGet) {
+      setCached(endpoint, data);
+    }
+
+    if (!isGet) {
+      clearApiCache();
+    }
+
     if (
       typeof window !== 'undefined' &&
-      options.method &&
+      !isGet &&
       ['POST', 'PATCH', 'PUT', 'DELETE'].includes(options.method.toUpperCase()) &&
       !endpoint.startsWith('/notifications') &&
       !endpoint.startsWith('/auth/')
@@ -86,7 +121,7 @@ async function request(endpoint, options = {}, retries = 2) {
 
     return data;
   } catch (err) {
-    if (retries > 0 && (!options.method || options.method === 'GET') && err.name === 'TypeError') {
+    if (retries > 0 && isGet && err.name === 'TypeError') {
       await new Promise((r) => setTimeout(r, 500));
       return request(endpoint, options, retries - 1);
     }
@@ -357,7 +392,7 @@ export async function releasePaymentEscrow(paymentId) {
 // PRICING, RESOURCES, BOOKMARKS, NEWSLETTER, SEARCH
 // ==========================================
 export async function fetchPricingPlans() {
-  return await request('/pricing');
+  return await request('/pricing', { cache: true });
 }
 
 export async function subscribeToPlan({ planId, billingCycle }) {
@@ -368,7 +403,7 @@ export async function subscribeToPlan({ planId, billingCycle }) {
 }
 
 export async function fetchResources() {
-  return await request('/resources');
+  return await request('/resources', { cache: true });
 }
 
 export async function fetchBookmarks(type) {
