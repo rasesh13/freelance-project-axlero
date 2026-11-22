@@ -312,6 +312,22 @@ ensureColumn('projects', 'featured', 'INTEGER DEFAULT 0');
 ensureColumn('projects', 'team_extra', 'INTEGER DEFAULT 0');
 ensureColumn('projects', 'type', "TEXT DEFAULT 'dev'");
 
+// High-Performance Query & Foreign Key Indexes
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
+  CREATE INDEX IF NOT EXISTS idx_projects_client ON projects(client_name);
+  CREATE INDEX IF NOT EXISTS idx_kanban_column ON kanban_tasks("column");
+  CREATE INDEX IF NOT EXISTS idx_proposals_project_id ON proposals(project_id);
+  CREATE INDEX IF NOT EXISTS idx_proposals_candidate_id ON proposals(candidate_id);
+  CREATE INDEX IF NOT EXISTS idx_contracts_freelancer_id ON contracts(freelancer_id);
+  CREATE INDEX IF NOT EXISTS idx_contracts_client_name ON contracts(client_name);
+  CREATE INDEX IF NOT EXISTS idx_messages_thread_id ON messages(thread_id);
+  CREATE INDEX IF NOT EXISTS idx_payments_recipient ON payments(recipient);
+  CREATE INDEX IF NOT EXISTS idx_wallet_tx_user_id ON wallet_transactions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_bookmarks_user ON bookmarks(user_id, item_type);
+  CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
+`);
+
 // ==========================================
 // 2. IDEMPOTENT PER-TABLE SEEDING
 // ==========================================

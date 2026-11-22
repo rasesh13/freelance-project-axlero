@@ -110,6 +110,23 @@ function runDatabaseTestSuite() {
     }
   });
 
+  test('Relational indexes are registered on high-frequency query paths', () => {
+    const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type='index'").all().map((i) => i.name);
+    const expectedIndexes = [
+      'idx_projects_status',
+      'idx_projects_client',
+      'idx_kanban_column',
+      'idx_proposals_project_id',
+      'idx_contracts_freelancer_id',
+      'idx_messages_thread_id',
+      'idx_payments_recipient',
+      'idx_wallet_tx_user_id',
+    ];
+    for (const exp of expectedIndexes) {
+      assert(indexes.includes(exp), `Missing database index: ${exp}`);
+    }
+  });
+
   // -------------------------------------------------------------------------
   // 3. COLUMN SCHEMA DEFINITIONS & DATA TYPES
   // -------------------------------------------------------------------------
