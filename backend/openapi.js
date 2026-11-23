@@ -32,6 +32,7 @@ function getOpenApiSpec(port = 5000) {
       { name: 'Messages, Files & Escrow', description: 'Real-time collaboration threads, deliverables, team, and escrow payouts' },
       { name: 'Platform Catalog', description: 'Pricing plans, resources hub, bookmarks, and newsletter' },
       { name: 'Notifications', description: 'Real-time role-aware workspace notifications and read status controls' },
+      { name: 'Audit & Compliance', description: 'Enterprise compliance audit logs and financial CSV exports' },
     ],
     paths: {
       '/api/health': {
@@ -450,6 +451,35 @@ function getOpenApiSpec(port = 5000) {
           summary: 'Delete/dismiss a notification permanently',
           parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
           responses: { 200: { description: 'Notification deleted' }, 404: { description: 'Not found' } },
+        },
+      },
+      '/api/audit-logs': {
+        get: {
+          tags: ['Audit & Compliance'],
+          summary: 'Retrieve compliance audit trail logs with filtering',
+          parameters: [
+            { name: 'action', in: 'query', schema: { type: 'string' } },
+            { name: 'entity_type', in: 'query', schema: { type: 'string' } },
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } },
+          ],
+          responses: { 200: { description: 'Array of audit log entries' } },
+        },
+        post: {
+          tags: ['Audit & Compliance'],
+          summary: 'Log a custom audit or security telemetry event',
+          requestBody: {
+            required: true,
+            content: { 'application/json': { example: { action: 'security.check', entity_type: 'device', details: 'Automated scan' } } },
+          },
+          responses: { 201: { description: 'Audit log event recorded' } },
+        },
+      },
+      '/api/finances/export': {
+        get: {
+          tags: ['Audit & Compliance'],
+          summary: 'Export complete wallet transaction & escrow ledger as RFC 4180 CSV',
+          parameters: [{ name: 'format', in: 'query', schema: { type: 'string', default: 'csv' } }],
+          responses: { 200: { description: 'Raw CSV file stream' } },
         },
       },
     },

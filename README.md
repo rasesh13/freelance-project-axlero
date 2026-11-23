@@ -19,7 +19,7 @@ Discover talent. Find meaningful work. Collaborate with clients and teams. Manag
   <a href="#-api-reference">API Reference</a>
 </p>
 
-![Version](https://img.shields.io/badge/version-1.4.0-F36B21?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.5.0-F36B21?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=flat-square&logo=pwa&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Frontend](https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react&logoColor=black)
@@ -486,10 +486,10 @@ freelance-project-axlero/
 
 ## 🧭 Development Highlights
 
-The project has evolved through a structured 14-day development lifecycle, delivering a production-grade full-stack workspace:
+The project has evolved through a structured 15-day development lifecycle, delivering a production-grade full-stack workspace:
 
 <details open>
-  <summary><strong>🗓️ Milestone Roadmap (Days 1 – 14)</strong></summary>
+  <summary><strong>🗓️ Milestone Roadmap (Days 1 – 15)</strong></summary>
 
   | Day | Milestone |
   |:---:|---|
@@ -507,12 +507,17 @@ The project has evolved through a structured 14-day development lifecycle, deliv
   | 12 | PWA offline service worker, sliding-window rate limiting, and Vite bundle code-splitting. |
   | 13 | Global React Error Boundary, offline connectivity toast, and automated SQLite backup runner. |
   | 14 | Database B-tree relational indexing, workspace JSON export/import, seed CLI, and client TTL caching. |
+  | 15 | Enterprise audit logging trail, financial CSV exporter, query pagination & sorting, and global keyboard hotkeys modal. |
 </details>
 
 ### Production Checklist
 
 - [x] Full-stack REST API with SQLite WAL persistence
 - [x] High-performance relational B-tree indexes across all foreign key query paths
+- [x] Persistent compliance audit logging service & telemetry endpoint (`/api/audit-logs`)
+- [x] Financial transaction & milestone escrow CSV exporter (`/api/finances/export`)
+- [x] Query pagination, limits, and multi-field sorting on project and sprint endpoints
+- [x] Pro keyboard shortcuts cheat sheet & instant navigation system (`KeyboardShortcutsModal`)
 - [x] JWT authentication with sliding-window brute-force rate limiting
 - [x] React Error Boundary with diagnostic recovery UI
 - [x] Workspace JSON snapshot export endpoint (`/api/workspace/export`)
@@ -521,7 +526,7 @@ The project has evolved through a structured 14-day development lifecycle, deliv
 - [x] PWA offline manifest & stale-while-revalidate service worker
 - [x] Multi-stage Docker containerization & Docker Compose orchestration
 - [x] Automated CI/CD pipeline via GitHub Actions
-- [x] 43/43 platform checks passed (DB integrity + API integration + atomic backups)
+- [x] 47/47 platform checks passed with 100% health (DB integrity + API integration + atomic backups)
 
 ---
 
