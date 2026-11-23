@@ -31,6 +31,7 @@ const EXPECTED_TABLES = [
   'bookmarks',
   'newsletter_subscribers',
   'notifications',
+  'audit_logs',
 ];
 
 const results = {
@@ -95,7 +96,7 @@ function runDatabaseTestSuite() {
   // -------------------------------------------------------------------------
   console.log('\n\x1b[36m--- Section 2: Relational Schema & Table Registrations ---\x1b[0m');
 
-  test('Master schema contains all 18 required Workverse tables', () => {
+  test('Master schema contains all 19 required Workverse tables', () => {
     const rows = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all();
     const tableNames = new Set(rows.map((r) => r.name));
     for (const expected of EXPECTED_TABLES) {
@@ -104,7 +105,7 @@ function runDatabaseTestSuite() {
   });
 
   test('Core tables contain valid seeded production records', () => {
-    for (const t of ['users', 'projects', 'talents', 'kanban_tasks', 'payments']) {
+    for (const t of ['users', 'projects', 'talents', 'kanban_tasks', 'payments', 'audit_logs']) {
       const count = db.prepare(`SELECT COUNT(*) as c FROM ${t}`).get().c;
       assert(count > 0, `Table ${t} should have seeded rows (got ${count})`);
     }
@@ -121,6 +122,7 @@ function runDatabaseTestSuite() {
       'idx_messages_thread_id',
       'idx_payments_recipient',
       'idx_wallet_tx_user_id',
+      'idx_audit_logs_timestamp',
     ];
     for (const exp of expectedIndexes) {
       assert(indexes.includes(exp), `Missing database index: ${exp}`);
@@ -169,6 +171,14 @@ function runDatabaseTestSuite() {
     const required = ['id', 'user_id', 'amount', 'type', 'method', 'status', 'note'];
     for (const r of required) {
       assert(cols.includes(r), `wallet_transactions table missing column: ${r}`);
+    }
+  });
+
+  test('Audit Logs table schema has user_id, action, entity_type, details, timestamp', () => {
+    const cols = db.prepare('PRAGMA table_info(audit_logs)').all().map((c) => c.name);
+    const required = ['id', 'user_id', 'action', 'entity_type', 'details', 'timestamp'];
+    for (const r of required) {
+      assert(cols.includes(r), `audit_logs table missing column: ${r}`);
     }
   });
 

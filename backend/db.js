@@ -295,6 +295,17 @@ CREATE TABLE IF NOT EXISTS notifications (
   is_read INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL DEFAULT 'system',
+  action TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT,
+  details TEXT,
+  ip_address TEXT DEFAULT '127.0.0.1',
+  timestamp TEXT DEFAULT (datetime('now'))
+);
 `);
 
 // Upgrade existing tables if database.sqlite came from an earlier version
@@ -326,6 +337,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_wallet_tx_user_id ON wallet_transactions(user_id);
   CREATE INDEX IF NOT EXISTS idx_bookmarks_user ON bookmarks(user_id, item_type);
   CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
+  CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp DESC);
+  CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+  CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
 `);
 
 // ==========================================
@@ -914,6 +928,35 @@ function seedDatabase() {
     insNotif.run('notif-c2', 'all', 'client', 'milestone', 'Deliverable Ready for Review', 'Vinita Parmar moved "Mobile Responsive Audit & Tap Targets" to Review.', 'projects', 'kanban', 0);
     insNotif.run('notif-c3', 'all', 'client', 'payment', 'Escrow Milestone Pending Approval', '$1,200.00 escrow release awaiting signoff for Brand Website & UI Design.', 'projects', 'payments', 1);
   }
+
+  // 2.15 Seed Initial Compliance Audit Logs
+  if (db.prepare('SELECT COUNT(*) as count FROM audit_logs').get().count === 0) {
+    const insAudit = db.prepare(`
+      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, ip_address, timestamp)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    insAudit.run('audit-1', 'usr-freelancer-1', 'auth.login', 'session', 'sess-101', 'Arjun Mehta authenticated via JWT credentials.', '127.0.0.1', '2026-11-23 09:15:00');
+    insAudit.run('audit-2', 'usr-client-1', 'project.create', 'project', 'proj-1', 'SaaS Dashboard Development created with $3,200.00 budget.', '127.0.0.1', '2026-11-23 09:30:00');
+    insAudit.run('audit-3', 'usr-client-1', 'escrow.fund', 'payment', 'pay-1', 'Milestone 1 escrow funded ($950.00) into verified custody.', '127.0.0.1', '2026-11-23 10:00:00');
+    insAudit.run('audit-4', 'usr-freelancer-1', 'deliverable.upload', 'file', 'f-1', 'Production Architecture Deck v2 uploaded to project drive.', '127.0.0.1', '2026-11-23 11:20:00');
+    insAudit.run('audit-5', 'usr-freelancer-1', 'wallet.withdraw', 'transaction', 'tx-1', 'Automated withdrawal of $250.00 disbursed via Stripe.', '127.0.0.1', '2026-11-23 14:05:00');
+  }
+}
+
+function logAuditEvent({ userId = 'system', action, entityType = 'general', entityId = null, details = null, ip = '127.0.0.1' }) {
+  try {
+    const id = `audit-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const detailsStr = typeof details === 'object' ? JSON.stringify(details) : String(details || '');
+    const stmt = db.prepare(`
+      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, ip_address, timestamp)
+      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `);
+    stmt.run(id, userId, action, entityType, entityId, detailsStr, ip);
+    return id;
+  } catch (err) {
+    console.error('Failed to record audit event:', err);
+    return null;
+  }
 }
 
 seedDatabase();
@@ -921,4 +964,5 @@ seedDatabase();
 module.exports = {
   db,
   seedDatabase,
+  logAuditEvent,
 };

@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { db } = require('./db');
+const { db, logAuditEvent } = require('./db');
 const { renderDashboardHtml, renderDocsHtml } = require('./dashboard');
 const { getOpenApiSpec } = require('./openapi');
 
@@ -517,6 +517,16 @@ app.post('/api/auth/login', authRateLimiter, (req, res) => {
     const user = formatUserRow(userRecord);
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
 
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
+    logAuditEvent({
+      userId: user.id,
+      action: 'auth.login',
+      entityType: 'session',
+      entityId: user.id,
+      details: `User ${user.name} logged into ${user.role} workspace`,
+      ip,
+    });
+
     res.json({
       message: 'Login successful',
       token,
@@ -759,6 +769,17 @@ app.post('/api/projects', authenticateToken, (req, res) => {
     );
 
     const created = formatProjectRow(db.prepare('SELECT * FROM projects WHERE id = ?').get(id));
+
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
+    logAuditEvent({
+      userId: clientId,
+      action: 'project.create',
+      entityType: 'project',
+      entityId: id,
+      details: `Project "${created.title}" created with budget ${budget}`,
+      ip,
+    });
+
     res.status(201).json({ success: true, project: created });
   } catch (err) {
     console.error('Create project error:', err);
@@ -1262,6 +1283,16 @@ app.post('/api/wallet/withdraw', authenticateToken, (req, res) => {
       message: `Disbursed via ${method.toUpperCase()} — remaining balance $${updated.wallet_balance.toFixed(2)}.`,
       targetPage: 'projects',
       targetTab: 'earnings',
+    });
+
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
+    logAuditEvent({
+      userId,
+      action: 'wallet.withdraw',
+      entityType: 'transaction',
+      entityId: txId,
+      details: `Disbursed $${withdrawAmt.toFixed(2)} via ${method.toUpperCase()}`,
+      ip,
     });
     res.json({
       success: true,
@@ -1851,6 +1882,62 @@ app.get('/api/workspace/export', (req, res) => {
   } catch (err) {
     console.error('Workspace export error:', err);
     res.status(500).json({ error: 'Failed to export workspace data' });
+  }
+});
+
+// ==========================================
+// 10D. COMPLIANCE AUDIT LOGGING
+// ==========================================
+app.get('/api/audit-logs', (req, res) => {
+  try {
+    const { action, entity_type, user_id, limit = 50 } = req.query;
+    let query = 'SELECT * FROM audit_logs WHERE 1=1';
+    const params = [];
+
+    if (action) {
+      query += ' AND action = ?';
+      params.push(action);
+    }
+    if (entity_type) {
+      query += ' AND entity_type = ?';
+      params.push(entity_type);
+    }
+    if (user_id) {
+      query += ' AND user_id = ?';
+      params.push(user_id);
+    }
+
+    query += ' ORDER BY timestamp DESC LIMIT ?';
+    params.push(Math.min(parseInt(limit, 10) || 50, 200));
+
+    const rows = db.prepare(query).all(...params);
+    res.json(rows);
+  } catch (err) {
+    console.error('Fetch audit logs error:', err);
+    res.status(500).json({ error: 'Failed to retrieve audit logs' });
+  }
+});
+
+app.post('/api/audit-logs', (req, res) => {
+  try {
+    const { action, entity_type, entity_id, details } = req.body || {};
+    if (!action || !entity_type) {
+      return res.status(400).json({ error: 'Action and entity_type are required' });
+    }
+    const userId = req.user ? req.user.id : 'anonymous';
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
+    const id = logAuditEvent({
+      userId,
+      action,
+      entityType: entity_type,
+      entityId: entity_id || null,
+      details: details || null,
+      ip,
+    });
+    res.status(201).json({ success: true, id });
+  } catch (err) {
+    console.error('Create audit log error:', err);
+    res.status(500).json({ error: 'Failed to log audit event' });
   }
 });
 

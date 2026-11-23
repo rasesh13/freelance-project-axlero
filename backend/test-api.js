@@ -351,6 +351,29 @@ async function runApiTestSuite() {
     assert(res.data.summary.projectsCount >= 0);
   });
 
+  await test('GET /api/audit-logs returns compliance audit telemetry records', async () => {
+    const res = await request('/api/audit-logs?limit=10');
+    assert.strictEqual(res.status, 200);
+    assert(Array.isArray(res.data), 'Audit logs should return array');
+    assert(res.data.length > 0, 'Audit logs should contain recorded events');
+    const first = res.data[0];
+    assert(first.action && first.entity_type, 'Audit entry must have action and entity_type');
+  });
+
+  await test('POST /api/audit-logs records custom security telemetry event', async () => {
+    const res = await request('/api/audit-logs', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'security.check',
+        entity_type: 'device',
+        details: 'Integrity check verified during automated test run',
+      }),
+    });
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.data.success, true);
+    assert(res.data.id && res.data.id.startsWith('audit-'));
+  });
+
   // -------------------------------------------------------------------------
   // 8. TEARDOWN & CLEANUP
   // -------------------------------------------------------------------------
