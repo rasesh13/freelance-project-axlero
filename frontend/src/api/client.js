@@ -460,3 +460,31 @@ export async function deleteNotification(id) {
     method: 'DELETE',
   });
 }
+
+export async function fetchAuditLogs({ action = '', entity_type = '', limit = 50 } = {}) {
+  const params = new URLSearchParams();
+  if (action) params.append('action', action);
+  if (entity_type) params.append('entity_type', entity_type);
+  if (limit) params.append('limit', limit);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return await request(`/audit-logs${qs}`);
+}
+
+export async function exportFinancialsCsv() {
+  const token = getAuthToken();
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}/finances/export?format=csv`, { headers });
+  if (!res.ok) throw new Error('Failed to download financial report');
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `workverse-financial-ledger-${Date.now()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+  return { success: true };
+}

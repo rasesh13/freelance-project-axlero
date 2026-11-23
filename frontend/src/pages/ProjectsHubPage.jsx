@@ -74,6 +74,7 @@ import {
   fetchSettings,
   saveSettings,
   getAuthToken,
+  exportFinancialsCsv,
 } from '../api/client';
 import { PROJECTS } from '../data/mockData';
 
@@ -184,6 +185,20 @@ export default function ProjectsHubPage({
     setTimeout(() => {
       setToast(null);
     }, 3500);
+  };
+
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const handleExportFinancials = async () => {
+    try {
+      setIsExportingCsv(true);
+      await exportFinancialsCsv();
+      triggerToast('Financial Ledger Exported', 'Downloaded complete transaction statement in CSV format.');
+    } catch (err) {
+      console.error('Export CSV error:', err);
+      triggerToast('Export Failed', 'Could not generate CSV statement.', 'error');
+    } finally {
+      setIsExportingCsv(false);
+    }
   };
 
   // Projects State
@@ -2696,19 +2711,31 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-1 bg-white border border-[#EAE2DC] rounded-xl p-1 text-xs shadow-xs">
-                    {['All', 'Released', 'In Escrow', 'Pending Approval'].map((st) => (
-                      <button
-                        key={st}
-                        onClick={() => setPaymentFilter(st)}
-                        className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${paymentFilter === st
-                            ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
-                            : 'text-[#777777] hover:text-[#171717]'
-                          }`}
-                      >
-                        {st}
-                      </button>
-                    ))}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleExportFinancials}
+                      disabled={isExportingCsv}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#EAE2DC] bg-white hover:bg-[#FFF9F5] hover:border-[#F36B21] text-xs font-semibold text-[#171717] shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                      title="Download CSV Statement"
+                    >
+                      <Download className={`w-3.5 h-3.5 text-[#F36B21] ${isExportingCsv ? 'animate-bounce' : ''}`} />
+                      <span>{isExportingCsv ? 'Exporting...' : 'Export CSV'}</span>
+                    </button>
+
+                    <div className="flex items-center gap-1 bg-white border border-[#EAE2DC] rounded-xl p-1 text-xs shadow-xs">
+                      {['All', 'Released', 'In Escrow', 'Pending Approval'].map((st) => (
+                        <button
+                          key={st}
+                          onClick={() => setPaymentFilter(st)}
+                          className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${paymentFilter === st
+                              ? 'bg-[#FCE2D3] text-[#171717] font-semibold'
+                              : 'text-[#777777] hover:text-[#171717]'
+                            }`}
+                        >
+                          {st}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 

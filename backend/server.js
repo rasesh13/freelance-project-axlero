@@ -1886,6 +1886,71 @@ app.get('/api/workspace/export', (req, res) => {
 });
 
 // ==========================================
+// 10E. FINANCIAL TRANSACTIONS & ESCROW CSV EXPORT
+// ==========================================
+app.get('/api/finances/export', (req, res) => {
+  try {
+    const transactions = db.prepare('SELECT * FROM wallet_transactions ORDER BY created_at DESC').all();
+    const payments = db.prepare('SELECT * FROM payments ORDER BY created_at DESC').all();
+
+    function escapeCsv(val) {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    }
+
+    const rows = [];
+    rows.push(['Section', 'Record ID', 'Date', 'Entity / Recipient', 'Type / Milestone', 'Amount ($)', 'Status', 'Method / Reference Note'].map(escapeCsv).join(','));
+
+    for (const tx of transactions) {
+      rows.push([
+        'Wallet Transaction',
+        tx.id,
+        tx.created_at || 'N/A',
+        tx.user_id || 'System',
+        tx.type || 'Transfer',
+        Number(tx.amount || 0).toFixed(2),
+        tx.status || 'Completed',
+        `${tx.method || 'General'} - ${tx.note || ''}`,
+      ].map(escapeCsv).join(','));
+    }
+
+    for (const p of payments) {
+      rows.push([
+        'Escrow Payment',
+        p.id,
+        p.date || p.created_at || 'N/A',
+        p.recipient || 'Contractor',
+        `${p.milestone} (${p.project})`,
+        String(p.amount || '0').replace(/[^0-9.]/g, ''),
+        p.status || 'Pending',
+        p.escrow_protected ? 'Escrow Protected' : 'Direct',
+      ].map(escapeCsv).join(','));
+    }
+
+    const csvContent = rows.join('\r\n');
+    const filename = `workverse-financial-ledger-${Date.now()}.csv`;
+
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
+    logAuditEvent({
+      userId: req.user ? req.user.id : 'anonymous',
+      action: 'finance.export_csv',
+      entityType: 'report',
+      entityId: filename,
+      details: `Financial ledger exported with ${transactions.length} transactions and ${payments.length} escrow payments`,
+      ip,
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.status(200).send(csvContent);
+  } catch (err) {
+    console.error('Financial export error:', err);
+    res.status(500).json({ error: 'Failed to generate financial export' });
+  }
+});
+
+// ==========================================
 // 10D. COMPLIANCE AUDIT LOGGING
 // ==========================================
 app.get('/api/audit-logs', (req, res) => {

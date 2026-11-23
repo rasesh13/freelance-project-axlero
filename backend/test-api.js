@@ -374,6 +374,15 @@ async function runApiTestSuite() {
     assert(res.data.id && res.data.id.startsWith('audit-'));
   });
 
+  await test('GET /api/finances/export generates standard CSV financial ledger', async () => {
+    const res = await request('/api/finances/export');
+    assert.strictEqual(res.status, 200);
+    const contentType = res.headers.get('content-type') || '';
+    assert(contentType.includes('text/csv'), 'Content-Type should be text/csv');
+    assert(typeof res.data === 'string', 'Data should be raw CSV string');
+    assert(res.data.includes('Wallet Transaction') || res.data.includes('Escrow Payment'), 'CSV must contain ledger records');
+  });
+
   // -------------------------------------------------------------------------
   // 8. TEARDOWN & CLEANUP
   // -------------------------------------------------------------------------
