@@ -220,11 +220,15 @@ export async function fetchTalentById(id) {
 // ==========================================
 // PROJECTS API
 // ==========================================
-export async function fetchProjects({ status = 'All', search = '', category = '' } = {}) {
+export async function fetchProjects({ status = 'All', search = '', category = '', page, limit, sortBy, sortOrder } = {}) {
   const params = new URLSearchParams();
   if (status && status !== 'All') params.append('status', status);
   if (category && category !== 'All Categories') params.append('category', category);
   if (search && search.trim()) params.append('search', search.trim());
+  if (page) params.append('page', String(page));
+  if (limit) params.append('limit', String(limit));
+  if (sortBy) params.append('sortBy', String(sortBy));
+  if (sortOrder) params.append('sortOrder', String(sortOrder));
   const queryStr = params.toString() ? `?${params.toString()}` : '';
   return await request(`/projects${queryStr}`);
 }

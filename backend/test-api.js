@@ -153,6 +153,17 @@ async function runApiTestSuite() {
     assert(res.data.length > 0, 'Seed projects should be present');
   });
 
+  await test('GET /api/projects with page and limit returns structured pagination metadata', async () => {
+    const res = await request('/api/projects?page=1&limit=3&sortBy=title&sortOrder=asc');
+    assert.strictEqual(res.status, 200);
+    assert(res.data.projects && Array.isArray(res.data.projects), 'Expected projects array');
+    assert.strictEqual(res.data.projects.length, 3, 'Should respect limit of 3');
+    assert(res.data.pagination && typeof res.data.pagination === 'object');
+    assert.strictEqual(res.data.pagination.page, 1);
+    assert.strictEqual(res.data.pagination.limit, 3);
+    assert(res.data.pagination.total >= 3);
+  });
+
   await test('POST /api/projects creates a new project with valid budget', async () => {
     const newProj = {
       title: 'E2E Automated Sprint Initiative',

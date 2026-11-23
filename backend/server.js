@@ -659,7 +659,7 @@ app.get('/api/talents/:id', (req, res) => {
 // ==========================================
 app.get('/api/projects', (req, res) => {
   try {
-    const { status, search, category } = req.query;
+    const { status, search, category, page, limit, sortBy, sortOrder, paginate } = req.query;
     let rows = db.prepare('SELECT * FROM projects ORDER BY created_at DESC').all().map(formatProjectRow);
 
     if (status && status !== 'All') {
@@ -681,8 +681,39 @@ app.get('/api/projects', (req, res) => {
         (r) =>
           (r.title && r.title.toLowerCase().includes(q)) ||
           (r.description && r.description.toLowerCase().includes(q)) ||
-          r.skills.some((s) => s.toLowerCase().includes(q))
+          (Array.isArray(r.skills) && r.skills.some((s) => s.toLowerCase().includes(q)))
       );
+    }
+
+    if (sortBy) {
+      const order = (sortOrder || 'desc').toLowerCase() === 'asc' ? 1 : -1;
+      rows.sort((a, b) => {
+        if (sortBy === 'budget') return ((a.budget_max || 0) - (b.budget_max || 0)) * order;
+        if (sortBy === 'progress') return ((a.progress || 0) - (b.progress || 0)) * order;
+        if (sortBy === 'title') return (a.title || '').localeCompare(b.title || '') * order;
+        return (new Date(a.created_at || 0) - new Date(b.created_at || 0)) * order;
+      });
+    }
+
+    if (page || limit || paginate === 'true') {
+      const pageNum = Math.max(1, parseInt(page, 10) || 1);
+      const pageSize = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
+      const total = rows.length;
+      const totalPages = Math.ceil(total / pageSize) || 1;
+      const offset = (pageNum - 1) * pageSize;
+      const paginatedProjects = rows.slice(offset, offset + pageSize);
+
+      return res.json({
+        projects: paginatedProjects,
+        pagination: {
+          page: pageNum,
+          limit: pageSize,
+          total,
+          totalPages,
+          hasNext: pageNum < totalPages,
+          hasPrev: pageNum > 1,
+        },
+      });
     }
 
     res.json(rows);
