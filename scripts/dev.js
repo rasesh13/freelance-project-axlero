@@ -44,6 +44,7 @@ prefixStream(backendProc.stderr, 'BACKEND:ERR', '\x1b[31m');
 const frontendProc = spawn(npmCmd, ['--prefix', 'frontend', 'run', 'dev'], {
   cwd: rootDir,
   env: process.env,
+  shell: isWin,
 });
 
 prefixStream(frontendProc.stdout, 'FRONTEND', '\x1b[36m');
