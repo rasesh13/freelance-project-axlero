@@ -1358,6 +1358,9 @@ This section provides a consolidated reference of the API routes currently expos
 | Notifications | PATCH | `/api/notifications/:id/read` | JWT required |
 | Notifications | DELETE | `/api/notifications/:id` | JWT required |
 | Export | GET | `/api/workspace/export` | Public route in current implementation |
+| Finance Export | GET | `/api/finances/export` | Public route in current implementation |
+| Audit Logs | GET | `/api/audit-logs` | Public route in current implementation |
+| Audit Logs | POST | `/api/audit-logs` | Public route in current implementation |
 
 ---
 
@@ -1928,6 +1931,140 @@ The backend exposes its documentation interface and OpenAPI document directly th
 The OpenAPI JSON can be imported into compatible API clients and documentation tools. The interactive documentation page is generated from the backend's OpenAPI specification, allowing developers to inspect available operations and request examples.
 
 ---
+
+
+
+# ◈ 31. FINANCIAL EXPORT & COMPLIANCE AUDIT ENDPOINTS
+
+This section documents the additional financial-export and audit-log routes implemented in the current backend. These endpoints are useful for reporting, traceability, operational review, and integration workflows.
+
+## 31.1 Financial Transactions & Escrow CSV Export
+
+### `GET /api/finances/export`
+
+Generates a CSV export containing wallet transaction records and escrow payment records. The export is assembled from the `wallet_transactions` and `payments` tables and ordered by the most recent transaction/payment first.
+
+**Export contents**
+
+| Column | Description |
+|---|---|
+| `Section` | Identifies the record as a Wallet Transaction or Escrow Payment |
+| `Record ID` | Identifier of the transaction or payment record |
+| `Date` | Record creation/payment date where available |
+| `Entity / Recipient` | User or recipient associated with the record |
+| `Type / Milestone` | Transaction type or milestone/project description |
+| `Amount ($)` | Monetary amount formatted for the CSV output |
+| `Status` | Transaction/payment status |
+| `Method / Reference Note` | Payment method, reference, or contextual note |
+
+**Expected behavior**
+
+- Wallet transactions are exported as individual rows.
+- Escrow payments are exported as individual rows.
+- CSV values are quoted and embedded quotation marks are escaped to help preserve valid CSV formatting.
+- The response is intended for downloading and reviewing financial records.
+- If export generation fails, the server responds with `500 Internal Server Error` and an error message.
+
+**Example usage**
+
+```http
+GET /api/finances/export
+```
+
+The route currently does not enforce JWT authentication in its handler. Treat the export as sensitive and protect it appropriately before exposing it in a production deployment.
+
+## 31.2 Retrieve Audit Logs
+
+### `GET /api/audit-logs`
+
+Returns audit events, with optional filters to narrow the records by action, entity type, or user. Results are sorted by timestamp in descending order, so the newest events appear first.
+
+**Query parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `action` | string | No | Filters records by the exact action value |
+| `entity_type` | string | No | Filters records by entity type |
+| `user_id` | string / number | No | Filters records by user identifier |
+| `limit` | integer | No | Maximum number of records to return; defaults to `50` and is capped at `200` |
+
+**Example request**
+
+```http
+GET /api/audit-logs?action=project_created&entity_type=project&limit=25
+```
+
+**Expected behavior**
+
+- Filters are combined when more than one filter is supplied.
+- Results are ordered newest-first.
+- The default result limit is `50`.
+- The requested limit is capped at `200`.
+- If retrieval fails, the server returns `500 Internal Server Error`.
+
+## 31.3 Create an Audit Event
+
+### `POST /api/audit-logs`
+
+Records an audit event containing an action, entity type, optional entity identifier, and optional details. The handler uses the authenticated user when available; otherwise, it records the actor as `anonymous`.
+
+**Request body**
+
+```json
+{
+  "action": "project_updated",
+  "entity_type": "project",
+  "entity_id": 42,
+  "details": "Project status changed to active"
+}
+```
+
+| Field | Required | Description |
+|---|---|---|
+| `action` | Yes | Action being recorded |
+| `entity_type` | Yes | Type of object or entity involved |
+| `entity_id` | No | Identifier of the affected entity |
+| `details` | No | Additional contextual information |
+
+**Expected outcomes**
+
+- `201 Created` when the audit event is recorded successfully, returning `success` and the new log `id`.
+- `400 Bad Request` when either `action` or `entity_type` is missing.
+- `500 Internal Server Error` if the audit event cannot be written.
+
+**Example response**
+
+```json
+{
+  "success": true,
+  "id": 128
+}
+```
+
+The current route handler does not require JWT authentication. In production, audit-log creation and retrieval should be access-controlled and should not accept untrusted client details as a replacement for server-side audit events.
+
+---
+
+# ◈ 32. ROUTE ACCESS & IMPLEMENTATION NOTES
+
+The endpoint directory and route descriptions are based on the current `backend/server.js` implementation. A few endpoints that return sensitive workspace or financial information are public in the present implementation; the access labels reflect the route behavior rather than a recommended security policy.
+
+| Endpoint | Current implementation note |
+|---|---|
+| `GET /api/settings` | Public route; returns settings in the current implementation |
+| `GET /api/workspace/export` | Public route in the current implementation |
+| `GET /api/finances/export` | Public route in the current implementation |
+| `GET /api/audit-logs` | Public route in the current implementation |
+| `POST /api/audit-logs` | Public route in the current implementation; records the actor as `anonymous` if no user context is present |
+
+These routes should be reviewed and protected with appropriate authentication, authorization, and ownership checks before production use. This documentation describes the implemented behavior and does not imply that the current access model is a security recommendation.
+
+## Final Integration Reminder
+
+Before integrating, verify the request fields and response shape against the live backend's OpenAPI specification and route handlers. The API documentation is intended as a developer reference; the current implementation remains the source of truth for endpoint behavior.
+
+> **Keep your workflows connected. Keep your integrations clear. Keep building with Workverse.**
+
 
 # ◈ 30. FINAL NOTES
 
