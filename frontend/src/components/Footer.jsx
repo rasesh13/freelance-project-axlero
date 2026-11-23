@@ -288,6 +288,14 @@ export default function Footer({ setCurrentPage }) {
             <button onClick={() => setInfoModalKey('privacy')} className="hover:text-[#171717] cursor-pointer">Privacy</button>
             <button onClick={() => setInfoModalKey('terms')} className="hover:text-[#171717] cursor-pointer">Terms</button>
             <button onClick={() => setInfoModalKey('security')} className="hover:text-[#171717] cursor-pointer">Security</button>
+            <button
+              onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }))}
+              className="hidden sm:inline-flex items-center gap-1 hover:text-[#171717] cursor-pointer text-[11px]"
+              title="View Keyboard Shortcuts (?)"
+            >
+              <span>Hotkeys</span>
+              <kbd className="px-1.5 py-0.5 text-[9px] font-mono rounded bg-white border border-[#EAE2DC]">?</kbd>
+            </button>
             <div className="flex items-center gap-1">
               <Globe className="w-3.5 h-3.5" />
               <span>English (US)</span>

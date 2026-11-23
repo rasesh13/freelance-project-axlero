@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import SearchModal from './components/SearchModal';
+import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
 import HomePage from './pages/HomePage';
 import FindTalentPage from './pages/FindTalentPage';
 import FindWorkPage from './pages/FindWorkPage';
@@ -29,6 +30,7 @@ export default function App() {
   const [projectsInitialTab, setProjectsInitialTab] = useState('projects');
   const [projectsTabNonce, setProjectsTabNonce] = useState(0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState(null);
   const [authNotice, setAuthNotice] = useState('');
 
@@ -130,12 +132,33 @@ export default function App() {
     }
   };
 
-  // Global Ctrl+K / Cmd+K Search Shortcut
+  // Global Hotkeys: Ctrl+K (Search), ? (Shortcuts Guide), Alt+1..5 (Quick Jump)
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
+      const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+      const isInput = activeTag === 'input' || activeTag === 'textarea' || document.activeElement?.isContentEditable;
+
+      // Ctrl/Cmd + K -> Toggle Global Search
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsSearchOpen((prev) => !prev);
+        return;
+      }
+
+      // '?' (Shift + /) when not typing in an input field -> Toggle Shortcuts Modal
+      if (e.key === '?' && !isInput && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setIsShortcutsOpen((prev) => !prev);
+        return;
+      }
+
+      // Alt + Number Keys for fast page navigation
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        if (e.key === '1') { e.preventDefault(); navigateToPage('home'); }
+        if (e.key === '2') { e.preventDefault(); navigateToPage('talent'); }
+        if (e.key === '3') { e.preventDefault(); navigateToPage('work'); }
+        if (e.key === '4') { e.preventDefault(); navigateToPage('projects'); }
+        if (e.key === '5') { e.preventDefault(); navigateToPage('pricing'); }
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
@@ -340,6 +363,13 @@ export default function App() {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         onSelectResult={handleSearchResultSelect}
+      />
+
+      {/* Keyboard Shortcuts Cheat Sheet Modal */}
+      <KeyboardShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
+        navigateTo={navigateToPage}
       />
 
       {/* Footer on content pages */}
