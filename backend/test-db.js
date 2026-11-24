@@ -3,14 +3,16 @@
  * WORKVERSE PLATFORM — DATABASE RELATIONAL INTEGRITY & SCHEMA VALIDATION SUITE
  * ==============================================================================
  * Verifies SQLite schema structures, foreign key constraints, column definitions,
- * WAL journal mode, index availability, and data consistency across all 18 tables.
+ * WAL journal mode, index availability, and data consistency across all 20 tables.
  */
 
 const assert = require('node:assert');
 const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 
-const dbPath = path.resolve(__dirname, 'database.sqlite');
+const dbPath = process.env.WORKVERSE_DB_PATH
+  ? path.resolve(process.env.WORKVERSE_DB_PATH)
+  : path.resolve(__dirname, 'database.sqlite');
 
 const EXPECTED_TABLES = [
   'users',
@@ -32,6 +34,7 @@ const EXPECTED_TABLES = [
   'newsletter_subscribers',
   'notifications',
   'audit_logs',
+  'disputes',
 ];
 
 const results = {
@@ -96,7 +99,7 @@ function runDatabaseTestSuite() {
   // -------------------------------------------------------------------------
   console.log('\n\x1b[36m--- Section 2: Relational Schema & Table Registrations ---\x1b[0m');
 
-  test('Master schema contains all 19 required Workverse tables', () => {
+  test('Master schema contains all 20 required Workverse tables', () => {
     const rows = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all();
     const tableNames = new Set(rows.map((r) => r.name));
     for (const expected of EXPECTED_TABLES) {

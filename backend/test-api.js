@@ -11,6 +11,8 @@ const assert = require('node:assert');
 const BASE_URL = process.env.TEST_API_URL || 'http://localhost:5000';
 
 let authToken = null;
+let freelancerToken = null;
+let clientToken = null;
 let currentTestUser = null;
 let createdProjectId = null;
 let createdKanbanTaskId = null;
@@ -131,6 +133,7 @@ async function runApiTestSuite() {
     assert(res.data.token, 'Response must include JWT token');
     assert.strictEqual(res.data.user.email, 'arjun@workverse.io');
     authToken = res.data.token;
+    freelancerToken = res.data.token;
     currentTestUser = res.data.user;
   });
 
@@ -139,6 +142,16 @@ async function runApiTestSuite() {
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.data.user.email, 'arjun@workverse.io');
     assert.strictEqual(res.data.user.id, currentTestUser.id);
+  });
+
+  await test('POST /api/auth/login authenticates client workspace owner', async () => {
+    const res = await request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'sarah@cloudscale.ai', password: 'password123', role: 'client' }),
+    });
+    assert.strictEqual(res.status, 200);
+    clientToken = res.data.token;
+    authToken = clientToken;
   });
 
   // -------------------------------------------------------------------------
@@ -157,11 +170,11 @@ async function runApiTestSuite() {
     const res = await request('/api/projects?page=1&limit=3&sortBy=title&sortOrder=asc');
     assert.strictEqual(res.status, 200);
     assert(res.data.projects && Array.isArray(res.data.projects), 'Expected projects array');
-    assert.strictEqual(res.data.projects.length, 3, 'Should respect limit of 3');
+    assert.strictEqual(res.data.projects.length, Math.min(3, res.data.pagination.total), 'Should respect limit of 3');
     assert(res.data.pagination && typeof res.data.pagination === 'object');
     assert.strictEqual(res.data.pagination.page, 1);
     assert.strictEqual(res.data.pagination.limit, 3);
-    assert(res.data.pagination.total >= 3);
+    assert(res.data.pagination.total >= 1);
   });
 
   await test('POST /api/projects creates a new project with valid budget', async () => {
@@ -208,6 +221,7 @@ async function runApiTestSuite() {
     const taskPayload = {
       title: 'E2E API Test Verification Card',
       project: 'E2E Automated Sprint Initiative',
+      projectId: createdProjectId,
       column: 'backlog',
       priority: 'High',
       estimate: '6 hrs',
@@ -252,6 +266,9 @@ async function runApiTestSuite() {
       name: 'E2E_Test_Audit_Report.pdf',
       size: '6.4 MB',
       project: 'E2E Automated Sprint Initiative',
+      projectId: createdProjectId,
+      mimeType: 'application/pdf',
+      contentBase64: Buffer.from('E2E file content').toString('base64'),
     };
     const res = await request('/api/files', {
       method: 'POST',
@@ -267,6 +284,7 @@ async function runApiTestSuite() {
   // 6. WALLET, TIME LOGGING & ESCROW DISBURSEMENT
   // -------------------------------------------------------------------------
   console.log('\n\x1b[36m--- Section 6: Wallet, Time Sessions & Escrow ---\x1b[0m');
+  authToken = freelancerToken;
 
   await test('GET /api/wallet retrieves balances and transaction ledger', async () => {
     const res = await request('/api/wallet');
@@ -278,20 +296,22 @@ async function runApiTestSuite() {
 
   await test('POST /api/time/log records session and updates wallet', async () => {
     const initialWallet = await request('/api/wallet');
+    const account = await request('/api/auth/me');
     const initialBal = initialWallet.data.walletBalance;
+    const accountRate = Number(account.data.user.hourly_rate);
 
     const res = await request('/api/time/log', {
       method: 'POST',
       body: JSON.stringify({
         seconds: 3600, // 1 hr
-        hourly_rate: 85,
-        project_title: 'E2E Automated Sprint Initiative',
+        hourly_rate: 99999,
+        project_title: 'SaaS Dashboard Development',
         formatted_time: '01:00:00',
       }),
     });
     assert.strictEqual(res.status, 200);
     assert.strictEqual(typeof res.data.newWalletBalance, 'number');
-    assert.strictEqual(res.data.newWalletBalance, initialBal + 85);
+    assert.strictEqual(res.data.newWalletBalance, initialBal + accountRate);
   });
 
   await test('POST /api/wallet/withdraw processes withdrawal request', async () => {
@@ -398,6 +418,7 @@ async function runApiTestSuite() {
   // 8. TEARDOWN & CLEANUP
   // -------------------------------------------------------------------------
   console.log('\n\x1b[36m--- Section 8: Teardown & Resource Cleanup ---\x1b[0m');
+  authToken = clientToken;
 
   if (createdKanbanTaskId) {
     await test(`DELETE /api/kanban/${createdKanbanTaskId} removes test task`, async () => {

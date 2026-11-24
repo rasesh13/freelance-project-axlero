@@ -1,0 +1,186 @@
+const { spawn } = require('node:child_process');
+const path = require('node:path');
+const { db } = require('./db');
+
+const port = 5051;
+const base = `http://127.0.0.1:${port}/api`;
+const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+const createdUserIds = [];
+const createdProjectIds = [];
+let server;
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+async function api(pathname, { token, method = 'GET', body, expected = 200 } = {}) {
+  const response = await fetch(`${base}${pathname}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-bypass-ratelimit': '1',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const contentType = response.headers.get('content-type') || '';
+  const data = contentType.includes('application/json') ? await response.json() : await response.text();
+  assert(response.status === expected, `${method} ${pathname}: expected ${expected}, received ${response.status} (${JSON.stringify(data)})`);
+  return data;
+}
+
+async function register(role, label) {
+  const data = await api('/auth/register', {
+    method: 'POST',
+    expected: 201,
+    body: {
+      name: `${label} ${stamp}`,
+      email: `${label.toLowerCase()}-${stamp}@example.test`,
+      password: 'LiveData123!',
+      role,
+    },
+  });
+  createdUserIds.push(data.user.id);
+  return data;
+}
+
+async function waitForServer() {
+  for (let i = 0; i < 50; i += 1) {
+    try {
+      const response = await fetch(`${base}/health`);
+      if (response.ok) return;
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error('Live-data test server did not start');
+}
+
+function cleanup() {
+  const ids = createdUserIds;
+  for (const projectId of createdProjectIds) {
+    db.prepare('DELETE FROM disputes WHERE contract_id IN (SELECT id FROM contracts WHERE title IN (SELECT title FROM projects WHERE id = ?))').run(projectId);
+    db.prepare('DELETE FROM files WHERE project_id = ?').run(projectId);
+    db.prepare('DELETE FROM team_members WHERE project_id = ?').run(projectId);
+    db.prepare('DELETE FROM payments WHERE project_id = ?').run(projectId);
+    db.prepare('DELETE FROM proposals WHERE project_id = ?').run(projectId);
+    db.prepare('DELETE FROM kanban_tasks WHERE project_id = ?').run(projectId);
+    db.prepare('DELETE FROM projects WHERE id = ?').run(projectId);
+  }
+  for (const userId of ids) {
+    const threads = db.prepare('SELECT id FROM message_threads WHERE owner_id = ? OR participant_id = ?').all(userId, userId);
+    for (const thread of threads) db.prepare('DELETE FROM messages WHERE thread_id = ?').run(thread.id);
+    db.prepare('DELETE FROM message_threads WHERE owner_id = ? OR participant_id = ?').run(userId, userId);
+    db.prepare('DELETE FROM disputes WHERE opened_by = ? OR against_user_id = ?').run(userId, userId);
+    db.prepare('DELETE FROM notifications WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM wallet_transactions WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM time_logs WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM bookmarks WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM files WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM team_members WHERE owner_id = ? OR member_user_id = ?').run(userId, userId);
+    db.prepare('DELETE FROM payments WHERE client_id = ? OR recipient_id = ?').run(userId, userId);
+    db.prepare('DELETE FROM contracts WHERE client_id = ? OR freelancer_id = ?').run(userId, userId);
+    db.prepare('DELETE FROM proposals WHERE candidate_id = ?').run(userId);
+    db.prepare('DELETE FROM kanban_tasks WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM audit_logs WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM talents WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+  }
+}
+
+async function main() {
+  server = spawn(process.execPath, [path.join(__dirname, 'server.js')], {
+    cwd: __dirname,
+    env: { ...process.env, PORT: String(port), NODE_ENV: 'test', JWT_SECRET: 'live-data-test-secret' },
+    stdio: 'ignore',
+  });
+  await waitForServer();
+
+  const clientA = await register('client', 'ClientA');
+  const clientB = await register('client', 'ClientB');
+  const freelancer = await register('freelancer', 'Freelancer');
+
+  assert(clientA.user.wallet_balance === 0 && freelancer.user.wallet_balance === 0, 'New users must start with real zero balances');
+
+  const profile = await api('/auth/profile', {
+    token: freelancer.token,
+    method: 'PATCH',
+    body: { title: 'Live Data Engineer', hourlyRate: 72, skills: ['Node.js', 'SQLite'] },
+  });
+  assert(profile.user.title === 'Live Data Engineer', 'Profile update was not persisted');
+
+  const projectResult = await api('/projects', {
+    token: clientA.token,
+    method: 'POST',
+    expected: 201,
+    body: { title: `Isolation Project ${stamp}`, description: 'Private live workspace test', budget: '$2,000' },
+  });
+  const project = projectResult.project;
+  createdProjectIds.push(project.id);
+
+  const mineA = await api('/projects?scope=mine', { token: clientA.token });
+  const mineB = await api('/projects?scope=mine', { token: clientB.token });
+  assert(mineA.some((item) => item.id === project.id), 'Owner cannot see their project');
+  assert(!mineB.some((item) => item.id === project.id), 'Another client can see a private workspace project');
+  await api(`/projects/${project.id}`, { token: clientB.token, method: 'PATCH', expected: 403, body: { status: 'Completed' } });
+
+  const proposal = await api('/proposals', {
+    token: freelancer.token,
+    method: 'POST',
+    expected: 201,
+    body: { project_id: project.id, bid_amount: '$1,900', duration: '2 Weeks', pitch: 'Live proposal' },
+  });
+  assert(proposal.proposal.project_id === project.id, 'Proposal was not linked to the project');
+  const proposalsA = await api('/proposals', { token: clientA.token });
+  const proposalsB = await api('/proposals', { token: clientB.token });
+  assert(proposalsA.some((item) => item.id === proposal.proposal.id), 'Project owner cannot see proposal');
+  assert(!proposalsB.some((item) => item.id === proposal.proposal.id), 'Unrelated client can see proposal');
+
+  await api(`/proposals/${proposal.proposal.id}/status`, {
+    token: clientA.token,
+    method: 'PATCH',
+    body: { status: 'Accepted' },
+  });
+  const contracts = await api('/contracts', { token: freelancer.token });
+  assert(contracts.some((item) => item.title === project.title), 'Accepted proposal did not create a live contract');
+
+  const message = await api('/messages', {
+    token: clientA.token,
+    method: 'POST',
+    expected: 201,
+    body: { recipientId: freelancer.user.id, project: project.title, text: 'Private workspace message' },
+  });
+  const freelancerThreads = await api('/messages', { token: freelancer.token });
+  const unrelatedThreads = await api('/messages', { token: clientB.token });
+  assert(freelancerThreads.some((thread) => thread.id === message.threadId), 'Recipient cannot see live message');
+  assert(!unrelatedThreads.some((thread) => thread.id === message.threadId), 'Unrelated user can see private message');
+
+  const upload = await api('/files', {
+    token: clientA.token,
+    method: 'POST',
+    expected: 201,
+    body: {
+      name: 'live-proof.txt',
+      size: '0.02 KB',
+      mimeType: 'text/plain',
+      contentBase64: Buffer.from('live workspace proof').toString('base64'),
+      projectId: project.id,
+      project: project.title,
+    },
+  });
+  const filesA = await api('/files', { token: clientA.token });
+  const filesB = await api('/files', { token: clientB.token });
+  assert(filesA.some((file) => file.id === upload.file.id), 'Uploaded file is missing from owner workspace');
+  assert(!filesB.some((file) => file.id === upload.file.id), 'Unrelated user can see uploaded file');
+
+  console.log('Live-data isolation: 18/18 checks passed');
+}
+
+main()
+  .catch((error) => {
+    console.error(error.stack || error);
+    process.exitCode = 1;
+  })
+  .finally(() => {
+    if (server) server.kill();
+    cleanup();
+  });
