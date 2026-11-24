@@ -82,7 +82,7 @@ function getOpenApiSpec(port = 5000) {
         },
       },
       '/api/stats': {
-        get: { tags: ['System'], summary: 'Live row counts across all 18 SQLite tables', responses: { 200: { description: 'OK' } } },
+        get: { tags: ['System'], summary: 'Live registered-user and workspace metrics from SQLite', responses: { 200: { description: 'OK' } } },
       },
       '/api/search': {
         get: {
@@ -114,7 +114,7 @@ function getOpenApiSpec(port = 5000) {
       '/api/auth/register': {
         post: {
           tags: ['Auth & Settings'],
-          summary: 'Create a new verified client or freelancer account',
+          summary: 'Create a new client or freelancer account',
           requestBody: {
             required: true,
             content: {
@@ -136,6 +136,22 @@ function getOpenApiSpec(port = 5000) {
           summary: 'Get authenticated current user profile',
           security: [{ bearerAuth: [] }],
           responses: { 200: { description: 'Current user' }, 401: { description: 'Unauthorized' } },
+        },
+      },
+      '/api/auth/profile': {
+        patch: {
+          tags: ['Auth & Settings'],
+          summary: 'Update the authenticated user and linked freelancer profile',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                example: { name: 'Riya Kapoor', title: 'Product Engineer', hourlyRate: 65, skills: ['React', 'Node.js'] },
+              },
+            },
+          },
+          responses: { 200: { description: 'Profile updated' }, 400: { description: 'Invalid profile fields' } },
         },
       },
       '/api/auth/forgot-password': {
@@ -169,7 +185,7 @@ function getOpenApiSpec(port = 5000) {
       '/api/talents': {
         get: {
           tags: ['Talents & Projects'],
-          summary: 'List all verified freelancers with skills, portfolios, and reviews',
+          summary: 'List registered freelancers with their live profiles',
           parameters: [
             { name: 'search', in: 'query', schema: { type: 'string', default: '' } },
             { name: 'category', in: 'query', schema: { type: 'string', default: '' } },
@@ -337,17 +353,27 @@ function getOpenApiSpec(port = 5000) {
         },
       },
       '/api/files': {
-        get: { tags: ['Messages, Files & Escrow'], summary: 'List shared milestone deliverable files', responses: { 200: { description: 'Files array' } } },
+        get: { tags: ['Messages, Files & Escrow'], summary: 'List accessible uploaded deliverable files', security: [{ bearerAuth: [] }], responses: { 200: { description: 'Files array' } } },
         post: {
           tags: ['Messages, Files & Escrow'],
-          summary: 'Save uploaded deliverable file metadata',
+          summary: 'Store a project file and metadata in SQLite',
+          security: [{ bearerAuth: [] }],
           requestBody: {
             required: true,
             content: {
-              'application/json': { example: { name: 'Architecture_Spec_v3.pdf', size: '4.8 MB', project: 'SaaS Dashboard Development' } },
+              'application/json': { example: { name: 'Architecture_Spec_v3.pdf', size: '4.8 MB', projectId: 'proj-1', mimeType: 'application/pdf', contentBase64: 'JVBERi0xLjQ...' } },
             },
           },
           responses: { 201: { description: 'File recorded' } },
+        },
+      },
+      '/api/files/{id}/download': {
+        get: {
+          tags: ['Messages, Files & Escrow'],
+          summary: 'Download an accessible stored project file',
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { 200: { description: 'File content and MIME metadata' }, 403: { description: 'No project access' }, 404: { description: 'File not found' } },
         },
       },
       '/api/team': {
@@ -373,6 +399,24 @@ function getOpenApiSpec(port = 5000) {
           summary: 'Release milestone escrow payment to contractor wallet',
           parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', default: 'tx-102' } }],
           responses: { 200: { description: 'Escrow released' }, 400: { description: 'Already released' } },
+        },
+      },
+      '/api/disputes': {
+        get: {
+          tags: ['Messages, Files & Escrow'],
+          summary: 'List disputes involving the authenticated user',
+          security: [{ bearerAuth: [] }],
+          responses: { 200: { description: 'Disputes array' } },
+        },
+        post: {
+          tags: ['Messages, Files & Escrow'],
+          summary: 'Open a persisted contract dispute and freeze pending payment',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: { 'application/json': { example: { contractId: 'cnt-1', reason: 'Deliverable mismatch', notes: 'Milestone requirements were not met.' } } },
+          },
+          responses: { 201: { description: 'Dispute opened' }, 403: { description: 'No contract access' } },
         },
       },
       '/api/pricing': {
