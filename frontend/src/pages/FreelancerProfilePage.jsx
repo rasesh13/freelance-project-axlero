@@ -81,35 +81,36 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage, isLo
         freelancerName: currentFreelancer.name,
         budget: hireBudget,
       });
+      setHireHiredSuccess(true);
+      setTimeout(() => {
+        setHireHiredSuccess(false);
+        setIsHireModalOpen(false);
+        setCurrentPage('projects');
+      }, 1500);
     } catch (err) {
       console.error('Failed to create contract:', err);
     }
-    setHireHiredSuccess(true);
-    setTimeout(() => {
-      setHireHiredSuccess(false);
-      setIsHireModalOpen(false);
-      setCurrentPage('projects');
-    }, 1500);
   };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
     try {
       await sendMessage({
+        recipientId: currentFreelancer.userId || currentFreelancer.id,
         recipientName: currentFreelancer.name,
         recipientRole: currentFreelancer.title,
         recipientAvatar: currentFreelancer.avatar,
         project: messageSubject || 'Direct Message',
         text: messageBody,
       });
+      setMessageSentSuccess(true);
+      setTimeout(() => {
+        setMessageSentSuccess(false);
+        setIsMessageModalOpen(false);
+      }, 1400);
     } catch (err) {
       console.error('Failed to send message:', err);
     }
-    setMessageSentSuccess(true);
-    setTimeout(() => {
-      setMessageSentSuccess(false);
-      setIsMessageModalOpen(false);
-    }, 1400);
   };
 
   const handleSendInquiry = async (e) => {
@@ -121,20 +122,21 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage, isLo
     if (inquiryText.trim()) {
       try {
         await sendMessage({
+          recipientId: currentFreelancer.userId || currentFreelancer.id,
           recipientName: currentFreelancer.name,
           recipientRole: currentFreelancer.title,
           recipientAvatar: currentFreelancer.avatar,
           project: 'Quick Inquiry',
           text: inquiryText.trim(),
         });
+        setInquirySentSuccess(true);
+        setTimeout(() => {
+          setInquirySentSuccess(false);
+          setInquiryText('');
+        }, 2500);
       } catch (err) {
         console.error('Failed to send inquiry:', err);
       }
-      setInquirySentSuccess(true);
-      setTimeout(() => {
-        setInquirySentSuccess(false);
-        setInquiryText('');
-      }, 2500);
     }
   };
 

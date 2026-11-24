@@ -130,21 +130,22 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
     if (messageText.trim() && contactModalTalent) {
       try {
         await sendMessage({
+          recipientId: contactModalTalent.userId || contactModalTalent.id,
           recipientName: contactModalTalent.name,
           recipientRole: contactModalTalent.title,
           recipientAvatar: contactModalTalent.avatar,
           project: 'Direct Talent Inquiry',
           text: messageText.trim(),
         });
+        setMessageSentSuccess(true);
+        setTimeout(() => {
+          setMessageSentSuccess(false);
+          setContactModalTalent(null);
+          setMessageText('');
+        }, 1400);
       } catch (err) {
         console.error('Failed to send direct message:', err);
       }
-      setMessageSentSuccess(true);
-      setTimeout(() => {
-        setMessageSentSuccess(false);
-        setContactModalTalent(null);
-        setMessageText('');
-      }, 1400);
     }
   };
 
@@ -202,6 +203,14 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const verifiedTalentCount = talentsList.filter((talent) => talent.verified).length;
+  const ratedTalents = talentsList.filter((talent) => Number(talent.reviewsCount) > 0);
+  const totalVerifiedReviews = ratedTalents.reduce((sum, talent) => sum + Number(talent.reviewsCount || 0), 0);
+  const averageTalentRating = ratedTalents.length > 0
+    ? ratedTalents.reduce((sum, talent) => sum + Number(talent.rating || 0), 0) / ratedTalents.length
+    : 0;
+  const skillSpecializationCount = new Set(talentsList.flatMap((talent) => talent.skills || [])).size;
+
   return (
     <div className="w-full min-h-screen bg-[#FFF9F5] text-[#171717] pb-24 relative">
       {/* ========================================================
@@ -241,7 +250,7 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[#FCE2D3] shadow-xs">
                 <span className="w-2 h-2 rounded-full bg-[#F36B21] animate-pulse" />
                 <span className="text-xs sm:text-sm font-semibold tracking-wide text-[#171717]">
-                  Workverse Verified Talent
+                  Workverse Talent Directory
                 </span>
               </div>
 
@@ -251,7 +260,7 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
               </h1>
 
               <p className="text-base sm:text-lg text-[#666666] max-w-xl font-normal leading-relaxed">
-                Connect with vetted, world-class engineers, designers, and AI specialists ready to build what's next for your high-growth products.
+                Connect with registered engineers, designers, and AI specialists through live, account-backed profiles.
               </p>
 
               {/* Big High-Elevation Search Bar */}
@@ -372,41 +381,41 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
 
             {/* Right Column: Open-Air Floating Glassmorphic Badges */}
             <div className="lg:col-span-5 relative min-h-[320px] sm:min-h-[360px] flex items-center justify-center">
-              {/* Stat Badge 1: 12,480+ Verified Talents (Top-Right) */}
+              {/* Live talent totals */}
               <div className="absolute top-4 right-2 sm:right-6 backdrop-blur-xl bg-white/90 rounded-2xl p-4 shadow-[0_12px_36px_rgba(0,0,0,0.08)] border border-white/90 flex items-center gap-3.5 transition-all hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(243,107,33,0.14)]">
                 <div className="w-11 h-11 rounded-xl bg-[#FFF3EC] flex items-center justify-center text-[#F36B21] border border-[#FCE2D3] shrink-0">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-lg font-extrabold text-[#171717] tracking-tight">12,480+</span>
+                    <span className="text-lg font-extrabold text-[#171717] tracking-tight">{talentsList.length}</span>
                     <CheckCircle2 className="w-4 h-4 text-[#F36B21] fill-[#FFF3EC]" />
                   </div>
-                  <span className="text-xs text-[#777777] font-medium">Vetted & Verified Talents</span>
+                  <span className="text-xs text-[#777777] font-medium">Registered Talents ({verifiedTalentCount} verified)</span>
                 </div>
               </div>
 
-              {/* Stat Badge 2: 4.9/5 Average Rating (Center-Left) */}
+              {/* Live review metrics */}
               <div className="absolute top-32 left-0 sm:left-4 backdrop-blur-xl bg-white/90 rounded-2xl p-4 shadow-[0_12px_36px_rgba(0,0,0,0.08)] border border-white/90 flex items-center gap-3.5 transition-all hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(243,107,33,0.14)]">
                 <div className="w-11 h-11 rounded-xl bg-[#FFF3EC] flex items-center justify-center text-[#F36B21] border border-[#FCE2D3] shrink-0">
                   <Star className="w-5 h-5 fill-[#F36B21]" />
                 </div>
                 <div>
-                  <div className="text-lg font-extrabold text-[#171717] tracking-tight">4.9 / 5.0</div>
-                  <span className="text-xs text-[#777777] font-medium">From 28,000+ Verified Reviews</span>
+                  <div className="text-lg font-extrabold text-[#171717] tracking-tight">{averageTalentRating > 0 ? `${averageTalentRating.toFixed(1)} / 5.0` : 'No ratings yet'}</div>
+                  <span className="text-xs text-[#777777] font-medium">From {totalVerifiedReviews} verified review{totalVerifiedReviews === 1 ? '' : 's'}</span>
                 </div>
               </div>
 
-              {/* Stat Badge 3: 120+ Skill Categories (Bottom-Right) */}
+              {/* Live skill coverage */}
               <div className="absolute bottom-4 right-0 sm:right-4 backdrop-blur-xl bg-white/90 rounded-2xl p-4 shadow-[0_12px_36px_rgba(0,0,0,0.08)] border border-white/90 flex items-center gap-3.5 transition-all hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(243,107,33,0.14)]">
                 <div className="w-11 h-11 rounded-xl bg-[#FFF3EC] flex items-center justify-center text-[#F36B21] border border-[#FCE2D3] shrink-0">
                   <SlidersHorizontal className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg font-extrabold text-[#171717] tracking-tight">120+</span>
+                    <span className="text-lg font-extrabold text-[#171717] tracking-tight">{skillSpecializationCount}</span>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      99% Success
+                      Live Profiles
                     </span>
                   </div>
                   <span className="text-xs text-[#777777] font-medium">Skill Specializations</span>
@@ -417,21 +426,19 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
         </div>
       </section>
 
-      {/* ========================================================
-          CLIENT TRUST STRIP
-      ======================================================== */}
+      {/* Live profile capability strip */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 border-b border-[#F3ECE7]">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <span className="text-xs uppercase tracking-wider font-semibold text-[#888888]">
-            Trusted by hiring managers from leading tech companies:
+            Profile data visible to hiring teams:
           </span>
           <div className="flex flex-wrap items-center gap-6 sm:gap-10 opacity-70 grayscale hover:grayscale-0 transition-all text-xs font-bold tracking-wider text-[#171717]">
-            <span>STRIPE</span>
-            <span>LINEAR</span>
-            <span>FIGMA</span>
-            <span>VERCEL</span>
-            <span>NOTION</span>
-            <span>SUPABASE</span>
+            <span>SKILLS</span>
+            <span>RATES</span>
+            <span>AVAILABILITY</span>
+            <span>PORTFOLIOS</span>
+            <span>REVIEWS</span>
+            <span>WORK HISTORY</span>
           </div>
         </div>
       </section>
@@ -475,11 +482,11 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
                 {openSections.category && (
                   <div className="space-y-2 pt-1">
                     {[
-                      { name: 'All Categories', count: 6 },
-                      { name: 'Development', count: 2 },
-                      { name: 'Design & Creative', count: 2 },
-                      { name: 'Data & Analytics', count: 1 },
-                      { name: 'Marketing', count: 1 },
+                      { name: 'All Categories', count: talentsList.length },
+                      { name: 'Development', count: talentsList.filter((talent) => talent.category === 'Development').length },
+                      { name: 'Design & Creative', count: talentsList.filter((talent) => talent.category === 'Design & Creative').length },
+                      { name: 'Data & Analytics', count: talentsList.filter((talent) => talent.category === 'Data & Analytics').length },
+                      { name: 'Marketing', count: talentsList.filter((talent) => talent.category === 'Marketing').length },
                     ].map((cat) => {
                       const isSelected = selectedCategory === cat.name;
                       return (
@@ -667,7 +674,7 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
               <h2 className="text-xl sm:text-2xl font-bold text-[#171717] flex items-center gap-2">
                 <span className="text-[#F36B21] font-extrabold">
-                  {filteredTalents.length > 0 ? (filteredTalents.length * 2080).toLocaleString() + '+' : '0'}
+                  {filteredTalents.length}
                 </span>
                 <span>Talents Found</span>
               </h2>
@@ -975,7 +982,7 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
               <div className="pt-8 text-center border-t border-[#EAE2DC]">
                 <p className="text-xs text-[#777777] mb-3">
                   Showing <span className="font-bold text-[#171717]">{Math.min(visibleCount, filteredTalents.length)}</span> of{' '}
-                  <span className="font-bold text-[#F36B21]">12,480+</span> verified talent profiles
+                  <span className="font-bold text-[#F36B21]">{filteredTalents.length}</span> matching live talent profile{filteredTalents.length === 1 ? '' : 's'}
                 </p>
                 {visibleCount < filteredTalents.length ? (
                   <button
@@ -990,7 +997,7 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#FFF3EC] text-xs font-semibold text-[#F36B21] border border-[#FCE2D3]">
                     <Check className="w-3.5 h-3.5" />
-                    <span>All verified talent matches loaded</span>
+                    <span>All matching live profiles loaded</span>
                   </span>
                 )}
               </div>
@@ -1012,7 +1019,7 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
             Hire with Complete Peace of Mind
           </h2>
           <p className="text-xs sm:text-sm text-[#777777] max-w-xl mx-auto leading-relaxed">
-            Every engagement on Workverse is protected by comprehensive screening, milestone escrow, and risk-free trial guarantees.
+            Compare live profiles, communicate directly, and track milestone payment status inside the project workspace.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 text-left">
@@ -1021,9 +1028,9 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
               <div className="w-10 h-10 rounded-xl bg-white border border-[#FCE2D3] flex items-center justify-center text-[#F36B21] shadow-xs">
                 <ShieldCheck className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-[#171717]">Top 1% Talent Screening</h3>
+              <h3 className="text-base font-bold text-[#171717]">Transparent Talent Profiles</h3>
               <p className="text-xs text-[#666666] leading-relaxed">
-                Rigorous multi-stage vetting covering domain expertise, live technical problem solving, and client communication.
+                See registered account details, skills, rates, verified reviews, and completed-project history in one place.
               </p>
             </div>
 
@@ -1032,9 +1039,9 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
               <div className="w-10 h-10 rounded-xl bg-white border border-[#FCE2D3] flex items-center justify-center text-[#F36B21] shadow-xs">
                 <Lock className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-[#171717]">Milestone Escrow Protection</h3>
+              <h3 className="text-base font-bold text-[#171717]">Tracked Milestone Payments</h3>
               <p className="text-xs text-[#666666] leading-relaxed">
-                Funds are held safely in escrow and only released when deliverables meet your satisfaction and milestones are signed off.
+                Payment states and releases are persisted in the workspace and remain visible to the contract participants.
               </p>
             </div>
 
@@ -1043,9 +1050,9 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
               <div className="w-10 h-10 rounded-xl bg-white border border-[#FCE2D3] flex items-center justify-center text-[#F36B21] shadow-xs">
                 <Clock className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-[#171717]">Zero-Risk Trial Period</h3>
+              <h3 className="text-base font-bold text-[#171717]">Persisted Dispute Records</h3>
               <p className="text-xs text-[#666666] leading-relaxed">
-                If the match isn't right within the first 48 hours, we provide an immediate replacement or 100% refund.
+                Either contract participant can open a dispute, notify the other party, and freeze unreleased milestone payments.
               </p>
             </div>
           </div>
