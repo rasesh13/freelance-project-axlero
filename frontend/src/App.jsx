@@ -16,7 +16,7 @@ import {
   authGetMe,
   authLogout,
   getAuthToken,
-  fetchTalentById,
+  fetchTalents,
   fetchProjects,
   subscribeNetworkStatus,
 } from './api/client';
@@ -88,8 +88,10 @@ export default function App() {
         });
     }
 
-    fetchTalentById('arjun-mehta')
-      .then((t) => setSelectedFreelancer((prev) => prev || t))
+    fetchTalents()
+      .then((list) => {
+        if (Array.isArray(list) && list.length) setSelectedFreelancer((prev) => prev || list[0]);
+      })
       .catch(() => {});
 
     fetchProjects()

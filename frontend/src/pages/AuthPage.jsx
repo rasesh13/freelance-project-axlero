@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, Eye, EyeOff, Check, Sparkles, Shield, ArrowLeft, KeyRound, Lock } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Check, Sparkles, Shield, ArrowLeft, Lock } from 'lucide-react';
 import { authLogin, authRegister, forgotPasswordRequest } from '../api/client';
 
 export default function AuthPage({
@@ -23,7 +23,7 @@ export default function AuthPage({
   const [errorMessage, setErrorMessage] = useState('');
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotSent, setForgotSent] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -65,44 +65,6 @@ export default function AuthPage({
       setErrorMessage(err.message || 'Authentication failed. Please verify credentials.');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleSocialAuth = async (provider) => {
-    setIsLoading(true);
-    setErrorMessage('');
-    try {
-      // Authenticate with default role account
-      const demoEmail = role === 'freelancer' ? 'arjun@workverse.io' : 'sarah@cloudscale.ai';
-      const res = await authLogin({ email: demoEmail, password: 'password123', role });
-      if (res && res.user) {
-        if (onAuthSuccess) {
-          onAuthSuccess(res.user, role);
-        } else {
-          if (setCurrentUser) setCurrentUser(res.user);
-          if (setUserRole) setUserRole(res.user.role || role);
-          setIsLoggedIn(true);
-          setCurrentPage('projects');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      }
-    } catch (err) {
-      setErrorMessage(err.message || 'Social sign-in failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleQuickFill = (targetRole) => {
-    setRole(targetRole);
-    setAuthMode('login');
-    setErrorMessage('');
-    if (targetRole === 'freelancer') {
-      setEmail('arjun@workverse.io');
-      setPassword('password123');
-    } else {
-      setEmail('sarah@cloudscale.ai');
-      setPassword('password123');
     }
   };
 
@@ -166,7 +128,7 @@ export default function AuthPage({
             </h2>
 
             <p className="text-xs text-white/70 leading-relaxed">
-              Join elite software architects, product designers, and AI specialists building high-impact products with top founders.
+              Join registered software architects, product designers, AI specialists, and clients in a database-backed workspace.
             </p>
           </div>
 
@@ -176,7 +138,7 @@ export default function AuthPage({
               <Shield className="w-4 h-4 text-[#F36B21]" />
               Bank-grade Escrow
             </span>
-            <span>50K+ Freelancers</span>
+            <span>Live Marketplace Accounts</span>
           </div>
         </div>
 
@@ -250,7 +212,7 @@ export default function AuthPage({
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => handleSocialAuth('google')}
+                disabled
                 className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-full border border-[#EAE2DC] hover:border-[#d4c8bf] hover:bg-[#FFF9F5] text-xs font-semibold text-[#171717] transition-all"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -271,18 +233,18 @@ export default function AuthPage({
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                   />
                 </svg>
-                <span>Google</span>
+                <span>Google OAuth not configured</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleSocialAuth('github')}
+                disabled
                 className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-full border border-[#EAE2DC] hover:border-[#d4c8bf] hover:bg-[#FFF9F5] text-xs font-semibold text-[#171717] transition-all"
               >
                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                   <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
                 </svg>
-                <span>GitHub</span>
+                <span>GitHub OAuth not configured</span>
               </button>
             </div>
 
@@ -313,7 +275,7 @@ export default function AuthPage({
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Arjun Mehta"
+                    placeholder="Your full name"
                     required={authMode === 'signup'}
                     className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-sm focus:outline-none focus:border-[#F36B21] transition-all"
                   />
@@ -458,29 +420,6 @@ export default function AuthPage({
                 )}
               </button>
 
-              {/* Quick Login Shortcut Badges */}
-              <div className="pt-2 border-t border-[#F3ECE7]">
-                <p className="text-[11px] font-semibold text-[#888888] mb-2 flex items-center gap-1.5">
-                  <KeyRound className="w-3.5 h-3.5 text-[#F36B21]" />
-                  <span>Real Seeded User Accounts (password: password123):</span>
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickFill('freelancer')}
-                    className="px-3 py-1.5 rounded-full bg-[#FFF3EC] hover:bg-[#FCE2D3] border border-[#FCE2D3] text-[11px] font-medium text-[#F36B21] transition-all cursor-pointer flex items-center gap-1"
-                  >
-                    <span>💻 Arjun Mehta (Freelancer)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickFill('client')}
-                    className="px-3 py-1.5 rounded-full bg-[#F5F5F5] hover:bg-[#EAEAEA] border border-[#E0E0E0] text-[11px] font-medium text-[#171717] transition-all cursor-pointer flex items-center gap-1"
-                  >
-                    <span>👔 Sarah Jenkins (Client)</span>
-                  </button>
-                </div>
-              </div>
             </form>
           </div>
         </div>
@@ -492,12 +431,12 @@ export default function AuthPage({
           <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-[#EAE2DC] p-6 space-y-4 text-center">
             <h3 className="text-lg font-bold text-[#171717]">Reset Password</h3>
             <p className="text-xs text-[#777777]">
-              Enter your account email and we'll send you a secure reset link.
+              Enter your account email to check whether reset delivery is configured.
             </p>
 
             {forgotSent ? (
-              <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-700">
-                A password reset email has been sent to {forgotEmail || 'your email'}.
+              <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-700">
+                {forgotSent}
               </div>
             ) : (
               <div className="space-y-3">
@@ -512,8 +451,8 @@ export default function AuthPage({
                   type="button"
                   onClick={async () => {
                     try {
-                      await forgotPasswordRequest(forgotEmail);
-                      setForgotSent(true);
+                      const result = await forgotPasswordRequest(forgotEmail);
+                      setForgotSent(result.message || 'Reset delivery is not configured.');
                     } catch (err) {
                       setErrorMessage(err.message);
                     }
@@ -528,7 +467,7 @@ export default function AuthPage({
             <button
               onClick={() => {
                 setShowForgotModal(false);
-                setForgotSent(false);
+                setForgotSent('');
               }}
               className="text-xs text-[#777777] hover:underline"
             >
