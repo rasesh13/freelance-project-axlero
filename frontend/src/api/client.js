@@ -170,6 +170,15 @@ export async function authGetMe() {
   return data.user;
 }
 
+export async function updateMyProfile(profileData) {
+  const data = await request('/auth/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(profileData),
+  });
+  if (data.user) setStoredUser(data.user);
+  return data;
+}
+
 export async function forgotPasswordRequest(email) {
   return await request('/auth/forgot-password', {
     method: 'POST',
@@ -220,11 +229,12 @@ export async function fetchTalentById(id) {
 // ==========================================
 // PROJECTS API
 // ==========================================
-export async function fetchProjects({ status = 'All', search = '', category = '', page, limit, sortBy, sortOrder } = {}) {
+export async function fetchProjects({ status = 'All', search = '', category = '', scope = '', page, limit, sortBy, sortOrder } = {}) {
   const params = new URLSearchParams();
   if (status && status !== 'All') params.append('status', status);
   if (category && category !== 'All Categories') params.append('category', category);
   if (search && search.trim()) params.append('search', search.trim());
+  if (scope) params.append('scope', scope);
   if (page) params.append('page', String(page));
   if (limit) params.append('limit', String(limit));
   if (sortBy) params.append('sortBy', String(sortBy));
@@ -344,10 +354,10 @@ export async function fetchMessages() {
   return await request('/messages');
 }
 
-export async function sendMessage({ thread_id, text, project, recipientName, recipientRole, recipientAvatar }) {
+export async function sendMessage({ thread_id, text, project, recipientId, recipientName, recipientRole, recipientAvatar }) {
   return await request('/messages', {
     method: 'POST',
-    body: JSON.stringify({ thread_id, text, project, recipientName, recipientRole, recipientAvatar }),
+    body: JSON.stringify({ thread_id, text, project, recipientId, recipientName, recipientRole, recipientAvatar }),
   });
 }
 
@@ -358,11 +368,42 @@ export async function fetchFiles() {
   return await request('/files');
 }
 
-export async function uploadFile({ name, size, project }) {
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+    reader.onerror = () => reject(new Error('Could not read the selected file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+export async function uploadFile({ file, name, size, project, projectId }) {
+  if (!file) throw new Error('Choose a file to upload');
+  const contentBase64 = await readFileAsBase64(file);
   return await request('/files', {
     method: 'POST',
-    body: JSON.stringify({ name, size, project }),
+    body: JSON.stringify({ name: name || file.name, size, project, projectId, mimeType: file.type, contentBase64 }),
   });
+}
+
+export async function downloadFile(id, fileName) {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE}/files/${encodeURIComponent(id)}/download`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to download file');
+  }
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName || 'download';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
 }
 
 export async function deleteFile(id) {
@@ -375,10 +416,10 @@ export async function fetchTeam() {
   return await request('/team');
 }
 
-export async function inviteTeamMember({ name, email, role, project }) {
+export async function inviteTeamMember({ name, email, role, project, projectId }) {
   return await request('/team', {
     method: 'POST',
-    body: JSON.stringify({ name, email, role, project }),
+    body: JSON.stringify({ name, email, role, project, projectId }),
   });
 }
 
@@ -389,6 +430,17 @@ export async function fetchPayments() {
 export async function releasePaymentEscrow(paymentId) {
   return await request(`/payments/${paymentId}/release`, {
     method: 'PATCH',
+  });
+}
+
+export async function fetchDisputes() {
+  return await request('/disputes');
+}
+
+export async function createDispute({ contractId, contractTitle, reason, notes }) {
+  return await request('/disputes', {
+    method: 'POST',
+    body: JSON.stringify({ contractId, contractTitle, reason, notes }),
   });
 }
 
