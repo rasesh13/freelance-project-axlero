@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Users, Layers, Star, CheckCircle2, Shield, Sparkles, Code2, Palette, Cpu, Cloud, Smartphone, TrendingUp, Briefcase, FolderKanban } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { fetchTalents, fetchProjects, fetchBookmarks, toggleBookmark, getAuthToken } from '../api/client';
+import { fetchTalents, fetchProjects, fetchBookmarks, toggleBookmark, getAuthToken, fetchBackendStats } from '../api/client';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -11,11 +11,17 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
   const [featuredTalents, setFeaturedTalents] = useState([]);
   const [featuredProjects, setFeaturedProjects] = useState([]);
   const [savedTalentIds, setSavedTalentIds] = useState([]);
+  const [platformStats, setPlatformStats] = useState({ counts: {}, averageTalentRating: 0 });
+  const [allTalents, setAllTalents] = useState([]);
 
   useEffect(() => {
     fetchTalents().then((data) => {
-      if (Array.isArray(data)) setFeaturedTalents(data.slice(0, 3));
+      if (Array.isArray(data)) {
+        setAllTalents(data);
+        setFeaturedTalents(data.slice(0, 3));
+      }
     }).catch(() => {});
+    fetchBackendStats().then((data) => setPlatformStats(data || { counts: {}, averageTalentRating: 0 })).catch(() => {});
     fetchProjects().then((data) => {
       if (Array.isArray(data)) setFeaturedProjects(data.slice(0, 3));
     }).catch(() => {});
@@ -164,7 +170,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
                 </button>
               </div>
 
-              {/* Statistics Row (50K+ Freelancers, 12K+ Active Projects, 4.9 Average Rating) */}
+              {/* Live marketplace statistics from the backend */}
               <div className="hero-stats-row pt-8 border-t border-[#EAE2DC] flex items-center gap-4 sm:gap-7">
                 {/* Stat 1 */}
                 <div className="flex items-center gap-3">
@@ -172,7 +178,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
                     <Users className="w-4.5 h-4.5 text-[#171717]" />
                   </div>
                   <div>
-                    <div className="text-xl font-bold text-[#171717] tracking-tight">50K+</div>
+                    <div className="text-xl font-bold text-[#171717] tracking-tight">{platformStats.counts?.talents ?? 0}</div>
                     <div className="text-xs text-[#777777] font-medium">Freelancers</div>
                   </div>
                 </div>
@@ -186,7 +192,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
                     <Layers className="w-4.5 h-4.5 text-[#171717]" />
                   </div>
                   <div>
-                    <div className="text-xl font-bold text-[#171717] tracking-tight">12K+</div>
+                    <div className="text-xl font-bold text-[#171717] tracking-tight">{platformStats.counts?.active_projects ?? 0}</div>
                     <div className="text-xs text-[#777777] font-medium">Active Projects</div>
                   </div>
                 </div>
@@ -200,7 +206,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
                     <Star className="w-4.5 h-4.5 text-[#F36B21] fill-[#F36B21]" />
                   </div>
                   <div>
-                    <div className="text-xl font-bold text-[#171717] tracking-tight">4.9</div>
+                    <div className="text-xl font-bold text-[#171717] tracking-tight">{platformStats.averageTalentRating > 0 ? platformStats.averageTalentRating.toFixed(1) : 'New'}</div>
                     <div className="text-xs text-[#777777] font-medium">Average Rating</div>
                   </div>
                 </div>
@@ -227,32 +233,30 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
         </div>
       </section>
 
-      {/* ========================================================
-          1. TRUSTED BY SECTION
-      ======================================================== */}
+      {/* Platform capability strip */}
       <section className="section-reveal border-y border-[#EAE2DC] bg-[#FFF3EC]/50 py-10 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-xs font-semibold uppercase tracking-wider text-[#777777] mb-6">
-            Trusted by fast-moving companies and design-forward startups
+            Live workflows available in every registered workspace
           </p>
           <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-14 opacity-75 grayscale hover:grayscale-0 transition-all">
             <span className="text-lg sm:text-xl font-bold tracking-tighter text-[#171717]">
-              STRIPE
+              PROJECTS
             </span>
             <span className="text-lg sm:text-xl font-semibold tracking-tight text-[#171717]">
-              Linear
+              PROPOSALS
             </span>
             <span className="text-lg sm:text-xl font-bold tracking-tight text-[#171717]">
-              airbnb
+              CONTRACTS
             </span>
             <span className="text-lg sm:text-xl font-mono font-bold tracking-wider text-[#171717]">
-              ▲ Vercel
+              MILESTONES
             </span>
             <span className="text-lg sm:text-xl font-serif font-bold tracking-tight text-[#171717]">
-              Notion
+              FILES
             </span>
             <span className="text-lg sm:text-xl font-bold tracking-tight text-[#171717]">
-              Figma
+              MESSAGING
             </span>
           </div>
         </div>
@@ -292,10 +296,10 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
                 Find Talent
               </h3>
               <p className="text-sm text-[#666666] leading-relaxed mb-6 font-sans">
-                Source pre-vetted engineers, designers, and specialists ready to accelerate your product roadmap.
+                Browse registered engineers, designers, and specialists with profiles backed by live account data.
               </p>
               <div className="space-y-2.5 pt-2 border-t border-[#EAE2DC]/80">
-                {['Verified Portfolios', 'Fast-Track Matching', 'Top 1% Independent Builders'].map((item, idx) => (
+                {['Live Freelancer Profiles', 'Direct Messaging', 'Verified Review History'].map((item, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-xs text-[#555555]">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#F36B21]" />
                     <span>{item}</span>
@@ -325,10 +329,10 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
                 Discover Projects
               </h3>
               <p className="text-sm text-[#666666] leading-relaxed mb-6 font-sans">
-                Access handpicked, high-value opportunities from venture-backed startups and global design leaders.
+                Access current opportunities posted by registered clients and apply directly from your account.
               </p>
               <div className="space-y-2.5 pt-2 border-t border-[#EAE2DC]/80">
-                {['Fixed-Price & Retainers', 'Direct Client Access', 'Guaranteed Milestone Escrow'].map((item, idx) => (
+                {['Fixed-Price & Retainers', 'Direct Client Access', 'Tracked Milestone Payments'].map((item, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-xs text-[#555555]">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#F36B21]" />
                     <span>{item}</span>
@@ -427,7 +431,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
             onClick={() => navigateTo('talent')}
             className="flex items-center gap-1.5 text-sm font-semibold text-[#F36B21] hover:text-[#d45512] transition-colors"
           >
-            <span>All Categories (120+)</span>
+            <span>All Categories ({allTalents.length})</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -438,37 +442,37 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
               icon: Code2,
               title: 'Full Stack & Web Development',
               desc: 'Production-ready Next.js, React, Node, microservices, and high-performance databases.',
-              talents: '4,820+ Freelancers',
+              categoryKeys: ['development', 'web'],
             },
             {
               icon: Palette,
               title: 'UI/UX & Design Systems',
               desc: 'High-fidelity Figma prototypes, design tokens, micro-interactions, and conversion-optimized web design.',
-              talents: '3,140+ Freelancers',
+              categoryKeys: ['design'],
             },
             {
               icon: Cpu,
               title: 'AI, LLMs & Machine Learning',
               desc: 'Autonomous agent frameworks, fine-tuning, RAG pipelines, and automated intelligence.',
-              talents: '1,890+ Freelancers',
+              categoryKeys: ['ai', 'data'],
             },
             {
               icon: Cloud,
               title: 'Cloud Architecture & DevOps',
               desc: 'Kubernetes, Terraform, GCP/AWS infrastructure, CI/CD pipelines, and zero-downtime scalability.',
-              talents: '1,420+ Freelancers',
+              categoryKeys: ['cloud', 'devops'],
             },
             {
               icon: Smartphone,
               title: 'Mobile App Engineering',
               desc: 'Native iOS and Android applications, React Native, cross-platform fluid experiences.',
-              talents: '2,110+ Freelancers',
+              categoryKeys: ['mobile'],
             },
             {
               icon: TrendingUp,
               title: 'Growth Marketing & Technical SEO',
               desc: 'Data analytics, automated acquisition funnels, retention loops, and technical search positioning.',
-              talents: '1,120+ Freelancers',
+              categoryKeys: ['marketing', 'seo', 'growth'],
             },
           ].map((srv, idx) => {
             const Icon = srv.icon;
@@ -490,7 +494,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
                   </p>
                 </div>
                 <div className="pt-6 mt-4 border-t border-[#EAE2DC] flex items-center justify-between text-xs font-semibold text-[#777777] group-hover:text-[#F36B21]">
-                  <span>{srv.talents}</span>
+                  <span>{allTalents.filter((talent) => srv.categoryKeys.some((key) => String(talent.category || talent.title || '').toLowerCase().includes(key))).length} Freelancers</span>
                   <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
@@ -507,7 +511,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#EAE2DC] text-xs font-semibold text-[#F36B21] mb-3">
-                Verified Talent
+                Registered Talent
               </div>
               <h2 className="font-editorial text-3xl sm:text-4xl text-[#171717]">
                 Featured Independent Builders
@@ -517,7 +521,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
               onClick={() => navigateTo('talent')}
               className="flex items-center gap-1.5 text-sm font-semibold text-[#F36B21] hover:underline"
             >
-              <span>Explore all verified builders</span>
+              <span>Explore all registered builders</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -616,7 +620,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
             {
               step: '01',
               title: 'Discover or Post a Scope',
-              desc: 'Search pre-vetted specialists or publish your technical brief to receive handpicked proposals within hours.',
+              desc: 'Search registered specialists or publish your technical brief to receive proposals from real platform accounts.',
             },
             {
               step: '02',
@@ -625,8 +629,8 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
             },
             {
               step: '03',
-              title: 'Protected Milestone Escrow',
-              desc: 'Deposit funds safely into automated escrow. Payouts are released only after you inspect and approve deliverables.',
+              title: 'Tracked Milestone Payments',
+              desc: 'Record milestone funding states and release payouts after deliverables are reviewed and approved.',
             },
           ].map((item, idx) => (
             <div
@@ -665,7 +669,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
               onClick={() => navigateTo('work')}
               className="flex items-center gap-1.5 text-sm font-semibold text-[#F36B21] hover:underline"
             >
-              <span>Explore all active jobs (5.2K+)</span>
+              <span>Explore all active jobs ({platformStats.counts?.active_projects ?? 0})</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -734,8 +738,8 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
 
             <div className="space-y-4">
               {[
-                { title: 'Top 3% Verified Specialists', desc: 'Every contractor passes portfolio review and code architecture benchmarks.' },
-                { title: 'Safe Milestone Escrow', desc: 'Zero disputes or surprise payouts. Full financial protection for both sides.' },
+                { title: 'Live Freelancer Profiles', desc: 'Ratings, reviews, availability, skills, and completed work come from registered accounts.' },
+                { title: 'Tracked Milestone Escrow', desc: 'Payment states, releases, and disputes are persisted with role-based access controls.' },
                 { title: 'Integrated Project Workspace', desc: 'Manage deadlines, team members, deliverables, and communication in one hub.' },
               ].map((item, idx) => (
                 <div key={idx} className="flex items-start gap-3.5">
@@ -762,9 +766,9 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
                 Spatial Design & Ergonomics
               </span>
               <p className="text-lg font-editorial">
-                "Workverse gave our engineering team the elite frontend firepower we needed to ship ahead of our Series A."
+                Projects, proposals, files, payments, and collaboration stay connected in one accountable workspace.
               </p>
-              <p className="text-xs opacity-80 mt-2">— VP Engineering at Hyperscale</p>
+              <p className="text-xs opacity-80 mt-2">Live Workverse workspace</p>
             </div>
           </div>
         </div>
@@ -788,7 +792,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
             </h2>
 
             <p className="text-sm sm:text-base text-[#aaaaaa] leading-relaxed">
-              Join over 50,000 top engineers, designers, and fast-growing startups on the premier freelance marketplace.
+              Join {platformStats.counts?.talents ?? 0} registered freelancer{platformStats.counts?.talents === 1 ? '' : 's'} and explore {platformStats.counts?.active_projects ?? 0} active project{platformStats.counts?.active_projects === 1 ? '' : 's'} currently on Workverse.
             </p>
 
             <div className="flex flex-wrap items-center gap-4 pt-4">

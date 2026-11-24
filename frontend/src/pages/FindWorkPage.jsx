@@ -87,6 +87,8 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
   const [bidAmount, setBidAmount] = useState('');
   const [coverLetter, setCoverLetter] = useState('');
   const [appliedSuccess, setAppliedSuccess] = useState(false);
+  const [applyError, setApplyError] = useState('');
+  const [isSubmittingProposal, setIsSubmittingProposal] = useState(false);
 
   // Accordion state
   const [openSections, setOpenSections] = useState({
@@ -131,15 +133,14 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
       `Hi! I have extensive experience building scalable solutions with ${(project.skills || []).slice(0, 3).join(', ')}. I would love to deliver ${project.title} with clean code, robust testing, and smooth milestone communication.`
     );
     setAppliedSuccess(false);
+    setApplyError('');
   };
 
   const handleSubmitProposal = async (e) => {
     e.preventDefault();
     if (applyModalProject) {
-      if (!appliedProjectIds.includes(applyModalProject.id)) {
-        setAppliedProjectIds((prev) => [...prev, applyModalProject.id]);
-      }
-      setAppliedSuccess(true);
+      setApplyError('');
+      setIsSubmittingProposal(true);
       try {
         await submitProposal({
           project_id: applyModalProject.id,
@@ -149,13 +150,18 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
           pitch: coverLetter,
           cover_letter: coverLetter,
         });
+        setAppliedProjectIds((prev) => prev.includes(applyModalProject.id) ? prev : [...prev, applyModalProject.id]);
+        setAppliedSuccess(true);
+        setTimeout(() => {
+          setApplyModalProject(null);
+          setAppliedSuccess(false);
+        }, 1800);
       } catch (err) {
         console.error('Failed to submit proposal to backend:', err);
+        setApplyError(err.message || 'Your proposal could not be submitted.');
+      } finally {
+        setIsSubmittingProposal(false);
       }
-      setTimeout(() => {
-        setApplyModalProject(null);
-        setAppliedSuccess(false);
-      }, 1800);
     }
   };
 
@@ -223,6 +229,13 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
     return <Cpu className="w-5 h-5 text-[#F36B21]" />;
   };
 
+  const activeProjectCount = projectList.filter((project) => project.status !== 'Completed').length;
+  const registeredClientCount = new Set(projectList.map((project) => project.clientId).filter(Boolean)).size;
+  const ratedProjects = projectList.filter((project) => Number(project.clientRating) > 0);
+  const averageClientRating = ratedProjects.length > 0
+    ? ratedProjects.reduce((sum, project) => sum + Number(project.clientRating || 0), 0) / ratedProjects.length
+    : 0;
+
   return (
     <div className="w-full min-h-screen bg-[#FFF9F5] text-[#171717] pb-24 relative">
       {/* ========================================================
@@ -276,7 +289,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
               </h1>
 
               <p className="text-base sm:text-lg text-[#666666] max-w-xl font-normal leading-relaxed">
-                Explore handpicked, high-budget opportunities, build lasting client partnerships, and elevate your independent freelance career.
+                Explore live opportunities posted by registered clients, build lasting partnerships, and manage every application from your account.
               </p>
 
               {/* Elevated Big Search Bar */}
@@ -317,7 +330,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
                     <Briefcase className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-[#171717]">5.2K+</div>
+                    <div className="text-lg font-bold text-[#171717]">{activeProjectCount}</div>
                     <div className="text-xs text-[#777777] font-medium">Active Projects</div>
                   </div>
                 </div>
@@ -327,8 +340,8 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
                     <Users className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-[#171717]">2.1K+</div>
-                    <div className="text-xs text-[#777777] font-medium">Verified Clients</div>
+                    <div className="text-lg font-bold text-[#171717]">{registeredClientCount}</div>
+                    <div className="text-xs text-[#777777] font-medium">Registered Clients</div>
                   </div>
                 </div>
 
@@ -337,7 +350,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
                     <Star className="w-5 h-5 fill-[#F36B21]" />
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-[#171717]">4.9 ★</div>
+                    <div className="text-lg font-bold text-[#171717]">{averageClientRating > 0 ? `${averageClientRating.toFixed(1)} ★` : 'New'}</div>
                     <div className="text-xs text-[#777777] font-medium">Avg. Client Rating</div>
                   </div>
                 </div>
@@ -442,15 +455,15 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 border-b border-[#F3ECE7]">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <span className="text-xs uppercase tracking-wider font-semibold text-[#888888]">
-            Companies hiring freelancers on Workverse right now:
+            Live opportunity details available on Workverse:
           </span>
           <div className="flex flex-wrap items-center gap-6 sm:gap-10 opacity-70 grayscale hover:grayscale-0 transition-all text-xs font-bold tracking-wider text-[#171717]">
-            <span>STRIPE</span>
-            <span>LINEAR</span>
-            <span>FIGMA</span>
-            <span>VERCEL</span>
-            <span>NOTION</span>
-            <span>SUPABASE</span>
+            <span>BUDGET</span>
+            <span>DURATION</span>
+            <span>SKILLS</span>
+            <span>CLIENT</span>
+            <span>STATUS</span>
+            <span>DEADLINE</span>
           </div>
         </div>
       </section>
@@ -791,11 +804,11 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
             {/* Results Counter Header */}
             <div className="flex items-center justify-between pb-2">
               <h2 className="text-xl sm:text-2xl font-bold text-[#171717] flex items-center gap-2">
-                <span className="text-[#F36B21] font-extrabold">{filteredProjects.length * 860 || 5200}+</span>
+                <span className="text-[#F36B21] font-extrabold">{filteredProjects.length}</span>
                 <span>Active Opportunities</span>
               </h2>
               <span className="text-xs text-[#888888] font-medium hidden sm:inline">
-                Verified payment guarantees on all listings
+                Live records from registered client postings
               </span>
             </div>
 
@@ -1032,7 +1045,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
               Earn, Build, and Grow with Total Confidence
             </h2>
             <p className="text-sm text-[#777777] mt-2">
-              Workverse provides guaranteed milestone payments, low transparent fees, and direct relationships with premier technology founders.
+              Workverse keeps proposals, contracts, milestone states, and direct client relationships connected to your account.
             </p>
           </div>
 
@@ -1041,7 +1054,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
               <div className="w-12 h-12 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] flex items-center justify-center text-[#F36B21]">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-[#171717]">Guaranteed Escrow Payouts</h3>
+              <h3 className="text-base font-bold text-[#171717]">Tracked Escrow Payouts</h3>
               <p className="text-xs text-[#777777] leading-relaxed">
                 Clients deposit funds upfront before you start writing a single line of code or designing a single wireframe.
               </p>
@@ -1313,6 +1326,11 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
               </div>
             ) : (
               <form onSubmit={handleSubmitProposal} className="space-y-4">
+                {applyError && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+                    {applyError}
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
                     Your Proposed Bid / Total Amount (USD)
@@ -1352,9 +1370,10 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
                   </button>
                   <button
                     type="submit"
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-md shadow-orange-500/20 active:scale-95 transition-all"
+                    disabled={isSubmittingProposal}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] disabled:opacity-60 text-white text-xs font-semibold shadow-md shadow-orange-500/20 active:scale-95 transition-all"
                   >
-                    <span>Submit Proposal</span>
+                    <span>{isSubmittingProposal ? 'Submitting…' : 'Submit Proposal'}</span>
                     <Send className="w-3.5 h-3.5" />
                   </button>
                 </div>

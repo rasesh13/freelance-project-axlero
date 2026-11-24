@@ -112,8 +112,8 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
       a: 'The Team plan unlocks multi-seat workspaces (up to 10 members), shared milestone dashboards, team analytics, consolidated company billing, and priority candidate matching.',
     },
     {
-      q: 'Do you offer a money-back trial guarantee?',
-      a: 'Yes. All paid subscriptions include a risk-free 14-day trial period. If Workverse does not accelerate your hiring and delivery workflow, you will receive an immediate full refund.',
+      q: 'How are plan changes handled on localhost?',
+      a: 'Plan selections are saved to your Workverse account immediately. External billing is not charged until a payment provider is configured.',
     },
     {
       q: 'How does Enterprise custom invoicing work?',
@@ -465,7 +465,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                     {plan.buttonText}
                   </button>
                   <p className="text-[11px] text-[#888888] text-center mt-2.5">
-                    {plan.id === 'free' ? 'No credit card needed' : '14-day risk-free trial'}
+                    {plan.id === 'free' ? 'No credit card needed' : 'Saved to your workspace account'}
                   </p>
                 </div>
               </div>
