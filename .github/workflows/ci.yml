@@ -3,6 +3,7 @@ name: Workverse CI Platform Verification
 on:
   push:
     branches: [main, rasesh, vinita]
+
   pull_request:
     branches: [main, rasesh]
 
@@ -10,6 +11,10 @@ jobs:
   verify:
     name: Build & Verify (Node 22.x)
     runs-on: ubuntu-latest
+
+    # Keep demo seed records available during CI database tests.
+    env:
+      WORKVERSE_SEED_DEMO_DATA: 'true'
 
     steps:
       - name: Checkout Repository
