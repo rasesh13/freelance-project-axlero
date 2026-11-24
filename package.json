@@ -13,6 +13,7 @@
     "test:db": "npm --prefix backend run test:db",
     "test:api": "npm --prefix backend run test:api",
     "test:health": "npm --prefix backend run test:health",
+    "test:live": "npm --prefix backend run test:live",
     "backup": "npm --prefix backend run backup",
     "db:seed": "npm --prefix backend run db:seed",
     "db:seed:fresh": "npm --prefix backend run db:seed:fresh",
