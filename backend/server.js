@@ -18,7 +18,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '16mb' }));
 
 // Security Headers
 app.use((req, res, next) => {
@@ -119,17 +119,23 @@ function getDatabaseStats() {
     'bookmarks',
     'newsletter_subscribers',
     'notifications',
+    'disputes',
   ];
   const counts = {};
   for (const t of tables) {
     counts[t] = db.prepare(`SELECT COUNT(*) as c FROM ${t}`).get().c;
   }
+  counts.talents = db.prepare(`SELECT COUNT(*) AS c FROM talents t JOIN users u ON u.id = t.user_id AND u.role = 'freelancer'`).get().c;
+  counts.projects = db.prepare(`SELECT COUNT(*) AS c FROM projects p JOIN users u ON u.id = p.client_id AND u.role = 'client'`).get().c;
+  counts.active_projects = db.prepare(`SELECT COUNT(*) AS c FROM projects p JOIN users u ON u.id = p.client_id AND u.role = 'client' WHERE p.status != 'Completed'`).get().c;
+  const ratingRow = db.prepare(`SELECT AVG(t.rating) AS average FROM talents t JOIN users u ON u.id = t.user_id AND u.role = 'freelancer' WHERE t.reviews_count > 0`).get();
   return {
     status: 'ok',
     port: PORT,
     uptimeSeconds: Math.floor(process.uptime()),
     memoryMB: Number((process.memoryUsage().rss / (1024 * 1024)).toFixed(1)),
     counts,
+    averageTalentRating: Number(ratingRow?.average || 0),
     timestamp: new Date().toISOString(),
   };
 }
@@ -158,6 +164,12 @@ function createNotification({
 
 function formatUserRow(row) {
   if (!row) return null;
+  const talent = row.role === 'freelancer'
+    ? db.prepare(`
+        SELECT verified, rating, reviews_count, job_success, completed_projects, available
+        FROM talents WHERE user_id = ? LIMIT 1
+      `).get(row.id)
+    : null;
   return {
     id: row.id,
     name: row.name,
@@ -175,6 +187,12 @@ function formatUserRow(row) {
     auto_escrow_release: Boolean(row.auto_escrow_release ?? 1),
     two_factor_auth: Boolean(row.two_factor_auth ?? 1),
     email_digest: row.email_digest || 'Daily',
+    verified: Boolean(talent?.verified),
+    rating: Number(talent?.rating || 0),
+    reviews_count: Number(talent?.reviews_count || 0),
+    job_success: talent?.job_success || 'No ratings yet',
+    completed_projects: Number(talent?.completed_projects || 0),
+    available: talent ? Boolean(talent.available) : undefined,
   };
 }
 
@@ -316,6 +334,39 @@ function optionalAuth(req, res, next) {
   });
 }
 
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ error: `This action requires a ${roles.join(' or ')} account` });
+    }
+    next();
+  };
+}
+
+function canAccessProject(userId, projectId) {
+  if (!userId || !projectId) return false;
+  return Boolean(
+    db.prepare(`
+      SELECT p.id
+      FROM projects p
+      WHERE p.id = ? AND (
+        p.client_id = ?
+        OR EXISTS (SELECT 1 FROM contracts c WHERE c.freelancer_id = ? AND c.title = p.title)
+        OR EXISTS (SELECT 1 FROM proposals pr WHERE pr.candidate_id = ? AND pr.project_id = p.id AND pr.status = 'Accepted')
+      )
+      LIMIT 1
+    `).get(projectId, userId, userId, userId)
+  );
+}
+
+function resolveProjectForUser(userId, { projectId, projectTitle } = {}) {
+  const project = projectId
+    ? db.prepare('SELECT * FROM projects WHERE id = ?').get(projectId)
+    : db.prepare('SELECT * FROM projects WHERE lower(title) = lower(?) ORDER BY created_at DESC LIMIT 1').get(projectTitle || '');
+  if (!project || !canAccessProject(userId, project.id)) return null;
+  return project;
+}
+
 // ==========================================
 // 1. ROOT CONTROL CENTER, API DOCS & HEALTH
 // ==========================================
@@ -429,8 +480,8 @@ app.post('/api/auth/register', authRateLimiter, (req, res) => {
         ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=500&q=80'
         : 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=500&q=80';
     const defaultTitle = role === 'freelancer' ? 'Full Stack Developer' : 'Project Manager & Founder';
-    const starterWallet = role === 'freelancer' ? 1200.0 : 5000.0;
-    const starterEscrow = role === 'freelancer' ? 2400.0 : 1500.0;
+    const starterWallet = 0;
+    const starterEscrow = 0;
 
     db.prepare(`
       INSERT INTO users (id, name, email, password, role, title, avatar, wallet_balance, escrow_balance, hourly_rate, billing_email)
@@ -452,22 +503,22 @@ app.post('/api/auth/register', authRateLimiter, (req, res) => {
         name.trim(),
         defaultTitle,
         defaultTitle,
-        1,
+        0,
         1,
         defaultAvatar,
         'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80',
-        5.0,
+        0,
         0,
         45,
         'Remote',
-        '3+ Years Exp.',
-        '100%',
+        'New to Workverse',
+        'No ratings yet',
         0,
         'Development',
-        'Intermediate',
-        `Independent builder registered on Workverse (${cleanEmail}).`,
-        JSON.stringify(['React', 'Node.js', 'TypeScript']),
-        JSON.stringify(['Verified Talent', 'New Rising Star']),
+        'Entry Level',
+        `${name.trim()} is building their Workverse profile.`,
+        '[]',
+        JSON.stringify(['New Member']),
         '[]',
         '[]',
         '[]'
@@ -510,8 +561,9 @@ app.post('/api/auth/login', authRateLimiter, (req, res) => {
     }
 
     if (role && (role === 'client' || role === 'freelancer') && role !== userRecord.role) {
-      db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userRecord.id);
-      userRecord.role = role;
+      return res.status(403).json({
+        error: `This account is registered as ${userRecord.role}. Choose the ${userRecord.role} sign-in tab.`,
+      });
     }
 
     const user = formatUserRow(userRecord);
@@ -542,20 +594,70 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
   res.json({ user: req.user });
 });
 
+app.patch('/api/auth/profile', authenticateToken, (req, res) => {
+  try {
+    const { name, title, avatar, hourlyRate, location, about, skills, available } = req.body || {};
+    if (name !== undefined && !String(name).trim()) {
+      return res.status(400).json({ error: 'Name cannot be empty' });
+    }
+    const safeRate = hourlyRate === undefined ? null : Number(hourlyRate);
+    if (safeRate !== null && (!Number.isFinite(safeRate) || safeRate < 0 || safeRate > 10000)) {
+      return res.status(400).json({ error: 'Hourly rate must be between 0 and 10,000' });
+    }
+
+    db.prepare(`
+      UPDATE users
+      SET name = COALESCE(?, name), title = COALESCE(?, title), avatar = COALESCE(?, avatar),
+          hourly_rate = COALESCE(?, hourly_rate)
+      WHERE id = ?
+    `).run(
+      name === undefined ? null : String(name).trim(),
+      title === undefined ? null : String(title).trim(),
+      avatar === undefined ? null : String(avatar).trim(),
+      safeRate,
+      req.user.id
+    );
+
+    if (req.user.role === 'freelancer') {
+      db.prepare(`
+        UPDATE talents
+        SET name = COALESCE(?, name), title = COALESCE(?, title), role = COALESCE(?, role),
+            avatar = COALESCE(?, avatar), hourly_rate = COALESCE(?, hourly_rate),
+            location = COALESCE(?, location), about = COALESCE(?, about),
+            skills = COALESCE(?, skills), available = COALESCE(?, available)
+        WHERE user_id = ?
+      `).run(
+        name === undefined ? null : String(name).trim(),
+        title === undefined ? null : String(title).trim(),
+        title === undefined ? null : String(title).trim(),
+        avatar === undefined ? null : String(avatar).trim(),
+        safeRate,
+        location === undefined ? null : String(location).trim(),
+        about === undefined ? null : String(about).trim(),
+        skills === undefined ? null : JSON.stringify(Array.isArray(skills) ? skills.map(String).map((s) => s.trim()).filter(Boolean) : []),
+        available === undefined ? null : (available ? 1 : 0),
+        req.user.id
+      );
+    }
+
+    const user = formatUserRow(db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id));
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error('Profile update error:', err);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
 app.post('/api/auth/forgot-password', authRateLimiter, (req, res) => {
   try {
     const { email } = req.body || {};
     if (!email || !email.includes('@')) {
       return res.status(400).json({ error: 'Please provide a valid email address' });
     }
-    const cleanEmail = email.trim().toLowerCase();
-    const user = db.prepare('SELECT id, email FROM users WHERE email = ?').get(cleanEmail);
     res.json({
       success: true,
-      accountFound: Boolean(user),
-      message: user
-        ? `Password reset instructions dispatched to ${cleanEmail}.`
-        : `If an account exists for ${cleanEmail}, reset instructions have been queued.`,
+      deliveryConfigured: false,
+      message: 'Password-reset email delivery is not configured on localhost. Connect an email provider before enabling this flow.',
     });
   } catch (err) {
     console.error('Forgot password error:', err);
@@ -565,12 +667,12 @@ app.post('/api/auth/forgot-password', authRateLimiter, (req, res) => {
 
 app.get('/api/settings', authenticateToken, (req, res) => {
   try {
-    const userId = req.user ? req.user.id : 'usr-client-1';
+    const userId = req.user.id;
     const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
     const formatted = formatUserRow(userRow);
     res.json({
       workspaceName: formatted?.workspace_name || 'Workverse Ventures',
-      billingEmail: formatted?.billing_email || 'finance@workverse.io',
+      billingEmail: formatted?.billing_email || formatted?.email || '',
       autoEscrowRelease: formatted?.auto_escrow_release ?? true,
       twoFactorAuth: formatted?.two_factor_auth ?? true,
       emailDigest: formatted?.email_digest || 'Daily',
@@ -584,7 +686,7 @@ app.get('/api/settings', authenticateToken, (req, res) => {
 
 app.put('/api/settings', authenticateToken, (req, res) => {
   try {
-    const userId = req.user ? req.user.id : 'usr-client-1';
+    const userId = req.user.id;
     const { workspaceName, billingEmail, autoEscrowRelease, twoFactorAuth, emailDigest } = req.body || {};
 
     db.prepare(`
@@ -618,7 +720,11 @@ app.put('/api/settings', authenticateToken, (req, res) => {
 app.get('/api/talents', (req, res) => {
   try {
     const { search, category, experience } = req.query;
-    let rows = db.prepare('SELECT * FROM talents ORDER BY rating DESC, reviews_count DESC').all().map(formatTalentRow);
+    let rows = db.prepare(`
+      SELECT t.* FROM talents t
+      JOIN users u ON u.id = t.user_id AND u.role = 'freelancer'
+      ORDER BY t.rating DESC, t.reviews_count DESC, t.created_at DESC
+    `).all().map(formatTalentRow);
 
     if (category && category !== 'All Categories') {
       rows = rows.filter((t) => t.category === category);
@@ -645,7 +751,10 @@ app.get('/api/talents', (req, res) => {
 
 app.get('/api/talents/:id', (req, res) => {
   try {
-    const row = db.prepare('SELECT * FROM talents WHERE id = ?').get(req.params.id);
+    const row = db.prepare(`
+      SELECT t.* FROM talents t JOIN users u ON u.id = t.user_id AND u.role = 'freelancer'
+      WHERE t.id = ?
+    `).get(req.params.id);
     if (!row) return res.status(404).json({ error: 'Talent profile not found' });
     res.json(formatTalentRow(row));
   } catch (err) {
@@ -657,10 +766,32 @@ app.get('/api/talents/:id', (req, res) => {
 // ==========================================
 // 4. PROJECTS CONTROLLER
 // ==========================================
-app.get('/api/projects', (req, res) => {
+app.get('/api/projects', optionalAuth, (req, res) => {
   try {
-    const { status, search, category, page, limit, sortBy, sortOrder, paginate } = req.query;
-    let rows = db.prepare('SELECT * FROM projects ORDER BY created_at DESC').all().map(formatProjectRow);
+    const { status, search, category, page, limit, sortBy, sortOrder, paginate, scope } = req.query;
+    let rows = db.prepare(`
+      SELECT p.* FROM projects p
+      JOIN users u ON u.id = p.client_id AND u.role = 'client'
+      ORDER BY p.created_at DESC
+    `).all().map(formatProjectRow);
+
+    if (scope === 'mine') {
+      if (!req.user) return res.status(401).json({ error: 'Authentication token required' });
+      if (req.user.role === 'client') {
+        rows = rows.filter((project) => project.clientId === req.user.id);
+      } else {
+        const projectIds = new Set(
+          db.prepare(`
+            SELECT project_id FROM proposals WHERE candidate_id = ?
+            UNION
+            SELECT p.id AS project_id FROM projects p
+            JOIN contracts c ON c.title = p.title
+            WHERE c.freelancer_id = ?
+          `).all(req.user.id, req.user.id).map((row) => row.project_id).filter(Boolean)
+        );
+        rows = rows.filter((project) => projectIds.has(project.id));
+      }
+    }
 
     if (status && status !== 'All') {
       rows = rows.filter((r) => {
@@ -725,7 +856,10 @@ app.get('/api/projects', (req, res) => {
 
 app.get('/api/projects/:id', (req, res) => {
   try {
-    const row = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
+    const row = db.prepare(`
+      SELECT p.* FROM projects p JOIN users u ON u.id = p.client_id AND u.role = 'client'
+      WHERE p.id = ?
+    `).get(req.params.id);
     if (!row) return res.status(404).json({ error: 'Project not found' });
     res.json(formatProjectRow(row));
   } catch (err) {
@@ -734,7 +868,7 @@ app.get('/api/projects/:id', (req, res) => {
   }
 });
 
-app.post('/api/projects', authenticateToken, (req, res) => {
+app.post('/api/projects', authenticateToken, requireRole('client'), (req, res) => {
   try {
     const {
       title,
@@ -754,8 +888,8 @@ app.post('/api/projects', authenticateToken, (req, res) => {
 
     const numericBudget = parseInt(String(budget).replace(/[^0-9]/g, ''), 10) || 1500;
     const id = `proj-${Date.now()}`;
-    const clientId = req.user ? req.user.id : 'usr-client-1';
-    const clientName = req.user ? req.user.name : 'CloudScale AI';
+    const clientId = req.user.id;
+    const clientName = req.user.name;
     const thumbnail = 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80';
     const teamMembers =
       team.length > 0
@@ -822,6 +956,9 @@ app.patch('/api/projects/:id', authenticateToken, (req, res) => {
   try {
     const existing = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Project not found' });
+    if (existing.client_id !== req.user.id) {
+      return res.status(403).json({ error: 'Only the project owner can update this project' });
+    }
 
     const { status, progress, deadline, budget } = req.body || {};
     db.prepare(`
@@ -843,7 +980,12 @@ app.patch('/api/projects/:id', authenticateToken, (req, res) => {
 
 app.delete('/api/projects/:id', authenticateToken, (req, res) => {
   try {
-    const result = db.prepare('DELETE FROM projects WHERE id = ?').run(req.params.id);
+    const existing = db.prepare('SELECT client_id FROM projects WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Project not found' });
+    if (existing.client_id !== req.user.id) {
+      return res.status(403).json({ error: 'Only the project owner can delete this project' });
+    }
+    const result = db.prepare('DELETE FROM projects WHERE id = ? AND client_id = ?').run(req.params.id, req.user.id);
     if (result.changes === 0) return res.status(404).json({ error: 'Project not found' });
     res.json({ success: true, deletedId: req.params.id });
   } catch (err) {
@@ -857,7 +999,14 @@ app.delete('/api/projects/:id', authenticateToken, (req, res) => {
 // ==========================================
 app.get('/api/kanban', authenticateToken, (req, res) => {
   try {
-    const tasks = db.prepare('SELECT * FROM kanban_tasks ORDER BY created_at DESC').all();
+    const tasks = db.prepare(`
+      SELECT DISTINCT k.*
+      FROM kanban_tasks k
+      LEFT JOIN projects p ON p.id = k.project_id
+      LEFT JOIN contracts c ON c.title = p.title AND c.freelancer_id = ?
+      WHERE k.user_id = ? OR p.client_id = ? OR c.id IS NOT NULL
+      ORDER BY k.created_at DESC
+    `).all(req.user.id, req.user.id, req.user.id);
     res.json(tasks);
   } catch (err) {
     console.error('Fetch kanban tasks error:', err);
@@ -869,7 +1018,8 @@ app.post('/api/kanban', authenticateToken, (req, res) => {
   try {
     const {
       title,
-      project = 'SaaS Dashboard Development',
+      project = '',
+      projectId,
       column = 'backlog',
       priority = 'Medium',
       estimate = '4 hrs',
@@ -884,16 +1034,21 @@ app.post('/api/kanban', authenticateToken, (req, res) => {
     const validCols = ['backlog', 'progress', 'review', 'done'];
     const safeCol = validCols.includes(column) ? column : 'backlog';
 
+    const targetProject = resolveProjectForUser(req.user.id, { projectId, projectTitle: project });
+    if (!targetProject) {
+      return res.status(403).json({ error: 'Choose a project that belongs to your workspace' });
+    }
+
     const id = `kb-${Date.now()}`;
-    const userId = req.user ? req.user.id : 'usr-freelancer-1';
+    const userId = req.user.id;
 
     db.prepare(`
       INSERT INTO kanban_tasks (id, project_id, project, title, column, priority, estimate, assignee, assignee_name, assignee_role, subtasks, user_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
-      'proj-1',
-      project,
+      targetProject.id,
+      targetProject.title,
       title.trim(),
       safeCol,
       priority,
@@ -927,12 +1082,17 @@ app.patch('/api/kanban/:id/column', authenticateToken, (req, res) => {
     if (!existing) {
       return res.status(404).json({ error: 'Kanban task not found' });
     }
+    if (existing.user_id !== req.user.id && !canAccessProject(req.user.id, existing.project_id)) {
+      return res.status(403).json({ error: 'You do not have access to this task' });
+    }
 
     db.prepare('UPDATE kanban_tasks SET column = ? WHERE id = ?').run(column, id);
     const task = db.prepare('SELECT * FROM kanban_tasks WHERE id = ?').get(id);
 
     if (column === 'review') {
+      const projectOwner = task.project_id ? db.prepare('SELECT client_id FROM projects WHERE id = ?').get(task.project_id) : null;
       createNotification({
+        userId: projectOwner?.client_id || req.user.id,
         role: 'client',
         type: 'milestone',
         title: 'Deliverable Ready for Review',
@@ -951,6 +1111,11 @@ app.patch('/api/kanban/:id/column', authenticateToken, (req, res) => {
 
 app.delete('/api/kanban/:id', authenticateToken, (req, res) => {
   try {
+    const existing = db.prepare('SELECT * FROM kanban_tasks WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Kanban task not found' });
+    if (existing.user_id !== req.user.id && !canAccessProject(req.user.id, existing.project_id)) {
+      return res.status(403).json({ error: 'You do not have access to this task' });
+    }
     const result = db.prepare('DELETE FROM kanban_tasks WHERE id = ?').run(req.params.id);
     if (result.changes === 0) return res.status(404).json({ error: 'Kanban task not found' });
     res.json({ success: true, deletedId: req.params.id });
@@ -965,7 +1130,11 @@ app.delete('/api/kanban/:id', authenticateToken, (req, res) => {
 // ==========================================
 app.get('/api/contracts', authenticateToken, (req, res) => {
   try {
-    const rows = db.prepare('SELECT * FROM contracts ORDER BY created_at DESC').all();
+    const rows = db.prepare(`
+      SELECT * FROM contracts
+      WHERE client_id = ? OR freelancer_id = ?
+      ORDER BY created_at DESC
+    `).all(req.user.id, req.user.id);
     res.json(rows.map(formatContractRow));
   } catch (err) {
     console.error('Fetch contracts error:', err);
@@ -973,7 +1142,7 @@ app.get('/api/contracts', authenticateToken, (req, res) => {
   }
 });
 
-app.post('/api/contracts', authenticateToken, (req, res) => {
+app.post('/api/contracts', authenticateToken, requireRole('client'), (req, res) => {
   try {
     const {
       title,
@@ -982,11 +1151,24 @@ app.post('/api/contracts', authenticateToken, (req, res) => {
       budget = '2500',
       type = 'Fixed Price',
       deadline = 'Dec 15, 2026',
+      projectId = null,
     } = req.body || {};
 
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'Contract milestone title is required' });
     }
+
+    const freelancerUser = db.prepare(`
+      SELECT u.* FROM users u
+      WHERE u.role = 'freelancer' AND (
+        u.id = ? OR u.id = (SELECT user_id FROM talents WHERE id = ?)
+      )
+      LIMIT 1
+    `).get(freelancerId || '', freelancerId || '');
+    if (!freelancerUser) {
+      return res.status(400).json({ error: 'Select a registered freelancer before creating a contract' });
+    }
+    const linkedProject = projectId ? db.prepare('SELECT * FROM projects WHERE id = ? AND client_id = ?').get(projectId, req.user.id) : null;
 
     const numericBudget = parseFloat(String(budget).replace(/[^0-9.]/g, '')) || 2500;
     const formattedBudget = `$${numericBudget.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -1020,29 +1202,32 @@ app.post('/api/contracts', authenticateToken, (req, res) => {
       10,
       '0 of 3 approved',
       'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=80',
-      freelancerId || 'usr-freelancer-1',
-      req.user ? req.user.id : 'usr-client-1'
+      freelancerUser.id,
+      req.user.id
     );
 
     // Create funded escrow entry in payments ledger
     const payId = `tx-${Date.now()}`;
     db.prepare(`
-      INSERT INTO payments (id, milestone, project, recipient, recipient_id, amount, status, date, escrow_protected)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO payments (id, milestone, project, recipient, recipient_id, amount, status, date, escrow_protected, client_id, project_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       payId,
       `Escrow Deposit: ${title.trim()}`,
       title.trim(),
-      freelancerName || 'Specialist',
-      freelancerId || 'usr-freelancer-1',
+      freelancerName || freelancerUser.name,
+      freelancerUser.id,
       formattedBudget,
       'In Escrow',
       new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      1
+      1,
+      req.user.id,
+      linkedProject?.id || null
     );
 
     const created = formatContractRow(db.prepare('SELECT * FROM contracts WHERE id = ?').get(id));
     createNotification({
+      userId: freelancerUser.id,
       role: 'freelancer',
       type: 'payment',
       title: `New Escrow Contract Funded (${formattedBudget})`,
@@ -1059,7 +1244,13 @@ app.post('/api/contracts', authenticateToken, (req, res) => {
 
 app.get('/api/proposals', authenticateToken, (req, res) => {
   try {
-    const rows = db.prepare('SELECT * FROM proposals ORDER BY created_at DESC').all();
+    const rows = db.prepare(`
+      SELECT DISTINCT pr.*
+      FROM proposals pr
+      LEFT JOIN projects p ON p.id = pr.project_id
+      WHERE pr.candidate_id = ? OR p.client_id = ?
+      ORDER BY pr.created_at DESC
+    `).all(req.user.id, req.user.id);
     res.json(rows.map(formatProposalRow));
   } catch (err) {
     console.error('Fetch proposals error:', err);
@@ -1067,26 +1258,30 @@ app.get('/api/proposals', authenticateToken, (req, res) => {
   }
 });
 
-app.post('/api/proposals', authenticateToken, (req, res) => {
+app.post('/api/proposals', authenticateToken, requireRole('freelancer'), (req, res) => {
   try {
     const {
-      project_id = 'proj-1',
-      project_title = 'SaaS Dashboard Development',
+      project_id,
+      project_title,
       bid_amount = '$1,500',
       duration = '3 Weeks',
       pitch = 'I will deliver high quality production code with automated test coverage.',
       cover_letter = '',
     } = req.body || {};
 
-    const id = `prop-${Date.now()}`;
-    const candidateId = req.user ? req.user.id : 'usr-freelancer-1';
-    const candidateName = req.user ? req.user.name : 'Arjun Mehta';
-    const candidateTitle = req.user ? req.user.title : 'Senior Full Stack & Cloud Architect';
-    const candidateAvatar = req.user
-      ? req.user.avatar
-      : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80';
+    if (!project_id) return res.status(400).json({ error: 'Project ID is required' });
+    const projRow = db.prepare('SELECT * FROM projects WHERE id = ?').get(project_id);
+    if (!projRow) return res.status(404).json({ error: 'Project not found' });
+    if (projRow.client_id === req.user.id) return res.status(400).json({ error: 'You cannot bid on your own project' });
+    const duplicate = db.prepare('SELECT id FROM proposals WHERE project_id = ? AND candidate_id = ?').get(project_id, req.user.id);
+    if (duplicate) return res.status(409).json({ error: 'You already submitted a proposal for this project' });
 
-    const projRow = db.prepare('SELECT client_name FROM projects WHERE id = ?').get(project_id);
+    const id = `prop-${Date.now()}`;
+    const candidateId = req.user.id;
+    const candidateName = req.user.name;
+    const candidateTitle = req.user.title;
+    const candidateAvatar = req.user.avatar;
+    const talent = db.prepare('SELECT rating, reviews_count FROM talents WHERE user_id = ?').get(req.user.id);
 
     db.prepare(`
       INSERT INTO proposals (id, project_id, project_title, candidate_id, candidate_name, candidate_title, candidate_avatar, candidate_rating, candidate_reviews, bid_amount, duration, status, submitted_date, pitch, client_name, client_avatar, cover_letter)
@@ -1094,28 +1289,29 @@ app.post('/api/proposals', authenticateToken, (req, res) => {
     `).run(
       id,
       project_id,
-      project_title,
+      projRow.title,
       candidateId,
       candidateName,
       candidateTitle,
       candidateAvatar,
-      4.95,
-      128,
+      talent?.rating || 0,
+      talent?.reviews_count || 0,
       bid_amount,
       duration,
       'In Review',
       'Just now',
       pitch,
-      projRow?.client_name || 'Workverse Client',
+      projRow.client_name,
       'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
       cover_letter || pitch
     );
 
     const proposal = formatProposalRow(db.prepare('SELECT * FROM proposals WHERE id = ?').get(id));
     createNotification({
+      userId: projRow.client_id,
       role: 'client',
       type: 'proposal',
-      title: `New Bid on ${project_title}`,
+      title: `New Bid on ${projRow.title}`,
       message: `${candidateName} submitted a proposal for ${bid_amount}.`,
       targetPage: 'projects',
       targetTab: 'proposals',
@@ -1139,6 +1335,10 @@ app.patch('/api/proposals/:id/status', authenticateToken, (req, res) => {
     const existing = db.prepare('SELECT * FROM proposals WHERE id = ?').get(id);
     if (!existing) {
       return res.status(404).json({ error: 'Proposal not found' });
+    }
+    const proposalProject = db.prepare('SELECT * FROM projects WHERE id = ?').get(existing.project_id);
+    if (!proposalProject || proposalProject.client_id !== req.user.id) {
+      return res.status(403).json({ error: 'Only the project owner can update this proposal' });
     }
 
     db.prepare('UPDATE proposals SET status = ? WHERE id = ?').run(status, id);
@@ -1171,13 +1371,14 @@ app.patch('/api/proposals/:id/status', authenticateToken, (req, res) => {
           '0 of 4 approved',
           'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=80',
           existing.candidate_id || 'usr-freelancer-1',
-          req.user?.id || 'usr-client-1'
+          req.user.id
         );
       }
     }
 
     const proposal = formatProposalRow(db.prepare('SELECT * FROM proposals WHERE id = ?').get(id));
     createNotification({
+      userId: existing.candidate_id,
       role: 'freelancer',
       type: 'proposal',
       title: `Proposal ${status}`,
@@ -1195,27 +1396,36 @@ app.patch('/api/proposals/:id/status', authenticateToken, (req, res) => {
 // ==========================================
 // 7. TIME TRACKER & WALLET
 // ==========================================
-app.post('/api/time/log', authenticateToken, (req, res) => {
+app.post('/api/time/log', authenticateToken, requireRole('freelancer'), (req, res) => {
   try {
     const {
       seconds = 0,
-      project_title = 'SaaS Dashboard Development',
-      hourly_rate = 45.0,
+      project_title = '',
       formatted_time = '00:00:00',
     } = req.body || {};
 
-    if (typeof seconds !== 'number' || seconds < 0) {
-      return res.status(400).json({ error: 'Valid non-negative seconds required' });
+    if (typeof seconds !== 'number' || seconds <= 0 || seconds > 86400) {
+      return res.status(400).json({ error: 'Session time must be between 1 second and 24 hours' });
     }
 
-    const amountEarned = Number(((seconds / 3600) * hourly_rate).toFixed(2));
-    const userId = req.user ? req.user.id : 'usr-freelancer-1';
+    const contract = db.prepare(`
+      SELECT id FROM contracts WHERE freelancer_id = ? AND title = ? LIMIT 1
+    `).get(req.user.id, String(project_title).trim());
+    if (!contract) {
+      return res.status(403).json({ error: 'Time can only be logged against one of your awarded contracts' });
+    }
+
+    const account = db.prepare('SELECT hourly_rate FROM users WHERE id = ?').get(req.user.id);
+    const hourlyRate = Number(account?.hourly_rate || 0);
+
+    const amountEarned = Number(((seconds / 3600) * hourlyRate).toFixed(2));
+    const userId = req.user.id;
     const logId = `time-${Date.now()}`;
 
     db.prepare(`
       INSERT INTO time_logs (id, user_id, project_title, seconds, formatted_time, hourly_rate, amount_earned)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(logId, userId, project_title, seconds, formatted_time, hourly_rate, amountEarned);
+    `).run(logId, userId, project_title, seconds, formatted_time, hourlyRate, amountEarned);
 
     db.prepare('UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?').run(amountEarned, userId);
 
@@ -1253,7 +1463,7 @@ app.post('/api/time/log', authenticateToken, (req, res) => {
 
 app.get('/api/time/logs', authenticateToken, (req, res) => {
   try {
-    const userId = req.user ? req.user.id : 'usr-freelancer-1';
+    const userId = req.user.id;
     const logs = db.prepare('SELECT * FROM time_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT 50').all(userId);
     res.json(logs);
   } catch (err) {
@@ -1264,13 +1474,13 @@ app.get('/api/time/logs', authenticateToken, (req, res) => {
 
 app.get('/api/wallet', authenticateToken, (req, res) => {
   try {
-    const userId = req.user ? req.user.id : 'usr-freelancer-1';
+    const userId = req.user.id;
     const user = db.prepare('SELECT wallet_balance, escrow_balance FROM users WHERE id = ?').get(userId);
     const transactions = db.prepare('SELECT * FROM wallet_transactions WHERE user_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 30').all(userId);
 
     res.json({
-      walletBalance: user ? user.wallet_balance : 4250.0,
-      escrowBalance: user ? user.escrow_balance : 8900.0,
+      walletBalance: user ? user.wallet_balance : 0,
+      escrowBalance: user ? user.escrow_balance : 0,
       transactions,
     });
   } catch (err) {
@@ -1288,7 +1498,7 @@ app.post('/api/wallet/withdraw', authenticateToken, (req, res) => {
       return res.status(400).json({ error: 'Valid positive withdrawal amount required' });
     }
 
-    const userId = req.user ? req.user.id : 'usr-freelancer-1';
+    const userId = req.user.id;
     const user = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(userId);
 
     if (!user || user.wallet_balance < withdrawAmt) {
@@ -1343,25 +1553,36 @@ app.post('/api/wallet/withdraw', authenticateToken, (req, res) => {
 // ==========================================
 app.get('/api/messages', authenticateToken, (req, res) => {
   try {
-    const threads = db.prepare('SELECT * FROM message_threads ORDER BY updated_at DESC').all();
-    const allMessages = db.prepare('SELECT * FROM messages ORDER BY created_at ASC').all();
+    const threads = db.prepare(`
+      SELECT * FROM message_threads
+      WHERE participant_id IS NOT NULL AND (owner_id = ? OR participant_id = ?)
+      ORDER BY updated_at DESC
+    `).all(req.user.id, req.user.id);
+    const threadIds = new Set(threads.map((thread) => thread.id));
+    const allMessages = db.prepare('SELECT * FROM messages ORDER BY created_at ASC').all().filter((message) => threadIds.has(message.thread_id));
 
     const result = threads.map((tm) => {
       const msgs = allMessages.filter((m) => m.thread_id === tm.id);
       const last = msgs[msgs.length - 1];
+      const otherUserId = tm.owner_id === req.user.id ? tm.participant_id : tm.owner_id;
+      const otherUser = otherUserId ? db.prepare('SELECT * FROM users WHERE id = ?').get(otherUserId) : null;
       return {
         id: tm.id,
         user: {
-          name: tm.user_name,
-          role: tm.user_role,
-          avatar: tm.user_avatar,
+          id: otherUser?.id || otherUserId || null,
+          name: otherUser?.name || tm.user_name,
+          role: otherUser?.title || tm.user_role,
+          avatar: otherUser?.avatar || tm.user_avatar,
           online: Boolean(tm.user_online),
         },
         project: tm.project,
         lastMessage: last ? last.text : 'Conversation started',
         time: last ? last.time : 'Today',
         unread: tm.unread || 0,
-        messages: msgs,
+        messages: msgs.map((message) => ({
+          ...message,
+          sender: message.sender_id ? (message.sender_id === req.user.id ? 'you' : 'them') : message.sender,
+        })),
       };
     });
 
@@ -1379,6 +1600,7 @@ app.post('/api/messages', authenticateToken, (req, res) => {
       text,
       project = 'SaaS Dashboard Development',
       recipientName,
+      recipientId,
       recipientRole = 'Verified Specialist',
       recipientAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
     } = req.body || {};
@@ -1390,34 +1612,71 @@ app.post('/api/messages', authenticateToken, (req, res) => {
     let targetThreadId = thread_id;
 
     // Look up or dynamically create thread when messaging from Find Talent / Profile
-    if (!targetThreadId && recipientName) {
-      const existingThread = db.prepare('SELECT id FROM message_threads WHERE LOWER(user_name) = LOWER(?)').get(recipientName.trim());
+    if (targetThreadId) {
+      const existingThread = db.prepare('SELECT * FROM message_threads WHERE id = ?').get(targetThreadId);
+      if (!existingThread) return res.status(404).json({ error: 'Conversation not found' });
+      if (existingThread.owner_id !== req.user.id && existingThread.participant_id !== req.user.id) {
+        return res.status(403).json({ error: 'You do not have access to this conversation' });
+      }
+    }
+
+    let recipientUser = null;
+    if (!targetThreadId && (recipientId || recipientName)) {
+      recipientUser = db.prepare(`
+        SELECT u.* FROM users u
+        WHERE u.id = ?
+           OR u.id = (SELECT user_id FROM talents WHERE id = ?)
+           OR lower(u.name) = lower(?)
+        LIMIT 1
+      `).get(recipientId || '', recipientId || '', (recipientName || '').trim());
+      if (!recipientUser) return res.status(404).json({ error: 'The recipient must be a registered Workverse user' });
+      if (recipientUser.id === req.user.id) return res.status(400).json({ error: 'You cannot message yourself' });
+
+      const existingThread = db.prepare(`
+        SELECT id FROM message_threads
+        WHERE (owner_id = ? AND participant_id = ?) OR (owner_id = ? AND participant_id = ?)
+        ORDER BY updated_at DESC LIMIT 1
+      `).get(req.user.id, recipientUser.id, recipientUser.id, req.user.id);
       if (existingThread) {
         targetThreadId = existingThread.id;
       } else {
         targetThreadId = `thread-${Date.now()}`;
         db.prepare(`
-          INSERT INTO message_threads (id, user_name, user_role, user_avatar, user_online, project, unread)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run(targetThreadId, recipientName.trim(), recipientRole, recipientAvatar, 1, project, 0);
+          INSERT INTO message_threads (id, user_name, user_role, user_avatar, user_online, project, unread, owner_id, participant_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          targetThreadId,
+          recipientUser.name,
+          recipientUser.title || recipientRole,
+          recipientUser.avatar || recipientAvatar,
+          1,
+          project,
+          0,
+          req.user.id,
+          recipientUser.id
+        );
       }
     }
 
     if (!targetThreadId) {
-      targetThreadId = 'thread-1';
+      return res.status(400).json({ error: 'Conversation or recipient is required' });
     }
+
+    const thread = db.prepare('SELECT * FROM message_threads WHERE id = ?').get(targetThreadId);
+    const notifyUserId = thread.owner_id === req.user.id ? thread.participant_id : thread.owner_id;
 
     const id = `msg-${Date.now()}`;
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     db.prepare(`
-      INSERT INTO messages (id, thread_id, project, sender, text, time)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, targetThreadId, project, 'you', text.trim(), timeStr);
+      INSERT INTO messages (id, thread_id, project, sender, text, time, sender_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, targetThreadId, project, 'you', text.trim(), timeStr, req.user.id);
 
     db.prepare("UPDATE message_threads SET updated_at = datetime('now') WHERE id = ?").run(targetThreadId);
 
     createNotification({
+      userId: notifyUserId,
       role: 'all',
       type: 'message',
       title: `New Message: ${project || 'Workspace Chat'}`,
@@ -1439,7 +1698,15 @@ app.post('/api/messages', authenticateToken, (req, res) => {
 // ==========================================
 app.get('/api/files', authenticateToken, (req, res) => {
   try {
-    const files = db.prepare('SELECT * FROM files ORDER BY created_at DESC').all();
+    const files = db.prepare(`
+      SELECT DISTINCT f.id, f.name, f.size, f.type, f.uploaded_by, f.date, f.project,
+        f.user_id, f.project_id, f.mime_type, f.created_at
+      FROM files f
+      LEFT JOIN projects p ON p.id = f.project_id
+      LEFT JOIN contracts c ON c.title = p.title AND c.freelancer_id = ?
+      WHERE f.content_base64 IS NOT NULL AND (f.user_id = ? OR p.client_id = ? OR c.id IS NOT NULL)
+      ORDER BY f.created_at DESC
+    `).all(req.user.id, req.user.id, req.user.id);
     res.json(files);
   } catch (err) {
     console.error('Fetch files error:', err);
@@ -1449,22 +1716,31 @@ app.get('/api/files', authenticateToken, (req, res) => {
 
 app.post('/api/files', authenticateToken, (req, res) => {
   try {
-    const { name, size = '14.2 MB', project = 'SaaS Dashboard Development' } = req.body || {};
+    const { name, size = 'Unknown', project = '', projectId, mimeType = 'application/octet-stream', contentBase64 } = req.body || {};
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'File name is required' });
     }
+    if (!contentBase64 || typeof contentBase64 !== 'string') {
+      return res.status(400).json({ error: 'Choose a real file to upload' });
+    }
+    if (contentBase64.length > 14 * 1024 * 1024) {
+      return res.status(413).json({ error: 'File exceeds the 10 MB local upload limit' });
+    }
+
+    const targetProject = resolveProjectForUser(req.user.id, { projectId, projectTitle: project });
+    if (!targetProject) return res.status(403).json({ error: 'Choose a project that belongs to your workspace' });
 
     const id = `f-${Date.now()}`;
     const type = name.endsWith('.pdf') ? 'pdf' : name.endsWith('.fig') ? 'figma' : 'archive';
     const uploadedBy = req.user ? req.user.name : 'You';
 
     db.prepare(`
-      INSERT INTO files (id, name, size, type, uploaded_by, date, project)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, name.trim(), size, type, uploadedBy, 'Today', project);
+      INSERT INTO files (id, name, size, type, uploaded_by, date, project, user_id, project_id, mime_type, content_base64)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, name.trim(), size, type, uploadedBy, 'Today', targetProject.title, req.user.id, targetProject.id, mimeType, contentBase64);
 
-    const file = db.prepare('SELECT * FROM files WHERE id = ?').get(id);
+    const file = db.prepare(`SELECT id, name, size, type, uploaded_by, date, project, user_id, project_id, mime_type, created_at FROM files WHERE id = ?`).get(id);
     res.status(201).json({ success: true, file });
   } catch (err) {
     console.error('Upload file error:', err);
@@ -1472,8 +1748,32 @@ app.post('/api/files', authenticateToken, (req, res) => {
   }
 });
 
+app.get('/api/files/:id/download', authenticateToken, (req, res) => {
+  try {
+    const file = db.prepare('SELECT * FROM files WHERE id = ?').get(req.params.id);
+    if (!file) return res.status(404).json({ error: 'File not found' });
+    if (!file.content_base64) return res.status(404).json({ error: 'This legacy file has no uploaded content' });
+    if (file.user_id !== req.user.id && !canAccessProject(req.user.id, file.project_id)) {
+      return res.status(403).json({ error: 'You do not have access to this file' });
+    }
+    const safeName = String(file.name).replace(/[\r\n"\\]/g, '_');
+    res.setHeader('Content-Type', file.mime_type || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+    res.send(Buffer.from(file.content_base64, 'base64'));
+  } catch (err) {
+    console.error('Download file error:', err);
+    res.status(500).json({ error: 'Failed to download file' });
+  }
+});
+
 app.delete('/api/files/:id', authenticateToken, (req, res) => {
   try {
+    const existing = db.prepare('SELECT * FROM files WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'File not found' });
+    const project = existing.project_id ? db.prepare('SELECT client_id FROM projects WHERE id = ?').get(existing.project_id) : null;
+    if (existing.user_id !== req.user.id && project?.client_id !== req.user.id) {
+      return res.status(403).json({ error: 'Only the uploader or project owner can delete this file' });
+    }
     const result = db.prepare('DELETE FROM files WHERE id = ?').run(req.params.id);
     if (result.changes === 0) return res.status(404).json({ error: 'File not found' });
     res.json({ success: true, deletedId: req.params.id });
@@ -1485,7 +1785,11 @@ app.delete('/api/files/:id', authenticateToken, (req, res) => {
 
 app.get('/api/team', authenticateToken, (req, res) => {
   try {
-    const team = db.prepare('SELECT * FROM team_members ORDER BY created_at DESC').all();
+    const team = db.prepare(`
+      SELECT * FROM team_members
+      WHERE (owner_id = ? AND (member_user_id IS NOT NULL OR email != '')) OR member_user_id = ?
+      ORDER BY created_at DESC
+    `).all(req.user.id, req.user.id);
     res.json(team);
   } catch (err) {
     console.error('Fetch team error:', err);
@@ -1493,26 +1797,50 @@ app.get('/api/team', authenticateToken, (req, res) => {
   }
 });
 
-app.post('/api/team', authenticateToken, (req, res) => {
+app.post('/api/team', authenticateToken, requireRole('client'), (req, res) => {
   try {
-    const { name, email, role = 'Contributor', project = 'SaaS Dashboard Development' } = req.body || {};
+    const { name, email, role = 'Contributor', project = '', projectId } = req.body || {};
     const memberName = name || (email ? email.split('@')[0] : null);
     if (!memberName) return res.status(400).json({ error: 'Email or name is required' });
 
+    const targetProject = resolveProjectForUser(req.user.id, { projectId, projectTitle: project });
+    if (!targetProject || targetProject.client_id !== req.user.id) {
+      return res.status(403).json({ error: 'Only the owner can invite people to this project' });
+    }
+    const memberUser = email
+      ? db.prepare('SELECT * FROM users WHERE lower(email) = lower(?)').get(email.trim())
+      : db.prepare('SELECT * FROM users WHERE lower(name) = lower(?)').get(memberName);
+
     const id = `tm-${Date.now()}`;
     db.prepare(`
-      INSERT INTO team_members (id, name, role, project, status, hourly, avatar, permission)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO team_members (id, name, role, project, status, hourly, avatar, permission, owner_id, member_user_id, email, project_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       memberName,
       role,
-      project,
-      'Active',
+      targetProject.title,
+      memberUser ? 'Active' : 'Invited',
       '$40/hr',
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-      'Editor'
+      'Editor',
+      req.user.id,
+      memberUser?.id || null,
+      email?.trim().toLowerCase() || memberUser?.email || '',
+      targetProject.id
     );
+
+    if (memberUser) {
+      createNotification({
+        userId: memberUser.id,
+        role: memberUser.role,
+        type: 'team',
+        title: `Added to ${targetProject.title}`,
+        message: `${req.user.name} added you as ${role}.`,
+        targetPage: 'projects',
+        targetTab: 'team',
+      });
+    }
 
     const member = db.prepare('SELECT * FROM team_members WHERE id = ?').get(id);
     res.status(201).json({ success: true, member });
@@ -1524,7 +1852,11 @@ app.post('/api/team', authenticateToken, (req, res) => {
 
 app.get('/api/payments', authenticateToken, (req, res) => {
   try {
-    const payments = db.prepare('SELECT * FROM payments ORDER BY created_at DESC').all();
+    const payments = db.prepare(`
+      SELECT * FROM payments
+      WHERE client_id = ? OR recipient_id = ?
+      ORDER BY created_at DESC
+    `).all(req.user.id, req.user.id);
     res.json(
       payments.map((p) => ({
         ...p,
@@ -1545,8 +1877,14 @@ app.patch('/api/payments/:id/release', authenticateToken, (req, res) => {
     if (!payment) {
       return res.status(404).json({ error: 'Payment record not found' });
     }
+    if (payment.client_id !== req.user.id) {
+      return res.status(403).json({ error: 'Only the client who funded this payment can release it' });
+    }
     if (payment.status === 'Released') {
       return res.status(400).json({ error: 'Escrow payment has already been released' });
+    }
+    if (payment.status === 'Disputed') {
+      return res.status(409).json({ error: 'This payment is frozen while an open dispute is reviewed' });
     }
 
     db.prepare('UPDATE payments SET status = ? WHERE id = ?').run('Released', id);
@@ -1564,6 +1902,7 @@ app.patch('/api/payments/:id/release', authenticateToken, (req, res) => {
     }
 
     createNotification({
+      userId: payment.recipient_id,
       role: 'freelancer',
       type: 'payment',
       title: `Escrow Payment Released (${payment.amount})`,
@@ -1581,6 +1920,60 @@ app.patch('/api/payments/:id/release', authenticateToken, (req, res) => {
   } catch (err) {
     console.error('Release payment error:', err);
     res.status(500).json({ error: 'Failed to release escrow payment' });
+  }
+});
+
+app.get('/api/disputes', authenticateToken, (req, res) => {
+  try {
+    const disputes = db.prepare(`
+      SELECT d.*, c.title AS contract_title
+      FROM disputes d
+      LEFT JOIN contracts c ON c.id = d.contract_id
+      WHERE d.opened_by = ? OR d.against_user_id = ?
+      ORDER BY d.created_at DESC
+    `).all(req.user.id, req.user.id);
+    res.json(disputes);
+  } catch (err) {
+    console.error('Fetch disputes error:', err);
+    res.status(500).json({ error: 'Failed to load disputes' });
+  }
+});
+
+app.post('/api/disputes', authenticateToken, (req, res) => {
+  try {
+    const { contractId, contractTitle, reason, notes = '' } = req.body || {};
+    if (!reason || !String(reason).trim()) return res.status(400).json({ error: 'Dispute reason is required' });
+    const contract = contractId
+      ? db.prepare('SELECT * FROM contracts WHERE id = ?').get(contractId)
+      : db.prepare('SELECT * FROM contracts WHERE title = ? AND (client_id = ? OR freelancer_id = ?) ORDER BY created_at DESC LIMIT 1').get(contractTitle || '', req.user.id, req.user.id);
+    if (!contract) return res.status(404).json({ error: 'Contract not found' });
+    if (contract.client_id !== req.user.id && contract.freelancer_id !== req.user.id) {
+      return res.status(403).json({ error: 'You are not a participant in this contract' });
+    }
+    const againstUserId = contract.client_id === req.user.id ? contract.freelancer_id : contract.client_id;
+    const id = `dsp-${Date.now()}`;
+    db.prepare(`
+      INSERT INTO disputes (id, contract_id, opened_by, against_user_id, reason, notes, status)
+      VALUES (?, ?, ?, ?, ?, ?, 'Open')
+    `).run(id, contract.id, req.user.id, againstUserId, String(reason).trim(), String(notes).trim());
+    db.prepare(`
+      UPDATE payments SET status = 'Disputed'
+      WHERE status != 'Released' AND project = ? AND (client_id = ? OR recipient_id = ?)
+    `).run(contract.title, req.user.id, req.user.id);
+    createNotification({
+      userId: againstUserId,
+      role: 'all',
+      type: 'dispute',
+      title: `Dispute opened: ${contract.title}`,
+      message: String(reason).trim(),
+      targetPage: 'projects',
+      targetTab: 'settings',
+    });
+    const dispute = db.prepare('SELECT * FROM disputes WHERE id = ?').get(id);
+    res.status(201).json({ success: true, dispute });
+  } catch (err) {
+    console.error('Create dispute error:', err);
+    res.status(500).json({ error: 'Failed to open dispute' });
   }
 });
 
@@ -1623,7 +2016,7 @@ app.post('/api/subscriptions', authenticateToken, (req, res) => {
     const plan = db.prepare('SELECT * FROM pricing_plans WHERE id = ?').get(planId);
     if (!plan) return res.status(404).json({ error: 'Selected plan does not exist' });
 
-    const userId = req.user ? req.user.id : 'usr-client-1';
+    const userId = req.user.id;
     db.prepare('UPDATE users SET subscription_plan = ?, billing_cycle = ? WHERE id = ?').run(planId, billingCycle, userId);
 
     res.json({
@@ -1667,9 +2060,9 @@ app.get('/api/resources', (req, res) => {
 
 app.get('/api/bookmarks', authenticateToken, (req, res) => {
   try {
-    const userId = req.user ? req.user.id : 'default';
+    const userId = req.user.id;
     const { type } = req.query;
-    let rows = db.prepare('SELECT * FROM bookmarks WHERE user_id = ? OR user_id = ?').all(userId, 'default');
+    let rows = db.prepare('SELECT * FROM bookmarks WHERE user_id = ?').all(userId);
     if (type) {
       rows = rows.filter((r) => r.item_type === type);
     }
@@ -1686,7 +2079,7 @@ app.post('/api/bookmarks/toggle', authenticateToken, (req, res) => {
     if (!itemType || !itemId) {
       return res.status(400).json({ error: 'itemType and itemId are required' });
     }
-    const userId = req.user ? req.user.id : 'default';
+    const userId = req.user.id;
     const existing = db.prepare('SELECT id FROM bookmarks WHERE user_id = ? AND item_type = ? AND item_id = ?').get(userId, itemType, itemId);
 
     let saved;
@@ -1730,13 +2123,13 @@ app.get('/api/search', (req, res) => {
   try {
     const q = (req.query.q || '').toString().trim().toLowerCase();
     const talents = db
-      .prepare('SELECT * FROM talents')
+      .prepare(`SELECT t.* FROM talents t JOIN users u ON u.id = t.user_id AND u.role = 'freelancer'`)
       .all()
       .map(formatTalentRow)
       .filter((t) => !q || t.name.toLowerCase().includes(q) || t.title.toLowerCase().includes(q) || t.skills.some((s) => s.toLowerCase().includes(q)));
 
     const projects = db
-      .prepare('SELECT * FROM projects')
+      .prepare(`SELECT p.* FROM projects p JOIN users u ON u.id = p.client_id AND u.role = 'client'`)
       .all()
       .map(formatProjectRow)
       .filter((p) => !q || p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.skills.some((s) => s.toLowerCase().includes(q)));
@@ -1785,9 +2178,8 @@ function formatNotificationRow(row) {
 }
 
 function resolveNotificationScope(req) {
-  const activeUserId = req.user?.id || 'all';
-  const requestedRole = (req.query.role || req.body?.role || req.user?.role || 'client').toString();
-  const activeRole = requestedRole === 'freelancer' ? 'freelancer' : 'client';
+  const activeUserId = req.user.id;
+  const activeRole = req.user.role;
   return { activeUserId, activeRole };
 }
 
@@ -1797,7 +2189,7 @@ app.get('/api/notifications', authenticateToken, (req, res) => {
     const rows = db
       .prepare(
         `SELECT * FROM notifications
-         WHERE (user_id = ? OR user_id = 'all') AND (role = ? OR role = 'all')
+         WHERE user_id = ? AND (role = ? OR role = 'all')
          ORDER BY created_at DESC, rowid DESC
          LIMIT 40`
       )
@@ -1806,7 +2198,7 @@ app.get('/api/notifications', authenticateToken, (req, res) => {
     const unreadRow = db
       .prepare(
         `SELECT COUNT(*) as count FROM notifications
-         WHERE is_read = 0 AND (user_id = ? OR user_id = 'all') AND (role = ? OR role = 'all')`
+         WHERE is_read = 0 AND user_id = ? AND (role = ? OR role = 'all')`
       )
       .get(activeUserId, activeRole);
 
@@ -1826,7 +2218,7 @@ app.patch('/api/notifications/read-all', authenticateToken, (req, res) => {
     db.prepare(
       `UPDATE notifications
        SET is_read = 1
-       WHERE is_read = 0 AND (user_id = ? OR user_id = 'all') AND (role = ? OR role = 'all')`
+       WHERE is_read = 0 AND user_id = ? AND (role = ? OR role = 'all')`
     ).run(activeUserId, activeRole);
 
     res.json({ success: true, unreadCount: 0 });
@@ -1843,6 +2235,9 @@ app.patch('/api/notifications/:id/read', authenticateToken, (req, res) => {
     if (!existing) {
       return res.status(404).json({ error: 'Notification not found' });
     }
+    if (existing.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'You do not have access to this notification' });
+    }
 
     db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ?').run(id);
     const updated = db.prepare('SELECT * FROM notifications WHERE id = ?').get(id);
@@ -1850,7 +2245,7 @@ app.patch('/api/notifications/:id/read', authenticateToken, (req, res) => {
     const unreadRow = db
       .prepare(
         `SELECT COUNT(*) as count FROM notifications
-         WHERE is_read = 0 AND (user_id = ? OR user_id = 'all') AND (role = ? OR role = 'all')`
+         WHERE is_read = 0 AND user_id = ? AND (role = ? OR role = 'all')`
       )
       .get(activeUserId, activeRole);
 
@@ -1872,6 +2267,9 @@ app.delete('/api/notifications/:id', authenticateToken, (req, res) => {
     if (!existing) {
       return res.status(404).json({ error: 'Notification not found' });
     }
+    if (existing.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'You do not have access to this notification' });
+    }
     db.prepare('DELETE FROM notifications WHERE id = ?').run(id);
     res.json({ success: true, id });
   } catch (err) {
@@ -1883,13 +2281,14 @@ app.delete('/api/notifications/:id', authenticateToken, (req, res) => {
 // ==========================================
 // 10C. WORKSPACE DATA EXPORT & IMPORT
 // ==========================================
-app.get('/api/workspace/export', (req, res) => {
+app.get('/api/workspace/export', authenticateToken, (req, res) => {
   try {
-    const projects = db.prepare('SELECT * FROM projects ORDER BY created_at DESC').all().map(formatProjectRow);
-    const kanbanTasks = db.prepare('SELECT * FROM kanban_tasks ORDER BY created_at DESC').all();
-    const contracts = db.prepare('SELECT * FROM contracts ORDER BY created_at DESC').all().map(formatContractRow);
-    const proposals = db.prepare('SELECT * FROM proposals ORDER BY created_at DESC').all().map(formatProposalRow);
-    const files = db.prepare('SELECT * FROM files ORDER BY created_at DESC').all();
+    const projects = db.prepare('SELECT * FROM projects ORDER BY created_at DESC').all().map(formatProjectRow).filter((project) => canAccessProject(req.user.id, project.id));
+    const projectIds = new Set(projects.map((project) => project.id));
+    const kanbanTasks = db.prepare('SELECT * FROM kanban_tasks ORDER BY created_at DESC').all().filter((task) => task.user_id === req.user.id || projectIds.has(task.project_id));
+    const contracts = db.prepare('SELECT * FROM contracts WHERE client_id = ? OR freelancer_id = ? ORDER BY created_at DESC').all(req.user.id, req.user.id).map(formatContractRow);
+    const proposals = db.prepare(`SELECT pr.* FROM proposals pr LEFT JOIN projects p ON p.id = pr.project_id WHERE pr.candidate_id = ? OR p.client_id = ? ORDER BY pr.created_at DESC`).all(req.user.id, req.user.id).map(formatProposalRow);
+    const files = db.prepare('SELECT * FROM files ORDER BY created_at DESC').all().filter((file) => file.user_id === req.user.id || projectIds.has(file.project_id));
 
     res.json({
       platform: 'Workverse',
@@ -1919,10 +2318,10 @@ app.get('/api/workspace/export', (req, res) => {
 // ==========================================
 // 10E. FINANCIAL TRANSACTIONS & ESCROW CSV EXPORT
 // ==========================================
-app.get('/api/finances/export', (req, res) => {
+app.get('/api/finances/export', authenticateToken, (req, res) => {
   try {
-    const transactions = db.prepare('SELECT * FROM wallet_transactions ORDER BY created_at DESC').all();
-    const payments = db.prepare('SELECT * FROM payments ORDER BY created_at DESC').all();
+    const transactions = db.prepare('SELECT * FROM wallet_transactions WHERE user_id = ? ORDER BY created_at DESC').all(req.user.id);
+    const payments = db.prepare('SELECT * FROM payments WHERE client_id = ? OR recipient_id = ? ORDER BY created_at DESC').all(req.user.id, req.user.id);
 
     function escapeCsv(val) {
       if (val === null || val === undefined) return '""';
@@ -1984,11 +2383,11 @@ app.get('/api/finances/export', (req, res) => {
 // ==========================================
 // 10D. COMPLIANCE AUDIT LOGGING
 // ==========================================
-app.get('/api/audit-logs', (req, res) => {
+app.get('/api/audit-logs', authenticateToken, (req, res) => {
   try {
-    const { action, entity_type, user_id, limit = 50 } = req.query;
-    let query = 'SELECT * FROM audit_logs WHERE 1=1';
-    const params = [];
+    const { action, entity_type, limit = 50 } = req.query;
+    let query = 'SELECT * FROM audit_logs WHERE user_id = ?';
+    const params = [req.user.id];
 
     if (action) {
       query += ' AND action = ?';
@@ -1998,11 +2397,6 @@ app.get('/api/audit-logs', (req, res) => {
       query += ' AND entity_type = ?';
       params.push(entity_type);
     }
-    if (user_id) {
-      query += ' AND user_id = ?';
-      params.push(user_id);
-    }
-
     query += ' ORDER BY timestamp DESC LIMIT ?';
     params.push(Math.min(parseInt(limit, 10) || 50, 200));
 
@@ -2014,7 +2408,7 @@ app.get('/api/audit-logs', (req, res) => {
   }
 });
 
-app.post('/api/audit-logs', (req, res) => {
+app.post('/api/audit-logs', authenticateToken, (req, res) => {
   try {
     const { action, entity_type, entity_id, details } = req.body || {};
     if (!action || !entity_type) {
