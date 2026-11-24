@@ -2,7 +2,9 @@ const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 const bcrypt = require('bcryptjs');
 
-const dbPath = path.resolve(__dirname, 'database.sqlite');
+const dbPath = process.env.WORKVERSE_DB_PATH
+  ? path.resolve(process.env.WORKVERSE_DB_PATH)
+  : path.resolve(__dirname, 'database.sqlite');
 const db = new DatabaseSync(dbPath);
 
 // Enable WAL mode for high concurrency & integrity
@@ -306,6 +308,17 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   ip_address TEXT DEFAULT '127.0.0.1',
   timestamp TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS disputes (
+  id TEXT PRIMARY KEY,
+  contract_id TEXT,
+  opened_by TEXT NOT NULL,
+  against_user_id TEXT,
+  reason TEXT NOT NULL,
+  notes TEXT,
+  status TEXT NOT NULL DEFAULT 'Open',
+  created_at TEXT DEFAULT (datetime('now'))
+);
 `);
 
 // Upgrade existing tables if database.sqlite came from an earlier version
@@ -323,6 +336,81 @@ ensureColumn('projects', 'featured', 'INTEGER DEFAULT 0');
 ensureColumn('projects', 'team_extra', 'INTEGER DEFAULT 0');
 ensureColumn('projects', 'type', "TEXT DEFAULT 'dev'");
 
+// User/workspace ownership added in v1.6. These columns intentionally use
+// additive migrations so existing local databases keep working.
+ensureColumn('message_threads', 'owner_id', 'TEXT');
+ensureColumn('message_threads', 'participant_id', 'TEXT');
+ensureColumn('messages', 'sender_id', 'TEXT');
+ensureColumn('files', 'user_id', 'TEXT');
+ensureColumn('files', 'project_id', 'TEXT');
+ensureColumn('files', 'mime_type', "TEXT DEFAULT 'application/octet-stream'");
+ensureColumn('files', 'content_base64', 'TEXT');
+ensureColumn('team_members', 'owner_id', 'TEXT');
+ensureColumn('team_members', 'member_user_id', 'TEXT');
+ensureColumn('team_members', 'email', "TEXT DEFAULT ''");
+ensureColumn('team_members', 'project_id', 'TEXT');
+ensureColumn('payments', 'client_id', 'TEXT');
+ensureColumn('payments', 'project_id', 'TEXT');
+
+// Scope legacy demo records to the demo workspaces instead of exposing them to
+// every newly registered account.
+db.exec(`
+  UPDATE message_threads SET owner_id = COALESCE(owner_id, 'usr-client-1');
+  UPDATE message_threads
+  SET participant_id = COALESCE(
+    participant_id,
+    (SELECT u.id FROM users u WHERE lower(u.name) = lower(message_threads.user_name) LIMIT 1)
+  );
+  UPDATE messages
+  SET sender_id = COALESCE(
+    sender_id,
+    CASE
+      WHEN sender = 'you' THEN (SELECT owner_id FROM message_threads t WHERE t.id = messages.thread_id)
+      ELSE (SELECT participant_id FROM message_threads t WHERE t.id = messages.thread_id)
+    END
+  );
+  UPDATE files
+  SET project_id = COALESCE(
+        project_id,
+        (SELECT p.id FROM projects p WHERE lower(p.title) = lower(files.project) LIMIT 1)
+      ),
+      user_id = COALESCE(
+        user_id,
+        (SELECT u.id FROM users u WHERE lower(u.name) = lower(files.uploaded_by) LIMIT 1),
+        'usr-client-1'
+      );
+  UPDATE team_members
+  SET project_id = COALESCE(
+        project_id,
+        (SELECT p.id FROM projects p WHERE lower(p.title) = lower(team_members.project) LIMIT 1)
+      ),
+      owner_id = COALESCE(
+        (SELECT p.client_id FROM projects p WHERE p.id = team_members.project_id LIMIT 1),
+        owner_id,
+        'usr-client-1'
+      ),
+      member_user_id = COALESCE(
+        member_user_id,
+        (SELECT u.id FROM users u WHERE lower(u.name) = lower(team_members.name) LIMIT 1)
+      );
+  UPDATE payments
+  SET project_id = COALESCE(
+        project_id,
+        (SELECT p.id FROM projects p WHERE lower(p.title) = lower(payments.project) LIMIT 1)
+      ),
+      client_id = COALESCE(
+        (SELECT p.client_id FROM projects p WHERE p.id = payments.project_id LIMIT 1),
+        client_id,
+        'usr-client-1'
+      );
+  UPDATE notifications
+  SET user_id = CASE
+    WHEN user_id = 'all' AND role = 'client' THEN 'usr-client-1'
+    WHEN user_id = 'all' AND role = 'freelancer' THEN 'usr-freelancer-1'
+    ELSE user_id
+  END;
+`);
+
 // High-Performance Query & Foreign Key Indexes
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
@@ -333,24 +421,30 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_contracts_freelancer_id ON contracts(freelancer_id);
   CREATE INDEX IF NOT EXISTS idx_contracts_client_name ON contracts(client_name);
   CREATE INDEX IF NOT EXISTS idx_messages_thread_id ON messages(thread_id);
+  CREATE INDEX IF NOT EXISTS idx_message_threads_owner ON message_threads(owner_id, participant_id);
+  CREATE INDEX IF NOT EXISTS idx_files_project_user ON files(project_id, user_id);
+  CREATE INDEX IF NOT EXISTS idx_team_owner_project ON team_members(owner_id, project_id);
   CREATE INDEX IF NOT EXISTS idx_payments_recipient ON payments(recipient);
+  CREATE INDEX IF NOT EXISTS idx_payments_client_project ON payments(client_id, project_id);
   CREATE INDEX IF NOT EXISTS idx_wallet_tx_user_id ON wallet_transactions(user_id);
   CREATE INDEX IF NOT EXISTS idx_bookmarks_user ON bookmarks(user_id, item_type);
   CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
   CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp DESC);
   CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
   CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+  CREATE INDEX IF NOT EXISTS idx_disputes_users ON disputes(opened_by, against_user_id);
 `);
 
 // ==========================================
 // 2. IDEMPOTENT PER-TABLE SEEDING
 // ==========================================
 function seedDatabase() {
+  const shouldSeedDemo = process.env.WORKVERSE_SEED_DEMO_DATA === 'true';
   const passwordHash = bcrypt.hashSync('password123', 10);
 
   // 2.1 Seed Users
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-  if (userCount === 0) {
+  if (shouldSeedDemo && userCount === 0) {
     console.log('Seeding real user accounts...');
     const insertUser = db.prepare(`
       INSERT INTO users (id, name, email, password, role, title, avatar, wallet_balance, escrow_balance, hourly_rate, billing_email)
@@ -388,7 +482,7 @@ function seedDatabase() {
 
   // 2.2 Seed Talents Directory
   const talentCount = db.prepare('SELECT COUNT(*) as count FROM talents').get().count;
-  if (talentCount === 0) {
+  if (shouldSeedDemo && talentCount === 0) {
     console.log('Seeding verified talents roster into SQLite...');
     const insertTalent = db.prepare(`
       INSERT INTO talents (
@@ -750,7 +844,7 @@ function seedDatabase() {
 
   // 2.3 Seed Projects
   const projCount = db.prepare('SELECT COUNT(*) as count FROM projects').get().count;
-  if (projCount === 0) {
+  if (shouldSeedDemo && projCount === 0) {
     console.log('Seeding projects...');
     const insertProject = db.prepare(`
       INSERT INTO projects (id, title, category, description, budget, budget_min, budget_max, budget_type, duration, skills, featured, status, progress, deadline, client_id, client_name, client_rating, thumbnail, team, team_extra, type)
@@ -779,7 +873,7 @@ function seedDatabase() {
   }
 
   // 2.4 Seed Kanban Tasks
-  if (db.prepare('SELECT COUNT(*) as count FROM kanban_tasks').get().count === 0) {
+  if (shouldSeedDemo && db.prepare('SELECT COUNT(*) as count FROM kanban_tasks').get().count === 0) {
     const insertTask = db.prepare(`
       INSERT INTO kanban_tasks (id, project_id, project, title, column, priority, estimate, assignee, assignee_name, assignee_role, subtasks, user_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -794,7 +888,7 @@ function seedDatabase() {
   }
 
   // 2.5 Seed Contracts
-  if (db.prepare('SELECT COUNT(*) as count FROM contracts').get().count === 0) {
+  if (shouldSeedDemo && db.prepare('SELECT COUNT(*) as count FROM contracts').get().count === 0) {
     const insertContract = db.prepare(`
       INSERT INTO contracts (id, title, client_name, client_company, client_avatar, type, rate, weekly_limit, total_earned, escrow_locked, current_milestone, deadline, status, progress, milestones_count, thumbnail, freelancer_id, client_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -805,7 +899,7 @@ function seedDatabase() {
   }
 
   // 2.6 Seed Proposals
-  if (db.prepare('SELECT COUNT(*) as count FROM proposals').get().count === 0) {
+  if (shouldSeedDemo && db.prepare('SELECT COUNT(*) as count FROM proposals').get().count === 0) {
     const insertProposal = db.prepare(`
       INSERT INTO proposals (id, project_id, project_title, candidate_id, candidate_name, candidate_title, candidate_avatar, candidate_rating, candidate_reviews, bid_amount, duration, status, submitted_date, pitch, client_name, client_avatar, cover_letter)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -818,7 +912,7 @@ function seedDatabase() {
   }
 
   // 2.7 Seed Message Threads & Messages
-  if (db.prepare('SELECT COUNT(*) as count FROM message_threads').get().count === 0) {
+  if (shouldSeedDemo && db.prepare('SELECT COUNT(*) as count FROM message_threads').get().count === 0) {
     const insertThread = db.prepare(`
       INSERT INTO message_threads (id, user_name, user_role, user_avatar, user_online, project, unread)
       VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -828,7 +922,7 @@ function seedDatabase() {
     insertThread.run('thread-3', 'Rohit Verma', 'AI Specialist', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80', 0, 'Integrate AI Features', 0);
   }
 
-  if (db.prepare('SELECT COUNT(*) as count FROM messages').get().count === 0) {
+  if (shouldSeedDemo && db.prepare('SELECT COUNT(*) as count FROM messages').get().count === 0) {
     const insertMessage = db.prepare(`
       INSERT INTO messages (id, thread_id, project, sender, text, time)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -842,7 +936,7 @@ function seedDatabase() {
   }
 
   // 2.8 Seed Files
-  if (db.prepare('SELECT COUNT(*) as count FROM files').get().count === 0) {
+  if (shouldSeedDemo && db.prepare('SELECT COUNT(*) as count FROM files').get().count === 0) {
     const insertFile = db.prepare(`
       INSERT INTO files (id, name, size, type, uploaded_by, date, project)
       VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -855,7 +949,7 @@ function seedDatabase() {
   }
 
   // 2.9 Seed Team Members
-  if (db.prepare('SELECT COUNT(*) as count FROM team_members').get().count === 0) {
+  if (shouldSeedDemo && db.prepare('SELECT COUNT(*) as count FROM team_members').get().count === 0) {
     const insertTeam = db.prepare(`
       INSERT INTO team_members (id, name, role, project, status, hourly, avatar, permission)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -868,7 +962,7 @@ function seedDatabase() {
   }
 
   // 2.10 Seed Payments
-  if (db.prepare('SELECT COUNT(*) as count FROM payments').get().count === 0) {
+  if (shouldSeedDemo && db.prepare('SELECT COUNT(*) as count FROM payments').get().count === 0) {
     const insertPayment = db.prepare(`
       INSERT INTO payments (id, milestone, project, recipient, recipient_id, amount, status, date, escrow_protected)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -907,7 +1001,7 @@ function seedDatabase() {
   }
 
   // 2.13 Seed Initial Default Bookmarks
-  if (db.prepare('SELECT COUNT(*) as count FROM bookmarks').get().count === 0) {
+  if (shouldSeedDemo && db.prepare('SELECT COUNT(*) as count FROM bookmarks').get().count === 0) {
     const insBm = db.prepare('INSERT OR IGNORE INTO bookmarks (id, user_id, item_type, item_id) VALUES (?, ?, ?, ?)');
     insBm.run('bm-1', 'default', 'talent', 'arjun-mehta');
     insBm.run('bm-2', 'default', 'project', 'proj-1');
@@ -916,7 +1010,7 @@ function seedDatabase() {
   }
 
   // 2.14 Seed Initial Notifications
-  if (db.prepare('SELECT COUNT(*) as count FROM notifications').get().count === 0) {
+  if (shouldSeedDemo && db.prepare('SELECT COUNT(*) as count FROM notifications').get().count === 0) {
     const insNotif = db.prepare(`
       INSERT INTO notifications (id, user_id, role, type, title, message, target_page, target_tab, is_read)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -930,7 +1024,7 @@ function seedDatabase() {
   }
 
   // 2.15 Seed Initial Compliance Audit Logs
-  if (db.prepare('SELECT COUNT(*) as count FROM audit_logs').get().count === 0) {
+  if (shouldSeedDemo && db.prepare('SELECT COUNT(*) as count FROM audit_logs').get().count === 0) {
     const insAudit = db.prepare(`
       INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, ip_address, timestamp)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -960,6 +1054,132 @@ function logAuditEvent({ userId = 'system', action, entityType = 'general', enti
 }
 
 seedDatabase();
+
+// Run ownership backfills after seeding as well, which is required for a brand
+// new database where the demo rows are inserted after the migration block.
+db.exec(`
+  UPDATE message_threads SET owner_id = COALESCE(owner_id, 'usr-client-1');
+  UPDATE message_threads SET participant_id = COALESCE(participant_id, (SELECT u.id FROM users u WHERE lower(u.name) = lower(message_threads.user_name) LIMIT 1));
+  UPDATE messages SET sender_id = COALESCE(sender_id, CASE WHEN sender = 'you' THEN (SELECT owner_id FROM message_threads t WHERE t.id = messages.thread_id) ELSE (SELECT participant_id FROM message_threads t WHERE t.id = messages.thread_id) END);
+  UPDATE files SET project_id = COALESCE(project_id, (SELECT p.id FROM projects p WHERE lower(p.title) = lower(files.project) LIMIT 1)), user_id = COALESCE(user_id, (SELECT u.id FROM users u WHERE lower(u.name) = lower(files.uploaded_by) LIMIT 1), 'usr-client-1');
+  UPDATE team_members SET project_id = COALESCE(project_id, (SELECT p.id FROM projects p WHERE lower(p.title) = lower(team_members.project) LIMIT 1)), owner_id = COALESCE((SELECT p.client_id FROM projects p WHERE p.id = team_members.project_id LIMIT 1), owner_id, 'usr-client-1'), member_user_id = COALESCE(member_user_id, (SELECT u.id FROM users u WHERE lower(u.name) = lower(team_members.name) LIMIT 1));
+  UPDATE payments SET project_id = COALESCE(project_id, (SELECT p.id FROM projects p WHERE lower(p.title) = lower(payments.project) LIMIT 1)), client_id = COALESCE((SELECT p.client_id FROM projects p WHERE p.id = payments.project_id LIMIT 1), client_id, 'usr-client-1');
+  UPDATE notifications SET user_id = CASE WHEN user_id = 'all' AND role = 'client' THEN 'usr-client-1' WHEN user_id = 'all' AND role = 'freelancer' THEN 'usr-freelancer-1' ELSE user_id END;
+`);
+
+// Every freelancer account owns exactly one directory profile. This repairs
+// accounts created by older versions where changing roles could leave the
+// directory out of sync.
+const freelancersWithoutProfiles = db.prepare(`
+  SELECT u.* FROM users u
+  WHERE u.role = 'freelancer'
+    AND NOT EXISTS (SELECT 1 FROM talents t WHERE t.user_id = u.id)
+`).all();
+const insertMissingTalent = db.prepare(`
+  INSERT INTO talents (
+    id, user_id, name, title, role, verified, available, avatar, rating,
+    reviews_count, hourly_rate, location, experience, job_success,
+    completed_projects, category, experience_level, about, skills, badges,
+    portfolio, work_history, reviews
+  ) VALUES (?, ?, ?, ?, ?, 0, 1, ?, 0, 0, ?, 'Remote', 'New to Workverse',
+    'No ratings yet', 0, 'Development', 'Entry Level', ?, '[]', '[]', '[]', '[]', '[]')
+`);
+for (const user of freelancersWithoutProfiles) {
+  const slug = String(user.name || 'freelancer').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  insertMissingTalent.run(
+    `${slug}-${String(user.id).slice(-6)}`,
+    user.id,
+    user.name,
+    user.title || 'Independent Professional',
+    user.title || 'Independent Professional',
+    user.avatar || '',
+    Number(user.hourly_rate || 0),
+    `${user.name} is building their Workverse profile.`
+  );
+}
+
+// Demo fixtures are opt-in. Normal localhost startup keeps only records created
+// by real registered accounts, while the automated suite can request fixtures
+// in its isolated database with WORKVERSE_SEED_DEMO_DATA=true.
+if (process.env.WORKVERSE_SEED_DEMO_DATA !== 'true') {
+  db.exec(`
+    BEGIN;
+    DELETE FROM messages WHERE thread_id IN (
+      SELECT id FROM message_threads
+      WHERE owner_id IN ('usr-client-1', 'usr-freelancer-1')
+         OR participant_id IN ('usr-client-1', 'usr-freelancer-1')
+    ) OR sender_id IN ('usr-client-1', 'usr-freelancer-1');
+    DELETE FROM message_threads
+      WHERE owner_id IN ('usr-client-1', 'usr-freelancer-1')
+         OR participant_id IN ('usr-client-1', 'usr-freelancer-1');
+    DELETE FROM disputes
+      WHERE opened_by IN ('usr-client-1', 'usr-freelancer-1')
+         OR against_user_id IN ('usr-client-1', 'usr-freelancer-1');
+    DELETE FROM notifications WHERE user_id IN ('usr-client-1', 'usr-freelancer-1');
+    DELETE FROM wallet_transactions WHERE user_id IN ('usr-client-1', 'usr-freelancer-1');
+    DELETE FROM time_logs WHERE user_id IN ('usr-client-1', 'usr-freelancer-1');
+    DELETE FROM bookmarks WHERE user_id IN ('usr-client-1', 'usr-freelancer-1');
+    DELETE FROM files WHERE user_id IN ('usr-client-1', 'usr-freelancer-1')
+      OR project_id IN (SELECT id FROM projects WHERE client_id = 'usr-client-1');
+    DELETE FROM team_members WHERE owner_id IN ('usr-client-1', 'usr-freelancer-1')
+      OR member_user_id IN ('usr-client-1', 'usr-freelancer-1')
+      OR project_id IN (SELECT id FROM projects WHERE client_id = 'usr-client-1');
+    DELETE FROM payments WHERE client_id IN ('usr-client-1', 'usr-freelancer-1')
+      OR recipient_id IN ('usr-client-1', 'usr-freelancer-1')
+      OR project_id IN (SELECT id FROM projects WHERE client_id = 'usr-client-1');
+    DELETE FROM proposals WHERE candidate_id IN ('usr-client-1', 'usr-freelancer-1')
+      OR project_id IN (SELECT id FROM projects WHERE client_id = 'usr-client-1');
+    DELETE FROM kanban_tasks WHERE user_id IN ('usr-client-1', 'usr-freelancer-1')
+      OR project_id IN (SELECT id FROM projects WHERE client_id = 'usr-client-1');
+    DELETE FROM contracts WHERE client_id IN ('usr-client-1', 'usr-freelancer-1')
+      OR freelancer_id IN ('usr-client-1', 'usr-freelancer-1');
+    DELETE FROM projects WHERE client_id = 'usr-client-1';
+    DELETE FROM audit_logs WHERE user_id IN ('usr-client-1', 'usr-freelancer-1');
+    DELETE FROM talents WHERE user_id IN ('usr-client-1', 'usr-freelancer-1')
+      OR user_id NOT IN (SELECT id FROM users);
+    DELETE FROM users WHERE id IN ('usr-client-1', 'usr-freelancer-1');
+    DELETE FROM messages WHERE sender_id IS NOT NULL AND sender_id NOT IN (SELECT id FROM users);
+    DELETE FROM messages WHERE thread_id IN (
+      SELECT id FROM message_threads
+      WHERE owner_id NOT IN (SELECT id FROM users)
+         OR participant_id NOT IN (SELECT id FROM users)
+    );
+    DELETE FROM message_threads
+      WHERE owner_id NOT IN (SELECT id FROM users)
+         OR participant_id NOT IN (SELECT id FROM users);
+    DELETE FROM disputes
+      WHERE opened_by NOT IN (SELECT id FROM users)
+         OR against_user_id NOT IN (SELECT id FROM users);
+    DELETE FROM notifications WHERE user_id NOT IN (SELECT id FROM users);
+    DELETE FROM wallet_transactions WHERE user_id NOT IN (SELECT id FROM users);
+    DELETE FROM time_logs WHERE user_id NOT IN (SELECT id FROM users);
+    DELETE FROM bookmarks WHERE user_id NOT IN (SELECT id FROM users);
+    DELETE FROM files
+      WHERE user_id NOT IN (SELECT id FROM users)
+         OR project_id IN (SELECT id FROM projects WHERE client_id NOT IN (SELECT id FROM users));
+    DELETE FROM team_members
+      WHERE owner_id NOT IN (SELECT id FROM users)
+         OR project_id IN (SELECT id FROM projects WHERE client_id NOT IN (SELECT id FROM users));
+    DELETE FROM payments
+      WHERE client_id NOT IN (SELECT id FROM users)
+         OR recipient_id NOT IN (SELECT id FROM users)
+         OR project_id IN (SELECT id FROM projects WHERE client_id NOT IN (SELECT id FROM users));
+    DELETE FROM proposals
+      WHERE candidate_id NOT IN (SELECT id FROM users)
+         OR project_id IN (SELECT id FROM projects WHERE client_id NOT IN (SELECT id FROM users));
+    DELETE FROM kanban_tasks
+      WHERE user_id NOT IN (SELECT id FROM users)
+         OR project_id IN (SELECT id FROM projects WHERE client_id NOT IN (SELECT id FROM users));
+    DELETE FROM contracts
+      WHERE client_id NOT IN (SELECT id FROM users)
+         OR freelancer_id NOT IN (SELECT id FROM users);
+    DELETE FROM projects WHERE client_id NOT IN (SELECT id FROM users);
+    DELETE FROM talents WHERE user_id NOT IN (SELECT id FROM users);
+    DELETE FROM audit_logs WHERE user_id != 'system' AND user_id NOT IN (SELECT id FROM users);
+    DELETE FROM newsletter_subscribers WHERE email IN ('sarah@cloudscale.ai', 'founder@startup.io');
+    COMMIT;
+  `);
+}
 
 module.exports = {
   db,
