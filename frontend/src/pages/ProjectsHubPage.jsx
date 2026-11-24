@@ -47,6 +47,7 @@ import {
   Wallet,
   ArrowUpRight,
   GripVertical,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   fetchProjects,
@@ -66,17 +67,19 @@ import {
   sendMessage,
   fetchFiles,
   uploadFile,
+  downloadFile,
   deleteFile,
   fetchTeam,
   inviteTeamMember,
   fetchPayments,
   releasePaymentEscrow,
+  createDispute,
   fetchSettings,
   saveSettings,
+  updateMyProfile,
   getAuthToken,
   exportFinancialsCsv,
 } from '../api/client';
-import { PROJECTS } from '../data/mockData';
 
 function formatUsd(val, decimals = 2) {
   const num = Number(val);
@@ -114,13 +117,6 @@ function formatWalletMethodLabel(method) {
   };
   return map[String(method || '').toLowerCase()] || 'Workverse Wallet';
 }
-
-const WORKSPACE_MEMBERS = [
-  { name: 'Arjun Mehta', role: 'Frontend Lead', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' },
-  { name: 'Vinita Paramar', role: 'Fullstack Engineer', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80' },
-  { name: 'Elena Rostova', role: 'UI/UX Designer', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=100&q=80' },
-  { name: 'Marcus Chen', role: 'Smart Contract Dev', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80' },
-];
 
 const KANBAN_COLUMNS = [
   { id: 'backlog', title: 'Backlog / Specs', accentColor: 'bg-slate-400', badgeBg: 'bg-slate-100 text-slate-700' },
@@ -166,13 +162,13 @@ export default function ProjectsHubPage({
   const [freelancerContracts, setFreelancerContracts] = useState([]);
   const [myProposalsFilter, setMyProposalsFilter] = useState('All');
   const [myProposalsList, setMyProposalsList] = useState([]);
-  const [freelancerBalance, setFreelancerBalance] = useState(currentUser?.wallet_balance ?? 4250.00);
-  const [escrowBalance, setEscrowBalance] = useState(currentUser?.escrow_balance ?? 8900.00);
+  const [freelancerBalance, setFreelancerBalance] = useState(currentUser?.wallet_balance ?? 0);
+  const [escrowBalance, setEscrowBalance] = useState(currentUser?.escrow_balance ?? 0);
   const [walletTransactions, setWalletTransactions] = useState([]);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [withdrawAmountInput, setWithdrawAmountInput] = useState(
-    (currentUser?.wallet_balance ?? 4250.00) > 0
-      ? Math.min(250, currentUser?.wallet_balance ?? 4250.00).toFixed(2)
+    (currentUser?.wallet_balance ?? 0) > 0
+      ? Math.min(250, currentUser?.wallet_balance ?? 0).toFixed(2)
       : '0.00'
   );
   const [withdrawMethod, setWithdrawMethod] = useState('stripe');
@@ -204,13 +200,7 @@ export default function ProjectsHubPage({
   // Projects State
   const [projectStatusFilter, setProjectStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [projectList, setProjectList] = useState(() => {
-    try {
-      return typeof PROJECTS !== 'undefined' && Array.isArray(PROJECTS) ? PROJECTS : [];
-    } catch {
-      return [];
-    }
-  });
+  const [projectList, setProjectList] = useState([]);
 
 // Project Overview Statistics
 const totalProjects = projectList.length;
@@ -266,7 +256,7 @@ const completedLength =
   const [newTaskCol, setNewTaskCol] = useState('backlog');
   const [newTaskPriority, setNewTaskPriority] = useState('Medium');
   const [newTaskEstimate, setNewTaskEstimate] = useState('4 hrs');
-  const [newTaskProject, setNewTaskProject] = useState('SaaS Dashboard Development');
+  const [newTaskProject, setNewTaskProject] = useState('');
   const [newTaskSubtasksList, setNewTaskSubtasksList] = useState([]);
   const [subtaskInput, setSubtaskInput] = useState('');
   const [newTaskAssigneeIndex, setNewTaskAssigneeIndex] = useState(0);
@@ -277,7 +267,7 @@ const completedLength =
   const [dragOverTaskId, setDragOverTaskId] = useState(null);
 
   // Live Stopwatch Time Tracker State
-  const [timerSeconds, setTimerSeconds] = useState(5076); // 01:24:36
+  const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [hourlyRate, setHourlyRate] = useState(currentUser?.hourly_rate || 45);
 
@@ -303,8 +293,9 @@ const completedLength =
   const [filesList, setFilesList] = useState([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [newFileName, setNewFileName] = useState('');
-  const [newFileProject, setNewFileProject] = useState('SaaS Dashboard Development');
+  const [newFileProject, setNewFileProject] = useState('');
   const [newFileSize, setNewFileSize] = useState('6.4 MB');
+  const [selectedUploadFile, setSelectedUploadFile] = useState(null);
   const [fileCategoryFilter, setFileCategoryFilter] = useState('All');
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [downloadSuccessToast, setDownloadSuccessToast] = useState(null);
@@ -314,7 +305,7 @@ const completedLength =
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('Senior Full Stack Engineer');
-  const [inviteProject, setInviteProject] = useState('SaaS Dashboard Development');
+  const [inviteProject, setInviteProject] = useState('');
 
   // Payments State
   const [paymentsList, setPaymentsList] = useState([]);
@@ -322,19 +313,27 @@ const completedLength =
 
   // Settings State
   const [workspaceName, setWorkspaceName] = useState(currentUser?.workspace_name || 'Workverse Ventures');
-  const [billingEmail, setBillingEmail] = useState(currentUser?.billing_email || 'finance@workverse.io');
+  const [billingEmail, setBillingEmail] = useState(currentUser?.billing_email || currentUser?.email || '');
   const [autoEscrowRelease, setAutoEscrowRelease] = useState(currentUser?.auto_escrow_release ?? true);
   const [twoFactorAuth, setTwoFactorAuth] = useState(currentUser?.two_factor_auth ?? true);
   const [twoFactorMethod, setTwoFactorMethod] = useState('TOTP Authenticator');
   const [sessionTimeout, setSessionTimeout] = useState('1 Hour');
   const [payoutThreshold, setPayoutThreshold] = useState('1,000');
   const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
-  const [disputeContract, setDisputeContract] = useState('SaaS Dashboard Development');
+  const [disputeContract, setDisputeContract] = useState('');
   const [disputeReason, setDisputeReason] = useState('Deliverable Specs Discrepancy');
   const [disputeNotes, setDisputeNotes] = useState('');
   const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
   const [emailDigest, setEmailDigest] = useState(currentUser?.email_digest || 'Daily');
   const [settingsSuccess, setSettingsSuccess] = useState(false);
+  const [profileName, setProfileName] = useState(currentUser?.name || '');
+  const [profileTitle, setProfileTitle] = useState(currentUser?.title || '');
+  const [profileAvatar, setProfileAvatar] = useState(currentUser?.avatar || '');
+  const workspaceMembers = teamList.length > 0
+    ? teamList.map((member) => ({ name: member.name, role: member.role, avatar: member.avatar }))
+    : currentUser
+      ? [{ name: currentUser.name, role: currentUser.title || currentUser.role, avatar: currentUser.avatar }]
+      : [];
 
   // ========================================================
   // LIVE BACKEND DATA HYDRATION (SQLite + Express API on port 5000)
@@ -357,7 +356,7 @@ const completedLength =
           walletRes,
           settingsRes,
         ] = await Promise.allSettled([
-          fetchProjects(),
+          fetchProjects({ scope: 'mine' }),
           fetchKanbanTasks(),
           fetchContracts(),
           fetchProposals(),
@@ -373,12 +372,18 @@ const completedLength =
 
         if (projRes.status === 'fulfilled' && Array.isArray(projRes.value)) {
           setProjectList(projRes.value);
+          const firstTitle = projRes.value[0]?.title || '';
+          setNewTaskProject((value) => value || firstTitle);
+          setNewFileProject((value) => value || firstTitle);
+          setInviteProject((value) => value || firstTitle);
+          setDisputeContract((value) => value || firstTitle);
         }
         if (kanbanRes.status === 'fulfilled' && Array.isArray(kanbanRes.value)) {
           setKanbanTasks(kanbanRes.value);
         }
         if (contractRes.status === 'fulfilled' && Array.isArray(contractRes.value)) {
           setFreelancerContracts(contractRes.value);
+          setDisputeContract((value) => value || contractRes.value[0]?.title || '');
         }
         if (propRes.status === 'fulfilled' && Array.isArray(propRes.value)) {
           setProposals(propRes.value);
@@ -553,14 +558,19 @@ const completedLength =
   const handleCreateTask = async (e) => {
     e.preventDefault();
     if (newTaskTitle.trim()) {
-      const chosenMember = WORKSPACE_MEMBERS[newTaskAssigneeIndex] || WORKSPACE_MEMBERS[0];
+      const chosenMember = workspaceMembers[newTaskAssigneeIndex] || workspaceMembers[0] || {
+        name: currentUser?.name || 'Unassigned',
+        role: currentUser?.title || currentUser?.role || 'Contributor',
+        avatar: currentUser?.avatar || '',
+      };
       const subtasksSummary = newTaskSubtasksList.length > 0
         ? `0/${newTaskSubtasksList.length} items`
         : '1/2 ready';
 
       const taskPayload = {
         title: newTaskTitle.trim(),
-        project: newTaskProject || (projectList[0]?.title || 'SaaS Dashboard Development'),
+        project: newTaskProject || projectList[0]?.title || '',
+        projectId: projectList.find((project) => project.title === (newTaskProject || projectList[0]?.title))?.id,
         column: newTaskCol,
         priority: newTaskPriority,
         estimate: newTaskEstimate || '4 hrs',
@@ -572,7 +582,8 @@ const completedLength =
 
       try {
         const res = await createKanbanTask(taskPayload);
-        const task = res.task || { id: `kb-${Date.now()}`, ...taskPayload };
+        const task = res.task;
+        if (!task) throw new Error('The server did not return the saved task.');
         setKanbanTasks((prev) => [task, ...prev]);
         setIsNewTaskModalOpen(false);
         setNewTaskTitle('');
@@ -581,13 +592,7 @@ const completedLength =
         triggerToast('Task Created', `Added "${task.title}" to Kanban board`);
       } catch (err) {
         console.error('Failed to create task on backend:', err);
-        const task = { id: `kb-${Date.now()}`, ...taskPayload };
-        setKanbanTasks((prev) => [task, ...prev]);
-        setIsNewTaskModalOpen(false);
-        setNewTaskTitle('');
-        setNewTaskSubtasksList([]);
-        setSubtaskInput('');
-        triggerToast('Task Created', `Added "${task.title}" to Kanban board`);
+        triggerToast('Task Not Saved', err.message || 'Could not create the task.', 'error');
       }
     }
   };
@@ -620,7 +625,8 @@ const completedLength =
 
       try {
         const res = await createProject(projPayload);
-        const createdProj = res.project || { id: `proj-${Date.now()}`, ...projPayload, progress: 10, status: 'In Progress' };
+        const createdProj = res.project;
+        if (!createdProj) throw new Error('The server did not return the saved project.');
         setProjectList((prev) => [createdProj, ...prev]);
         setIsNewProjectModalOpen(false);
         setNewTitle('');
@@ -628,12 +634,7 @@ const completedLength =
         triggerToast('Project Created', `Published "${createdProj.title}" to workspace!`);
       } catch (err) {
         console.error('Failed to create project on backend:', err);
-        const createdProj = { id: `proj-${Date.now()}`, ...projPayload, progress: 10, status: 'In Progress' };
-        setProjectList((prev) => [createdProj, ...prev]);
-        setIsNewProjectModalOpen(false);
-        setNewTitle('');
-        setNewDesc('');
-        triggerToast('Project Created', `Published "${createdProj.title}"!`);
+        triggerToast('Project Not Saved', err.message || 'Could not publish the project.', 'error');
       }
     }
   };
@@ -646,7 +647,7 @@ const handleLogMilestoneTime = async () => {
   try {
     const res = await logTimeSession({
       seconds: timerSeconds,
-      project_title: 'SaaS Dashboard Development',
+      project_title: projectList[0]?.title || freelancerContracts[0]?.title || 'General Work',
       hourly_rate: hourlyRate,
       formatted_time: formatTimer(timerSeconds),
     });
@@ -713,26 +714,23 @@ const handleConfirmWithdrawal = async () => {
 
 // Delete Kanban Task (API Sync)
 const handleDeleteTask = async (taskId, title) => {
-  setKanbanTasks((prev) => prev.filter((t) => t.id !== taskId));
-  triggerToast('Deliverable Removed', `Removed "${title}" from sprint board.`);
-
   try {
     await deleteKanbanTask(taskId);
+    setKanbanTasks((prev) => prev.filter((t) => t.id !== taskId));
+    triggerToast('Deliverable Removed', `Removed "${title}" from sprint board.`);
   } catch (err) {
     console.error('Failed to delete task:', err);
+    triggerToast('Delete Failed', err.message || 'Could not remove the task.', 'error');
   }
 };
 
 // Handle Proposals Status Action (API Sync)
 const handleUpdateProposalStatus = async (id, newStatus) => {
-    setProposals((prev) =>
-      prev.map((prop) => (prop.id === id ? { ...prop, status: newStatus } : prop))
-    );
-    setMyProposalsList((prev) =>
-      prev.map((prop) => (prop.id === id ? { ...prop, status: newStatus } : prop))
-    );
     try {
-      await updateProposalStatus(id, newStatus);
+      const result = await updateProposalStatus(id, newStatus);
+      const updated = result?.proposal;
+      setProposals((prev) => prev.map((prop) => (prop.id === id ? (updated || { ...prop, status: newStatus }) : prop)));
+      setMyProposalsList((prev) => prev.map((prop) => (prop.id === id ? (updated || { ...prop, status: newStatus }) : prop)));
       if (newStatus === 'Accepted') {
         const updatedContracts = await fetchContracts();
         if (Array.isArray(updatedContracts)) setFreelancerContracts(updatedContracts);
@@ -740,6 +738,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
       triggerToast('Proposal Updated', `Proposal marked as ${newStatus}`);
     } catch (err) {
       console.error('Failed to update proposal status:', err);
+      triggerToast('Proposal Not Updated', err.message || 'Could not update proposal.', 'error');
     }
   };
 
@@ -748,31 +747,16 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
     e.preventDefault();
     if (chatInputText.trim()) {
       const text = chatInputText.trim();
-      const newMsg = {
-        id: `msg-${Date.now()}`,
-        sender: 'you',
-        text,
-        time: 'Just now',
-      };
-      setMessageThreads((prev) =>
-        prev.map((thread) => {
-          if (thread.id === activeThreadId) {
-            return {
-              ...thread,
-              lastMessage: text,
-              time: 'Just now',
-              messages: [...thread.messages, newMsg],
-            };
-          }
-          return thread;
-        })
-      );
-      setChatInputText('');
-
       try {
-        await sendMessage({ thread_id: activeThreadId, text, project: activeThread?.project || 'SaaS Dashboard Development' });
+        const response = await sendMessage({ thread_id: activeThreadId, text, project: activeThread?.project || 'General Collaboration' });
+        const savedMessage = { ...(response?.message || {}), sender: 'you', text };
+        setMessageThreads((prev) => prev.map((thread) => thread.id === activeThreadId
+          ? { ...thread, lastMessage: text, time: savedMessage.time || 'Just now', messages: [...thread.messages, savedMessage] }
+          : thread));
+        setChatInputText('');
       } catch (err) {
         console.error('Failed to send message:', err);
+        triggerToast('Message Not Sent', err.message || 'Could not send the message.', 'error');
       }
     }
   };
@@ -780,10 +764,16 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
   // Handle Upload File (API Sync)
   const handleUploadFileSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedUploadFile) {
+      triggerToast('Choose a File', 'Select a real file before uploading.', 'error');
+      return;
+    }
     if (newFileName.trim()) {
       const name = newFileName.trim();
       try {
-        const res = await uploadFile({ name, size: '14.2 MB', project: newFileProject });
+        const selectedProject = projectList.find((project) => project.title === newFileProject);
+        setIsUploadingFile(true);
+        const res = await uploadFile({ file: selectedUploadFile, name, size: newFileSize || 'Unknown', project: newFileProject, projectId: selectedProject?.id });
         const savedFile = res?.file || {
           id: `f-${Date.now()}`,
           name,
@@ -796,22 +786,36 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
         setFilesList((prev) => [savedFile, ...prev]);
         setIsUploadModalOpen(false);
         setNewFileName('');
+        setSelectedUploadFile(null);
         triggerToast('File Uploaded', `Uploaded "${name}" to project repository.`);
       } catch (err) {
         console.error('Failed to upload file:', err);
         triggerToast('Upload Error', err.message || 'Could not save file.', 'error');
+      } finally {
+        setIsUploadingFile(false);
       }
+    }
+  };
+
+  const handleDownloadStoredFile = async (file) => {
+    try {
+      await downloadFile(file.id, file.name);
+      setDownloadSuccessToast(file.name);
+      setTimeout(() => setDownloadSuccessToast(null), 3000);
+    } catch (err) {
+      triggerToast('Download Failed', err.message || 'Could not download this file.', 'error');
     }
   };
 
   // Handle Delete File (API Sync)
   const handleDeleteFile = async (fileId, fileName) => {
-    setFilesList((prev) => prev.filter((f) => f.id !== fileId));
-    triggerToast('File Deleted', `Removed "${fileName}" from repository.`);
     try {
       await deleteFile(fileId);
+      setFilesList((prev) => prev.filter((f) => f.id !== fileId));
+      triggerToast('File Deleted', `Removed "${fileName}" from repository.`);
     } catch (err) {
       console.error('Failed to delete file:', err);
+      triggerToast('Delete Failed', err.message || 'Could not delete the file.', 'error');
     }
   };
 
@@ -843,7 +847,8 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
     if (inviteEmail.trim()) {
       const email = inviteEmail.trim();
       try {
-        const res = await inviteTeamMember({ email, role: inviteRole, project: inviteProject });
+        const selectedProject = projectList.find((project) => project.title === inviteProject);
+        const res = await inviteTeamMember({ email, role: inviteRole, project: inviteProject, projectId: selectedProject?.id });
         const newMember = res?.member || {
           id: `tm-${Date.now()}`,
           name: email.split('@')[0],
@@ -883,15 +888,23 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     try {
-      const res = await saveSettings({
-        workspaceName,
-        billingEmail,
-        autoEscrowRelease,
-        twoFactorAuth,
-        emailDigest,
-      });
-      if (res?.settings && setCurrentUser) {
-        setCurrentUser(res.settings);
+      const [settingsResult, profileResult] = await Promise.all([
+        saveSettings({
+          workspaceName,
+          billingEmail,
+          autoEscrowRelease,
+          twoFactorAuth,
+          emailDigest,
+        }),
+        updateMyProfile({
+          name: profileName,
+          title: profileTitle,
+          avatar: profileAvatar,
+          hourlyRate: hourlyRate,
+        }),
+      ]);
+      if (setCurrentUser) {
+        setCurrentUser(profileResult?.user || settingsResult?.settings || currentUser);
       }
       setSettingsSuccess(true);
       triggerToast('Settings Saved', 'Workspace preferences persisted to database.');
@@ -899,6 +912,29 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
     } catch (err) {
       console.error('Failed to save settings:', err);
       triggerToast('Save Failed', err.message || 'Unable to save settings.', 'error');
+    }
+  };
+
+  const handleSubmitDispute = async (e) => {
+    e.preventDefault();
+    if (isSubmittingDispute) return;
+    setIsSubmittingDispute(true);
+    try {
+      const contract = freelancerContracts.find((item) => item.title === disputeContract);
+      await createDispute({
+        contractId: contract?.id,
+        contractTitle: disputeContract,
+        reason: disputeReason,
+        notes: disputeNotes,
+      });
+      setIsDisputeModalOpen(false);
+      setDisputeNotes('');
+      triggerToast('Mediation Claim Opened', 'The dispute is now stored in your workspace and the other participant was notified.');
+    } catch (err) {
+      console.error('Failed to submit dispute:', err);
+      triggerToast('Claim Not Submitted', err.message || 'Unable to open this dispute.', 'error');
+    } finally {
+      setIsSubmittingDispute(false);
     }
   };
 
@@ -966,6 +1002,12 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
   const clientReleasedCount = paymentsList.filter((p) => p.status === 'Released').length;
 
   const totalPaymentsVolume = clientEscrowHolding + pendingClearanceTotal + clientReleasedTotal;
+  const projectCompletionRate = totalProjects > 0 ? Math.round((completedCount / totalProjects) * 100) : 0;
+  const acceptedProposal = proposals.find((proposal) => proposal.status === 'Accepted');
+  const activeContractorName = acceptedProposal?.candidate?.name || acceptedProposal?.candidate_name || teamList[0]?.name || 'Unassigned';
+  const freelancerReputationLabel = currentUser?.reviews_count > 0
+    ? `${Number(currentUser.rating || 0).toFixed(1)} rating`
+    : 'New member';
 
   const donutCircumference = 251.33;
   const donutTotal = Math.max(0, freelancerBalance + escrowBalance);
@@ -1099,8 +1141,8 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                         <Clock className="w-5 h-5" />
                       </div>
                       <div>
-                        <div className="text-lg font-bold text-[#171717]">42.5 hrs</div>
-                        <div className="text-xs text-[#777777] font-medium">Logged This Week</div>
+                        <div className="text-lg font-bold text-[#171717]">{(timerSeconds / 3600).toFixed(2)} hrs</div>
+                        <div className="text-xs text-[#777777] font-medium">Current Session</div>
                       </div>
                     </div>
                   </>
@@ -1118,12 +1160,12 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-lg font-extrabold text-[#171717] tracking-tight">
-                      {userRole === 'client' ? '99.4%' : 'Top Rated Plus'}
+                      {userRole === 'client' ? `${projectCompletionRate}%` : freelancerReputationLabel}
                     </span>
                     <CheckCircle2 className="w-4 h-4 text-[#F36B21] fill-[#FFF3EC]" />
                   </div>
                   <span className="text-xs text-[#777777] font-medium">
-                    {userRole === 'client' ? 'On-Time Sprint Velocity' : '99% Job Success Score'}
+                    {userRole === 'client' ? 'Projects Completed' : (currentUser?.job_success || 'No ratings yet')}
                   </span>
                 </div>
               </div>
@@ -1138,7 +1180,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                     {userRole === 'client' ? `${formatUsd(clientEscrowHolding + pendingClearanceTotal, 0)} USD` : `${formatUsd(escrowBalance, 0)} USD`}
                   </div>
                   <span className="text-xs text-[#777777] font-medium">
-                    {userRole === 'client' ? 'Escrow Protected Funds' : 'Guaranteed Milestone Escrow'}
+                    {userRole === 'client' ? 'Tracked Escrow Funds' : 'Tracked Milestone Escrow'}
                   </span>
                 </div>
               </div>
@@ -1400,7 +1442,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                   <div>
                     <h2 className="text-xl sm:text-2xl font-bold text-[#171717]">My Active Contracts</h2>
                     <p className="text-xs text-[#888888] mt-0.5">
-                      Showing {freelancerContracts.length} awarded contracts with guaranteed escrow backing
+                      Showing {freelancerContracts.length} awarded contracts with persisted escrow records
                     </p>
                   </div>
 
@@ -1590,11 +1632,11 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="text-lg font-bold text-white tracking-tight">SaaS Dashboard Development</h3>
+                            <h3 className="text-lg font-bold text-white tracking-tight">{projectList[0]?.title || 'No active project'}</h3>
                             <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-[#F36B21]/20 text-[#F36B21] border border-[#F36B21]/30">Active Sprint</span>
                           </div>
                           <p className="text-xs text-white/70 mt-1 flex flex-wrap items-center gap-2">
-                            <span>Contractor: <strong className="text-white">{userRole === 'freelancer' ? (currentUser?.name || 'Arjun Mehta') : 'Arjun Mehta'}</strong></span>
+                            <span>Contractor: <strong className="text-white">{userRole === 'freelancer' ? (currentUser?.name || 'Current user') : activeContractorName}</strong></span>
                             <span className="text-white/30">•</span>
                             <span>Rate: <strong className="text-[#F36B21] font-bold">${hourlyRate}.00/hr</strong></span>
                             <span className="text-white/30">•</span>
@@ -2255,7 +2297,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                           id: 'TAX-2026',
                           milestone: '2026 Annual Escrow Summary',
                           project: 'Workverse Workspace',
-                          recipient: currentUser?.name || 'Arjun Mehta',
+                          recipient: currentUser?.name || 'Current user',
                           amount: formatUsd(freelancerTotalEarnings),
                           date: 'Today',
                         };
@@ -2278,7 +2320,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                           client: methodLabel,
                           milestone: isDebit ? `Withdrawal via ${methodLabel}` : (wt.note || `${wt.type} credit`),
                           project: 'Workverse Wallet Ledger',
-                          recipient: currentUser?.name || 'Arjun Mehta',
+                          recipient: currentUser?.name || 'Current user',
                           amount: `${isDebit ? '-' : '+'}${formatUsd(wt.amount)}`,
                           isDebit,
                           date: formatLedgerDate(wt.created_at),
@@ -2319,7 +2361,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                               setActiveInvoicePayment({
                                 id: tx.id,
                                 project: tx.project || tx.client,
-                                recipient: tx.recipient || currentUser?.name || 'Arjun Mehta',
+                                recipient: tx.recipient || currentUser?.name || 'Current user',
                                 milestone: tx.milestone,
                                 amount: tx.amount,
                                 status: 'Released',
@@ -2358,16 +2400,16 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-bold text-[#171717]">{currentUser?.name || 'Arjun Mehta'}</h3>
+                        <h3 className="text-lg font-bold text-[#171717]">{currentUser?.name || 'Current user'}</h3>
                         <span className="px-2.5 py-0.5 rounded-full bg-[#FFF3EC] text-[#F36B21] text-[10px] font-bold border border-[#FCE2D3]">
-                          Verified Talent
+                          {currentUser?.verified ? 'Verified Talent' : 'Profile In Review'}
                         </span>
                       </div>
-                      <p className="text-xs text-[#777777] mt-0.5">{currentUser?.title || 'Senior Full Stack & Cloud Architect'}</p>
+                      <p className="text-xs text-[#777777] mt-0.5">{currentUser?.title || 'Freelancer'}</p>
                       <div className="flex items-center gap-3 pt-1 text-xs text-[#888888]">
-                        <span className="text-amber-500 font-bold">★ 4.9 (Verified)</span>
+                        <span className="text-amber-500 font-bold">★ {currentUser?.reviews_count > 0 ? `${Number(currentUser.rating || 0).toFixed(1)} (${currentUser.reviews_count})` : 'No reviews'}</span>
                         <span>•</span>
-                        <span className="text-emerald-600 font-semibold">99% Job Success</span>
+                        <span className="text-emerald-600 font-semibold">{currentUser?.job_success || 'No ratings yet'}</span>
                         <span>•</span>
                         <span className="font-bold text-[#171717]">${(currentUser?.hourly_rate || hourlyRate).toFixed(2)}/hr</span>
                       </div>
@@ -2627,7 +2669,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
 
                         <div className="flex items-center gap-2 self-start sm:self-auto">
                           <button
-                            onClick={() => handleSimulateDownload(file.name, `Workverse Deliverable\nFile: ${file.name}\nProject: ${file.project}\nSize: ${file.size}\nUploaded by: ${file.uploadedBy || file.uploaded_by || 'Workverse'}\nDate: ${file.date}`)}
+                            onClick={() => handleDownloadStoredFile(file)}
                             className="px-4 py-2 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] hover:text-[#F36B21] bg-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -2707,7 +2749,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                   <div>
                     <h2 className="text-xl sm:text-2xl font-bold text-[#171717]">Escrow & Payments</h2>
                     <p className="text-xs text-[#888888] mt-0.5">
-                      Milestone fund guarantees, released disbursements, and official transaction receipts.
+                      Milestone payment states, released disbursements, and generated transaction receipts.
                     </p>
                   </div>
 
@@ -2835,6 +2877,53 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                 )}
 
                 <form onSubmit={handleSaveSettings} className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">Your Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={profileName}
+                        onChange={(e) => setProfileName(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">Professional Title</label>
+                      <input
+                        type="text"
+                        value={profileTitle}
+                        onChange={(e) => setProfileTitle(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">Profile Image URL</label>
+                    <input
+                      type="url"
+                      value={profileAvatar}
+                      onChange={(e) => setProfileAvatar(e.target.value)}
+                      placeholder="https://example.com/profile.jpg"
+                      className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                    />
+                  </div>
+
+                  {userRole === 'freelancer' && (
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">Hourly Rate (USD)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={hourlyRate}
+                        onChange={(e) => setHourlyRate(Number(e.target.value))}
+                        className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
+                      />
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
                       Workspace Name
@@ -2947,8 +3036,9 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                       </div>
                       <button
                         type="button"
+                        disabled={freelancerContracts.length === 0}
                         onClick={() => setIsDisputeModalOpen(true)}
-                        className="px-4 py-2 rounded-full border border-[#F36B21] text-[#F36B21] hover:bg-[#F36B21] hover:text-white text-xs font-bold transition-all whitespace-nowrap cursor-pointer shadow-xs self-start sm:self-auto"
+                        className="px-4 py-2 rounded-full border border-[#F36B21] text-[#F36B21] hover:bg-[#F36B21] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold transition-all whitespace-nowrap cursor-pointer shadow-xs self-start sm:self-auto"
                       >
                         File Mediation Claim
                       </button>
@@ -3199,15 +3289,17 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                   <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#171717] to-[#262626] text-white p-5 shadow-xs space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="px-2.5 py-0.5 rounded-full bg-white/10 text-[#FCE2D3] text-[10px] font-bold border border-white/15">
-                        Verified Talent
+                        {currentUser?.verified ? 'Verified Talent' : 'Profile In Review'}
                       </span>
-                      <span className="text-amber-400 font-bold text-xs">★ 4.9</span>
+                      <span className="text-amber-400 font-bold text-xs">★ {currentUser?.reviews_count > 0 ? Number(currentUser.rating || 0).toFixed(1) : 'New'}</span>
                     </div>
 
                     <div>
-                      <h4 className="text-sm font-bold text-white">Top Rated Plus</h4>
+                      <h4 className="text-sm font-bold text-white">{freelancerReputationLabel}</h4>
                       <p className="text-[11px] text-white/70 mt-0.5">
-                        Top 3% of architects on Workverse with 99% client satisfaction.
+                        {currentUser?.reviews_count > 0
+                          ? `${currentUser.reviews_count} verified review${currentUser.reviews_count === 1 ? '' : 's'} and ${currentUser.completed_projects || 0} completed project${currentUser.completed_projects === 1 ? '' : 's'}.`
+                          : 'Complete projects and collect verified client reviews to build your reputation.'}
                       </p>
                     </div>
 
@@ -3559,9 +3651,9 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                   onChange={(e) => setNewFileProject(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
                 >
-                  {projectList.map((p) => (
-                    <option key={p.id} value={p.title}>
-                      {p.title}
+                  {freelancerContracts.map((contract) => (
+                    <option key={contract.id} value={contract.title}>
+                      {contract.title}
                     </option>
                   ))}
                 </select>
@@ -3569,24 +3661,14 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">
-                  Deliverable Size Preset
+                  Selected File Size
                 </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {['1.8 MB', '6.4 MB', '24.0 MB', '85.5 MB'].map((sz) => (
-                    <button
-                      key={sz}
-                      type="button"
-                      onClick={() => setNewFileSize(sz)}
-                      className={`py-1.5 rounded-xl text-xs font-semibold border text-center transition-colors cursor-pointer ${
-                        newFileSize === sz
-                          ? 'bg-[#FFF3EC] text-[#F36B21] border-[#FCE2D3] ring-1 ring-[#F36B21]'
-                          : 'bg-[#FFF9F5] text-[#666666] border-[#EAE2DC] hover:border-[#FCE2D3]'
-                      }`}
-                    >
-                      {sz}
-                    </button>
-                  ))}
-                </div>
+                <input
+                  type="text"
+                  readOnly
+                  value={selectedUploadFile ? newFileSize : 'Choose a file below'}
+                  className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold text-[#777777]"
+                />
               </div>
 
               <div className="border-2 border-dashed border-[#FCE2D3] rounded-2xl p-5 text-center bg-[#FFF9F5] transition-colors hover:bg-[#FFF3EC]/40">
@@ -3594,7 +3676,27 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                 <p className="text-xs font-semibold text-[#171717]">
                   {newFileName ? `Ready: ${newFileName} (${newFileSize})` : 'Drag and drop deliverable files here'}
                 </p>
-                <p className="text-[10px] text-[#888888] mt-1">Supports PDF, ZIP, FIG, PNG, JSON up to 250MB</p>
+                <label className="mt-3 inline-flex cursor-pointer items-center rounded-full bg-white px-4 py-2 text-[11px] font-bold text-[#F36B21] border border-[#FCE2D3] hover:bg-[#FFF3EC]">
+                  Choose file
+                  <input
+                    type="file"
+                    className="sr-only"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      if (file && file.size > 10 * 1024 * 1024) {
+                        triggerToast('File Too Large', 'Local uploads are limited to 10 MB.', 'error');
+                        e.target.value = '';
+                        return;
+                      }
+                      setSelectedUploadFile(file);
+                      if (file) {
+                        setNewFileName(file.name);
+                        setNewFileSize(`${(file.size / 1024 / 1024).toFixed(2)} MB`);
+                      }
+                    }}
+                  />
+                </label>
+                <p className="text-[10px] text-[#888888] mt-2">Files are stored in the workspace database. Maximum 10 MB.</p>
                 {isUploadingFile && (
                   <div className="mt-3 w-full bg-[#EAE2DC] rounded-full h-1.5 overflow-hidden">
                     <div className="bg-[#F36B21] h-1.5 rounded-full animate-pulse w-3/4" />
@@ -3983,7 +4085,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                   Assign Team Member
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {WORKSPACE_MEMBERS.map((member, idx) => (
+                  {workspaceMembers.map((member, idx) => (
                     <button
                       key={member.name}
                       type="button"
@@ -4355,7 +4457,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
               <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <span>
-                  Filing places the milestone escrow into verified freeze state until Workverse Arbitration reviews both parties' submissions (24-48 hrs).
+                  Filing records the claim, notifies the other participant, and freezes matching unreleased payments until the case is reviewed.
                 </span>
               </div>
 
