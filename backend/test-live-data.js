@@ -73,6 +73,7 @@ function cleanup() {
     db.prepare('DELETE FROM disputes WHERE opened_by = ? OR against_user_id = ?').run(userId, userId);
     db.prepare('DELETE FROM notifications WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM wallet_transactions WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM demo_payments WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM time_logs WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM bookmarks WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM files WHERE user_id = ?').run(userId);
@@ -102,11 +103,22 @@ async function main() {
   assert(clientA.user.wallet_balance === 0 && freelancer.user.wallet_balance === 0, 'New users must start with real zero balances');
 
   const billing = await api('/billing/config');
-  assert(billing.configured === false, 'Unconfigured test billing must be unavailable');
+  assert(billing.provider === 'demo' && billing.simulation === true, 'Billing must be labeled as a simulation');
   await api('/subscriptions', { token: clientA.token, method: 'POST', expected: 409, body: { planId: 'pro', billingCycle: 'monthly' } });
-  await api('/billing/checkout', { token: clientA.token, method: 'POST', expected: 503, body: { planId: 'pro', billingCycle: 'monthly' } });
-  const afterFailedCheckout = await api('/auth/me', { token: clientA.token });
-  assert(afterFailedCheckout.user.subscription_plan === 'free', 'A failed checkout must never activate a paid plan');
+  await api('/billing/checkout', { token: clientA.token, method: 'POST', expected: 400, body: { planId: 'pro', billingCycle: 'monthly', paymentMethod: 'real_card' } });
+  const demoCheckout = await api('/billing/checkout', { token: clientA.token, method: 'POST', expected: 201,
+    body: { planId: 'pro', billingCycle: 'yearly', paymentMethod: 'demo_card', amountCents: 1 } });
+  assert(demoCheckout.simulation && demoCheckout.receipt.amountCents === 18000, 'Demo total must come from the server plan price');
+  const receiptsA = await api('/billing/receipts', { token: clientA.token });
+  const receiptsB = await api('/billing/receipts', { token: clientB.token });
+  assert(receiptsA.some((item) => item.id === demoCheckout.receipt.id), 'Owner cannot see demo receipt');
+  assert(!receiptsB.some((item) => item.id === demoCheckout.receipt.id), 'Another user can see private demo receipt');
+  const afterCheckout = await api('/auth/me', { token: clientA.token });
+  assert(afterCheckout.user.subscription_plan === 'pro' && afterCheckout.user.subscription_status === 'demo_active', 'Demo plan was not persisted');
+  assert(afterCheckout.user.wallet_balance === 0, 'Demo checkout changed wallet balance');
+  await api('/subscriptions', { token: clientA.token, method: 'POST', body: { planId: 'free', billingCycle: 'monthly' } });
+  const afterCancel = await api('/auth/me', { token: clientA.token });
+  assert(afterCancel.user.subscription_plan === 'free', 'Could not switch back to Free');
 
   const profile = await api('/auth/profile', {
     token: freelancer.token,
@@ -185,7 +197,7 @@ async function main() {
   assert(filesA.some((file) => file.id === upload.file.id), 'Uploaded file is missing from owner workspace');
   assert(!filesB.some((file) => file.id === upload.file.id), 'Unrelated user can see uploaded file');
 
-  console.log('Live-data isolation and billing: 24/24 checks passed');
+  console.log('Live-data isolation and demo billing checks passed');
 }
 
 main()
