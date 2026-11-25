@@ -23,12 +23,13 @@ import {
   Briefcase,
   TrendingUp,
 } from 'lucide-react';
-import { fetchPricingPlans, subscribeToPlan, createCheckout, fetchBillingConfig, openBillingPortal, getAuthToken, getStoredUser } from '../api/client';
+import { fetchPricingPlans, subscribeToPlan, createCheckout, fetchDemoReceipts, authGetMe, getAuthToken, getStoredUser } from '../api/client';
 
 export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
   const [plans, setPlans] = useState([]);
   const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'yearly'
-  const [billingReady, setBillingReady] = useState(false);
+  const [activePlan, setActivePlan] = useState(() => getStoredUser()?.subscription_plan || 'free');
+  const [receipts, setReceipts] = useState([]);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [selectedPlanModal, setSelectedPlanModal] = useState(null);
@@ -59,12 +60,11 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
   }, []);
 
   useEffect(() => {
-    fetchBillingConfig().then((config) => setBillingReady(Boolean(config.configured))).catch(() => setBillingReady(false));
-    const result = new URLSearchParams(window.location.search).get('checkout');
-    if (result === 'success') setSubscriptionSuccessMsg('Checkout completed. Your plan will update after payment confirmation.');
-    if (result === 'cancelled') setCheckoutError('Checkout was cancelled. No charge was made.');
-    if (result) window.history.replaceState({}, '', `${window.location.pathname}#pricing`);
-  }, []);
+    if (isLoggedIn) {
+      authGetMe().then((user) => setActivePlan(user?.subscription_plan || 'free')).catch(() => {});
+      fetchDemoReceipts().then((data) => setReceipts(Array.isArray(data) ? data : [])).catch(() => {});
+    }
+  }, [isLoggedIn]);
 
   // Price formatting helper
   const getPrice = (plan) => {
@@ -97,11 +97,11 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
   const faqs = [
     {
       q: 'How does milestone-based escrow billing work?',
-      a: 'Project milestones can be tracked in your workspace. Subscription checkout is handled by Stripe when billing is configured; Workverse does not currently hold regulated escrow funds.',
+      a: 'Project milestones can be tracked in your workspace. The plan checkout on this site is a simulation; it does not fund project milestones or hold real escrow.',
     },
     {
       q: 'Can I switch or cancel my plan at any time?',
-      a: 'Paid subscriptions are managed through the Stripe billing portal. Billing changes and cancellation take effect under the terms shown at checkout.',
+      a: 'Yes. Select another demo plan here, or choose Free to end your demo paid tier. No real recurring charges are created.',
     },
     {
       q: 'What makes Workverse different from legacy freelance platforms?',
@@ -113,7 +113,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
     },
     {
       q: 'How are plan changes handled on localhost?',
-      a: 'Paid plans use Stripe hosted Checkout when Stripe is configured. A plan becomes active only after Stripe confirms the subscription. Until then, checkout is unavailable.',
+      a: 'Plan selection is simulated and saved to your Workverse account, with a demo receipt. No payment details are collected or charged.',
     },
     {
       q: 'How does Enterprise custom invoicing work?',
@@ -128,15 +128,16 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
           {subscriptionSuccessMsg || checkoutError}
         </div>
       )}
-      {isLoggedIn && getStoredUser()?.subscription_status === 'active' && (
+      {isLoggedIn && activePlan !== 'free' && (
         <div className="max-w-7xl mx-auto px-4 pt-5 flex items-center justify-between gap-4 text-sm">
-          <span>Your {getStoredUser()?.subscription_plan} plan is active.</span>
+          <span>Your {activePlan} demo plan is active. No real payment was made.</span>
           <button className="text-[#F36B21] font-bold underline" onClick={async () => {
-            try { const result = await openBillingPortal(); window.location.assign(result.url); }
-            catch (err) { setCheckoutError(err.message || 'Could not open billing portal.'); }
-          }}>Manage billing</button>
+            try { const result = await subscribeToPlan({ planId: 'free', billingCycle }); setActivePlan('free'); setSubscriptionSuccessMsg(result.message); }
+            catch (err) { setCheckoutError(err.message || 'Could not change your plan.'); }
+          }}>Switch to Free</button>
         </div>
       )}
+      {isLoggedIn && receipts.length > 0 && <div className="max-w-7xl mx-auto px-4 pt-3 text-xs text-[#777777]">Last demo receipt: {receipts[0].id} · ${(receipts[0].amountCents / 100).toFixed(2)} USD · simulated</div>}
       {/* ========================================================
           HERO BANNER: ASYMMETRIC 2-COLUMN ARCHITECTURAL HERO
           (Headline on Left pure ivory, Pavilion visual on Right with floating preview card)
@@ -186,7 +187,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
               </h1>
 
               <p className="text-base sm:text-lg text-[#666666] max-w-xl font-normal leading-relaxed">
-                Compare the plans for your workspace. Paid subscriptions are billed securely through Stripe when checkout is configured.
+                Compare the plans for your workspace. Checkout is a demo simulation; no real charges occur.
               </p>
 
               {/* Value Badges */}
@@ -197,7 +198,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#F36B21]" />
-                  <span>Secure Stripe subscription checkout</span>
+                  <span>Demo checkout · no real payment</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#F36B21]" />
@@ -234,7 +235,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                   </button>
                 </div>
 
-                <span className="text-xs font-semibold text-[#777777]">Billed in USD · secure Stripe checkout</span>
+                <span className="text-xs font-semibold text-[#777777]">Illustrative USD prices · demo only</span>
               </div>
             </div>
 
@@ -800,7 +801,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
             </div>
 
             <h3 className="text-xl font-bold text-[#171717]">
-              Subscribe to {selectedPlanModal.name} Plan
+              {selectedPlanModal.id === 'free' ? 'Choose Free' : `Demo checkout · ${selectedPlanModal.name}`}
             </h3>
 
             <p className="text-xs text-[#777777]">
@@ -822,9 +823,10 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#777777]">Payment:</span>
-                    <span className="font-semibold text-[#171717]">{selectedPlanModal.id === 'free' ? 'No charge' : 'Stripe hosted checkout'}</span>
+                    <span className="font-semibold text-[#171717]">{selectedPlanModal.id === 'free' ? 'No charge' : 'Demo card ·•••• 4242'}</span>
                   </div>
-                  <p className="text-[#777777]">{selectedPlanModal.id === 'free' ? 'Your free plan activates immediately.' : billingReady ? 'You will review the final amount and payment terms securely on Stripe before paying.' : 'Billing is not configured on this server. No payment can be taken yet.'}</p>
+                  {selectedPlanModal.id !== 'free' && <div className="flex justify-between font-semibold"><span>Simulated total today:</span><span>${((billingCycle === 'yearly' ? selectedPlanModal.priceUsdYearly * 12 : selectedPlanModal.priceUsdMonthly) || 0).toFixed(2)} USD</span></div>}
+                  <p className="text-[#777777]">{selectedPlanModal.id === 'free' ? 'Your free plan activates immediately.' : 'This is a demo. No card details are entered, no money is taken, and no recurring charge is created.'}</p>
                 </div>
 
                 {checkoutError && <p role="alert" className="text-xs text-red-700 bg-red-50 rounded-xl p-3">{checkoutError}</p>}
@@ -837,7 +839,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                     Cancel
                   </button>
                   <button
-                    disabled={checkoutBusy || (selectedPlanModal.id !== 'free' && !billingReady)}
+                    disabled={checkoutBusy}
                     onClick={async () => {
                       setCheckoutBusy(true);
                       setCheckoutError('');
@@ -845,11 +847,15 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                         if (selectedPlanModal.id === 'free') {
                           const res = await subscribeToPlan({ planId: 'free', billingCycle });
                           setSubscriptionSuccessMsg(res.message);
+                          setActivePlan('free');
                         } else {
                           const res = await createCheckout({ planId: selectedPlanModal.id, billingCycle });
-                          if (!res.url || !res.url.startsWith('https://checkout.stripe.com/')) throw new Error('Checkout did not return a secure Stripe URL');
-                          window.location.assign(res.url);
+                          if (!res.simulation || !res.receipt) throw new Error('Demo checkout did not return a receipt');
+                          setSubscriptionSuccessMsg(`${res.message} Receipt: ${res.receipt.id}`);
+                          setActivePlan(selectedPlanModal.id);
+                          setReceipts((previous) => [res.receipt, ...previous]);
                         }
+                        authGetMe().catch(() => {});
                       } catch (err) {
                         setCheckoutError(err.message || 'Checkout could not be started.');
                       } finally {
@@ -858,7 +864,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                     }}
                     className="flex-1 py-3 rounded-full bg-[#F36B21] hover:bg-[#e05e16] disabled:opacity-50 text-white text-xs font-semibold shadow-md shadow-orange-500/20"
                   >
-                    {checkoutBusy ? 'Please wait…' : selectedPlanModal.id === 'free' ? 'Activate Free' : 'Continue to Stripe'}
+                    {checkoutBusy ? 'Please wait…' : selectedPlanModal.id === 'free' ? 'Activate Free' : 'Simulate payment'}
                   </button>
                 </div>
               </>

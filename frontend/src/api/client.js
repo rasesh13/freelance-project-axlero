@@ -463,11 +463,11 @@ export async function fetchBillingConfig() {
 }
 
 export async function createCheckout({ planId, billingCycle }) {
-  return await request('/billing/checkout', { method: 'POST', body: JSON.stringify({ planId, billingCycle }) });
+  return await request('/billing/checkout', { method: 'POST', body: JSON.stringify({ planId, billingCycle, paymentMethod: 'demo_card' }) });
 }
 
-export async function openBillingPortal() {
-  return await request('/billing/portal', { method: 'POST' });
+export async function fetchDemoReceipts() {
+  return await request('/billing/receipts');
 }
 
 export async function fetchResources() {
