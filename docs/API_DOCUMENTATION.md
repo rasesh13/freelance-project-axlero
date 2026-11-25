@@ -402,19 +402,27 @@ Environment variables allow the application to be configured without hardcoding 
 
 | `NODE_ENV` | Application environment |
 
+| `CORS_ORIGIN` | Allowed frontend origin for cross-origin requests |
+
+| `DATABASE_PATH` | SQLite database file path |
+
 ### Example configuration
 
 ```env
 
 PORT=5000
 
-JWT_SECRET=replace_with_secure_secret
+JWT_SECRET=replace-with-a-long-random-secret
 
 NODE_ENV=development
 
+CORS_ORIGIN=http://localhost:5173
+
+DATABASE_PATH=database.sqlite
+
 ```
 
-> ⚠️ Never expose production secrets or commit sensitive credentials to GitHub.
+> ⚠️ Never expose production secrets or commit sensitive credentials to GitHub. Set `JWT_SECRET` to a long, unpredictable value in production; do not rely on a placeholder or development fallback.
 
 ---
 
@@ -1087,123 +1095,71 @@ This section provides a consolidated reference of the API routes currently expos
 ## ✦ Endpoint Summary
 
 | Module | Method | Endpoint | Access |
-
 |---|---|---|---|
-
-| System | GET | `/` | Public |
-
-| System | GET | `/api` | Public |
-
-| System | GET | `/api/health` | Public |
-
-| System | GET | `/api/system/metrics` | Public |
-
-| System | GET | `/api/stats` | Public |
-
-| Documentation | GET | `/docs`, `/docs/`, `/api/docs`, `/api-docs`, `/swagger` | Public |
-
-| Documentation | GET | `/openapi.json`, `/api/openapi.json` | Public |
-
-| Authentication | POST | `/api/auth/register` | Public / rate-limited |
-
-| Authentication | POST | `/api/auth/login` | Public / rate-limited |
-
-| Authentication | GET | `/api/auth/me` | JWT required |
-
-| Authentication | POST | `/api/auth/forgot-password` | Public / rate-limited |
-
-| Settings | GET | `/api/settings` | Public route in current implementation |
-
-| Settings | PUT | `/api/settings` | JWT required |
-
-| Talent | GET | `/api/talents` | Public |
-
-| Talent | GET | `/api/talents/:id` | Public |
-
-| Projects | GET | `/api/projects` | Public |
-
-| Projects | GET | `/api/projects/:id` | Public |
-
-| Projects | POST | `/api/projects` | JWT required |
-
-| Projects | PATCH | `/api/projects/:id` | JWT required |
-
-| Projects | DELETE | `/api/projects/:id` | JWT required |
-
-| Kanban | GET | `/api/kanban` | JWT required |
-
-| Kanban | POST | `/api/kanban` | JWT required |
-
-| Kanban | PATCH | `/api/kanban/:id/column` | JWT required |
-
-| Kanban | DELETE | `/api/kanban/:id` | JWT required |
-
-| Contracts | GET | `/api/contracts` | JWT required |
-
-| Contracts | POST | `/api/contracts` | JWT required |
-
-| Proposals | GET | `/api/proposals` | JWT required |
-
-| Proposals | POST | `/api/proposals` | JWT required |
-
-| Proposals | PATCH | `/api/proposals/:id/status` | JWT required |
-
-| Time tracking | POST | `/api/time/log` | JWT required |
-
-| Time tracking | GET | `/api/time/logs` | JWT required |
-
-| Wallet | GET | `/api/wallet` | JWT required |
-
-| Wallet | POST | `/api/wallet/withdraw` | JWT required |
-
-| Messages | GET | `/api/messages` | JWT required |
-
-| Messages | POST | `/api/messages` | JWT required |
-
-| Files | GET | `/api/files` | JWT required |
-
-| Files | POST | `/api/files` | JWT required |
-
-| Files | DELETE | `/api/files/:id` | JWT required |
-
-| Team | GET | `/api/team` | JWT required |
-
-| Team | POST | `/api/team` | JWT required |
-
-| Payments | GET | `/api/payments` | JWT required |
-
-| Payments | PATCH | `/api/payments/:id/release` | JWT required |
-
-| Pricing | GET | `/api/pricing` | Public |
-
-| Subscriptions | POST | `/api/subscriptions` | JWT required |
-
-| Resources | GET | `/api/resources` | Public |
-
-| Bookmarks | GET | `/api/bookmarks` | JWT required |
-
-| Bookmarks | POST | `/api/bookmarks/toggle` | JWT required |
-
-| Newsletter | POST | `/api/newsletter` | Public |
-
-| Search | GET | `/api/search` | Public |
-
-| Notifications | GET | `/api/notifications` | JWT required |
-
-| Notifications | PATCH | `/api/notifications/read-all` | JWT required |
-
-| Notifications | PATCH | `/api/notifications/:id/read` | JWT required |
-
-| Notifications | DELETE | `/api/notifications/:id` | JWT required |
-
-| Export | GET | `/api/workspace/export` | Public route in current implementation |
-
-| Finance Export | GET | `/api/finances/export` | Public route in current implementation |
-
-| Audit Logs | GET | `/api/audit-logs` | Public route in current implementation |
-
-| Audit Logs | POST | `/api/audit-logs` | Public route in current implementation |
-
+| System | GET | / | Public |
+| Documentation | GET | /docs, /docs/, /api/docs, /api-docs, /swagger | Public |
+| Documentation | GET | /openapi.json, /api/openapi.json | Public |
+| System | GET | /api | Public |
+| System | GET | /api/health | Public |
+| System | GET | /api/system/metrics | Public |
+| System | GET | /api/stats | Public |
+| Authentication | POST | /api/auth/register | Public / rate-limited |
+| Authentication | POST | /api/auth/login | Public / rate-limited |
+| Authentication | GET | /api/auth/me | JWT required |
+| Authentication | PATCH | /api/auth/profile | JWT required |
+| Authentication | POST | /api/auth/forgot-password | Public / rate-limited |
+| Settings | GET | /api/settings | Public |
+| Settings | PUT | /api/settings | JWT required |
+| Talent | GET | /api/talents | Public |
+| Talent | GET | /api/talents/:id | Public |
+| Projects | GET | /api/projects | Optional JWT |
+| Projects | GET | /api/projects/:id | Public |
+| Projects | POST | /api/projects | JWT + client role |
+| Projects | PATCH | /api/projects/:id | JWT required |
+| Projects | DELETE | /api/projects/:id | JWT required |
+| Kanban | GET | /api/kanban | JWT required |
+| Kanban | POST | /api/kanban | JWT required |
+| Kanban | PATCH | /api/kanban/:id/column | JWT required |
+| Kanban | DELETE | /api/kanban/:id | JWT required |
+| Contracts | GET | /api/contracts | JWT required |
+| Contracts | POST | /api/contracts | JWT + client role |
+| Proposals | GET | /api/proposals | JWT required |
+| Proposals | POST | /api/proposals | JWT + freelancer role |
+| Proposals | PATCH | /api/proposals/:id/status | JWT required |
+| Time Tracking | POST | /api/time/log | JWT + freelancer role |
+| Time Tracking | GET | /api/time/logs | JWT required |
+| Wallet | GET | /api/wallet | JWT required |
+| Wallet | POST | /api/wallet/withdraw | JWT required |
+| Messages | GET | /api/messages | JWT required |
+| Messages | POST | /api/messages | JWT required |
+| Files | GET | /api/files | JWT required |
+| Files | POST | /api/files | JWT required |
+| Files | GET | /api/files/:id/download | JWT required |
+| Files | DELETE | /api/files/:id | JWT required |
+| Team | GET | /api/team | JWT required |
+| Team | POST | /api/team | JWT + client role |
+| Payments | GET | /api/payments | JWT required |
+| Payments | PATCH | /api/payments/:id/release | JWT required |
+| Disputes | GET | /api/disputes | JWT required |
+| Disputes | POST | /api/disputes | JWT required |
+| Pricing | GET | /api/pricing | Public |
+| Subscriptions | POST | /api/subscriptions | JWT required |
+| Billing | GET | /api/billing/config | Public |
+| Billing | POST | /api/billing/checkout | JWT required |
+| Billing | GET | /api/billing/receipts | JWT required |
+| Resources | GET | /api/resources | Public |
+| Bookmarks | GET | /api/bookmarks | JWT required |
+| Bookmarks | POST | /api/bookmarks/toggle | JWT required |
+| Newsletter | POST | /api/newsletter | Public |
+| Search | GET | /api/search | Public |
+| Notifications | GET | /api/notifications | JWT required |
+| Notifications | PATCH | /api/notifications/read-all | JWT required |
+| Notifications | PATCH | /api/notifications/:id/read | JWT required |
+| Notifications | DELETE | /api/notifications/:id | JWT required |
+| Workspace Export | GET | /api/workspace/export | JWT required |
+| Finance Export | GET | /api/finances/export | JWT required |
+| Audit Logs | GET | /api/audit-logs | JWT required |
+| Audit Logs | POST | /api/audit-logs | JWT required |
 ---
 
 # ◈ 16. SYSTEM & SERVICE ENDPOINTS
@@ -1362,7 +1318,45 @@ The client should store the returned token securely and attach it to protected r
 
 Requires a valid JWT. Returns the authenticated account/profile information associated with the token. This endpoint is useful when restoring a session after a page refresh.
 
-## 17.4 Password Reset Request
+## 17.4 Update User Profile
+
+### `PATCH /api/auth/profile`
+
+Updates the profile information associated with the currently authenticated user. A valid JWT is required.
+
+****Request headers****
+
+```http
+Authorization: Bearer YOUR_JWT_TOKEN
+Content-Type: application/json
+```
+
+****Request body****
+
+```json
+{
+  "name": "Riya Kapoor",
+  "title": "UI/UX Designer",
+  "avatar": "https://example.com/avatar.png",
+  "hourlyRate": 35,
+  "location": "Kolkata, India",
+  "about": "Product designer and researcher",
+  "skills": ["Figma", "Prototyping"],
+  "available": true
+}
+```
+
+The supported fields are `name`, `title`, `avatar`, `hourlyRate`, `location`, `about`, `skills`, and `available`. The profile handler updates the user record and, for freelancer accounts, the associated talent record. `name` cannot be empty and `hourlyRate` must be between `0` and `10,000`.
+
+****Expected outcomes****
+
+- `200 OK` when the profile is updated, returning `{ "success": true, "user": ... }`.
+- `400 Bad Request` when the name or hourly rate is invalid.
+- `401 Unauthorized` when authentication is missing.
+- `403 Forbidden` when the supplied token is invalid or expired.
+- `500 Internal Server Error` when the update fails.
+
+## 17.5 Password Reset Request
 
 ### `POST /api/auth/forgot-password`
 
@@ -1380,7 +1374,7 @@ Accepts an email address and queues or records a password-reset verification req
 
 ```
 
-## 17.5 Settings
+## 17.6 Settings
 
 ### `GET /api/settings`
 
@@ -1634,6 +1628,38 @@ Releases the payment or escrow amount associated with the payment record. This o
 
 ---
 
+## 22.5 Contract Disputes
+
+### `GET /api/disputes`
+
+Returns disputes where the authenticated user opened the dispute or is the other contract participant. Results are ordered by creation date, newest first, and include the associated contract title where available.
+
+### `POST /api/disputes`
+
+Opens a dispute for a contract in which the authenticated user participates.
+
+****Request body****
+
+```json
+{
+  "contractId": "cnt-1",
+  "reason": "Deliverable mismatch",
+  "notes": "The submitted deliverable does not meet the agreed requirements."
+}
+```
+
+The handler accepts `contractId` or, when an ID is not supplied, `contractTitle` to identify the contract. `reason` is required and `notes` is optional. The endpoint verifies contract participation, creates the dispute with `Open` status, marks eligible unreleased payments for the contract as `Disputed`, and notifies the other participant.
+
+****Expected outcomes****
+
+- `201 Created` when the dispute is opened.
+- `400 Bad Request` when the reason is missing.
+- `403 Forbidden` when the user is not a participant in the contract.
+- `404 Not Found` when the contract cannot be found.
+- `500 Internal Server Error` when dispute creation fails.
+
+---
+
 # ◈ 23. MESSAGING, FILES & TEAM COLLABORATION
 
 ## 23.1 Messages
@@ -1655,6 +1681,23 @@ Returns file/deliverable metadata available to the authenticated workspace.
 ### `POST /api/files`
 
 Creates a file/deliverable record. The current endpoint is protected; it should not be assumed to upload arbitrary binary file content unless the implementation explicitly supports that payload.
+
+### `GET /api/files/:id/download`
+
+Downloads the uploaded content associated with a file record. A valid JWT is required. The requesting user must be the file uploader or have access to the associated project.
+
+****Path parameter****
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `id` | string | Yes | Identifier of the file record |
+
+****Expected behavior****
+
+- Returns `404 Not Found` when the file does not exist or when a legacy file has no uploaded content.
+- Returns `403 Forbidden` when the user does not own the file and cannot access its project.
+- Sends the decoded file content with the stored MIME type and an attachment filename when access is allowed.
+- Returns `500 Internal Server Error` if the download fails.
 
 ### `DELETE /api/files/:id`
 
@@ -1686,13 +1729,64 @@ Returns pricing plan/catalog information. This endpoint is public and can be use
 
 Creates a subscription record or initiates the subscription workflow for the authenticated account. Authentication is required.
 
-## 24.3 Resources
+## 24.3 Billing Configuration
+
+### `GET /api/billing/config`
+
+Returns the billing provider configuration exposed by the application. The current implementation reports a demo provider, USD currency, and simulation mode.
+
+****Example response****
+
+```json
+{
+  "provider": "demo",
+  "configured": true,
+  "currency": "USD",
+  "simulation": true
+}
+```
+
+## 24.4 Demo Subscription Checkout
+
+### `POST /api/billing/checkout`
+
+Activates a paid demo subscription for the authenticated user. This workflow simulates checkout and does not process a real payment.
+
+****Request body****
+
+```json
+{
+  "planId": "pro",
+  "billingCycle": "monthly",
+  "paymentMethod": "demo_card"
+}
+```
+
+Supported paid plans are `pro`, `team`, and `business`. The billing cycle must be `monthly` or `yearly`, and the payment method must be `demo_card`. The backend calculates the amount from the selected pricing record, creates a demo receipt, and updates the user's subscription within a database transaction.
+
+****Expected outcomes****
+
+- `201 Created` when the demo subscription is activated.
+- `400 Bad Request` when the plan, billing cycle, or payment method is invalid.
+- `401 Unauthorized` when authentication is missing.
+- `404 Not Found` when the selected plan does not exist.
+- `500 Internal Server Error` when checkout cannot be completed.
+
+The response includes `success`, `simulation`, `receipt`, and a message confirming that no real payment was made.
+
+## 24.5 Billing Receipts
+
+### `GET /api/billing/receipts`
+
+Returns demo payment receipts belonging to the authenticated user, ordered by creation date and receipt identifier in descending order. Each receipt includes its identifier, plan, billing cycle, amount in cents, currency, status, and creation timestamp.
+
+## 24.6 Resources
 
 ### `GET /api/resources`
 
 Returns the platform resources/catalog entries. The endpoint can be used to populate resource discovery pages.
 
-## 24.4 Bookmarks
+## 24.7 Bookmarks
 
 ### `GET /api/bookmarks`
 
@@ -1702,7 +1796,7 @@ Returns the authenticated user's bookmarked items.
 
 Adds or removes a bookmark based on the item details supplied to the endpoint. Authentication is required. The frontend should interpret the response as the updated bookmark state rather than blindly adding a duplicate.
 
-## 24.5 Newsletter
+## 24.8 Newsletter
 
 ### `POST /api/newsletter`
 
@@ -1952,7 +2046,7 @@ GET /api/finances/export
 
 ```
 
-The route currently does not enforce JWT authentication in its handler. Treat the export as sensitive and protect it appropriately before exposing it in a production deployment.
+The route requires JWT authentication. The backend scopes the export to the authenticated user; treat the resulting financial data as sensitive.
 
 ## 31.2 Retrieve Audit Logs
 
@@ -2052,13 +2146,13 @@ Records an audit event containing an action, entity type, optional entity identi
 
 ```
 
-The current route handler does not require JWT authentication. In production, audit-log creation and retrieval should be access-controlled and should not accept untrusted client details as a replacement for server-side audit events.
+Both audit-log retrieval and creation require JWT authentication. Audit events should still be treated as sensitive operational records, and client-supplied details should not replace trusted server-side audit events.
 
 ---
 
 # ◈ 32. ROUTE ACCESS & IMPLEMENTATION NOTES
 
-The endpoint directory and route descriptions are based on the current `backend/server.js` implementation. A few endpoints that return sensitive workspace or financial information are public in the present implementation; the access labels reflect the route behavior rather than a recommended security policy.
+The endpoint directory and route descriptions are based on the current `backend/server.js` implementation. Access labels distinguish public routes, optional authentication, JWT-protected routes, and routes with additional role requirements.
 
 | Endpoint | Current implementation note |
 
@@ -2066,15 +2160,15 @@ The endpoint directory and route descriptions are based on the current `backend/
 
 | `GET /api/settings` | Public route; returns settings in the current implementation |
 
-| `GET /api/workspace/export` | Public route in the current implementation |
+| `GET /api/workspace/export` | Requires JWT authentication |
 
-| `GET /api/finances/export` | Public route in the current implementation |
+| `GET /api/finances/export` | Requires JWT authentication |
 
-| `GET /api/audit-logs` | Public route in the current implementation |
+| `GET /api/audit-logs` | Requires JWT authentication |
 
-| `POST /api/audit-logs` | Public route in the current implementation; records the actor as `anonymous` if no user context is present |
+| `POST /api/audit-logs` | Requires JWT authentication |
 
-These routes should be reviewed and protected with appropriate authentication, authorization, and ownership checks before production use. This documentation describes the implemented behavior and does not imply that the current access model is a security recommendation.
+Project creation, contract creation, proposal creation, time logging, and team creation also enforce role-specific access checks. File download and deletion apply ownership or project-access checks. Continue reviewing authorization and resource ownership whenever routes are changed.
 
 ## Final Integration Reminder
 
