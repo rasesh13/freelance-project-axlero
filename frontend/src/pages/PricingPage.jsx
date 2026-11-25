@@ -23,12 +23,14 @@ import {
   Briefcase,
   TrendingUp,
 } from 'lucide-react';
-import { fetchPricingPlans, subscribeToPlan, getAuthToken } from '../api/client';
+import { fetchPricingPlans, subscribeToPlan, createCheckout, fetchBillingConfig, openBillingPortal, getAuthToken, getStoredUser } from '../api/client';
 
 export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
   const [plans, setPlans] = useState([]);
   const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'yearly'
-  const [currency, setCurrency] = useState('USD'); // 'USD' | 'EUR' | 'INR'
+  const [billingReady, setBillingReady] = useState(false);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
   const [selectedPlanModal, setSelectedPlanModal] = useState(null);
   const [subscriptionSuccessMsg, setSubscriptionSuccessMsg] = useState('');
   const [activeFaq, setActiveFaq] = useState(0);
@@ -36,6 +38,8 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
   const [isCompareOpen, setIsCompareOpen] = useState(false);
 
   const handleSelectPlan = (plan) => {
+    setCheckoutError('');
+    setSubscriptionSuccessMsg('');
     if (!isLoggedIn || !getAuthToken()) {
       setCurrentPage('auth', {
         notice: `Sign in or create an account to activate the ${plan?.name || 'Workverse'} plan.`,
@@ -54,22 +58,18 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
       .catch((err) => console.error('Failed to load pricing plans:', err));
   }, []);
 
+  useEffect(() => {
+    fetchBillingConfig().then((config) => setBillingReady(Boolean(config.configured))).catch(() => setBillingReady(false));
+    const result = new URLSearchParams(window.location.search).get('checkout');
+    if (result === 'success') setSubscriptionSuccessMsg('Checkout completed. Your plan will update after payment confirmation.');
+    if (result === 'cancelled') setCheckoutError('Checkout was cancelled. No charge was made.');
+    if (result) window.history.replaceState({}, '', `${window.location.pathname}#pricing`);
+  }, []);
+
   // Price formatting helper
   const getPrice = (plan) => {
-    if (!plan || plan.id === 'free') {
-      return currency === 'INR' ? '₹0' : currency === 'EUR' ? '€0' : '$0';
-    }
-
-    if (currency === 'INR') {
-      const val = billingCycle === 'monthly' ? plan.priceMonthly : plan.priceYearly;
-      return `₹${(val || 0).toLocaleString('en-IN')}`;
-    } else if (currency === 'EUR') {
-      const val = billingCycle === 'monthly' ? Math.round((plan.priceUsdMonthly || 0) * 0.92) : Math.round((plan.priceUsdYearly || 0) * 0.92);
-      return `€${val}`;
-    } else {
-      const val = billingCycle === 'monthly' ? plan.priceUsdMonthly : plan.priceUsdYearly;
-      return `$${val || 0}`;
-    }
+    if (!plan || plan.id === 'free') return '$0';
+    return `$${billingCycle === 'monthly' ? plan.priceUsdMonthly : plan.priceUsdYearly}`;
   };
 
   // Savings calculations
@@ -97,15 +97,15 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
   const faqs = [
     {
       q: 'How does milestone-based escrow billing work?',
-      a: 'When you commission a project or milestone, your funds are safely deposited into a regulated escrow account. The funds are only released to the freelancer once you review and approve the submitted deliverables.',
+      a: 'Project milestones can be tracked in your workspace. Subscription checkout is handled by Stripe when billing is configured; Workverse does not currently hold regulated escrow funds.',
     },
     {
       q: 'Can I switch or cancel my plan at any time?',
-      a: 'Yes, absolutely. You can upgrade, downgrade, or cancel your subscription at any moment from your workspace settings with zero cancellation penalties or lock-in contracts.',
+      a: 'Paid subscriptions are managed through the Stripe billing portal. Billing changes and cancellation take effect under the terms shown at checkout.',
     },
     {
       q: 'What makes Workverse different from legacy freelance platforms?',
-      a: 'Legacy platforms charge high 20% commissions from freelancers and additional buyer fees. Workverse charges a predictable flat subscription with capped 4% escrow fees, giving you direct access to top-vetted talent with no middleman markup.',
+      a: 'Workverse provides project collaboration and a freelancer directory. Plan prices shown here are the subscription prices configured for checkout; project payment processing is separate.',
     },
     {
       q: 'What is included in the Team plan?',
@@ -113,16 +113,30 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
     },
     {
       q: 'How are plan changes handled on localhost?',
-      a: 'Plan selections are saved to your Workverse account immediately. External billing is not charged until a payment provider is configured.',
+      a: 'Paid plans use Stripe hosted Checkout when Stripe is configured. A plan becomes active only after Stripe confirms the subscription. Until then, checkout is unavailable.',
     },
     {
       q: 'How does Enterprise custom invoicing work?',
-      a: 'For high-volume teams and venture-backed scaleups, our Business Enterprise plan supports custom MSA contracts, Net-30 invoicing, dedicated talent managers, and custom SOC-2 compliance workflows.',
+      a: 'The Business plan is listed for larger teams. Contact the Workverse operator for any custom agreement or invoicing arrangements.',
     },
   ];
 
   return (
     <div className="w-full min-h-screen bg-[#FFF9F5] text-[#171717] pb-24 relative">
+      {(subscriptionSuccessMsg || checkoutError) && !selectedPlanModal && (
+        <div role="status" className="max-w-7xl mx-auto px-4 pt-5 text-sm font-semibold text-[#171717]">
+          {subscriptionSuccessMsg || checkoutError}
+        </div>
+      )}
+      {isLoggedIn && getStoredUser()?.subscription_status === 'active' && (
+        <div className="max-w-7xl mx-auto px-4 pt-5 flex items-center justify-between gap-4 text-sm">
+          <span>Your {getStoredUser()?.subscription_plan} plan is active.</span>
+          <button className="text-[#F36B21] font-bold underline" onClick={async () => {
+            try { const result = await openBillingPortal(); window.location.assign(result.url); }
+            catch (err) { setCheckoutError(err.message || 'Could not open billing portal.'); }
+          }}>Manage billing</button>
+        </div>
+      )}
       {/* ========================================================
           HERO BANNER: ASYMMETRIC 2-COLUMN ARCHITECTURAL HERO
           (Headline on Left pure ivory, Pavilion visual on Right with floating preview card)
@@ -172,7 +186,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
               </h1>
 
               <p className="text-base sm:text-lg text-[#666666] max-w-xl font-normal leading-relaxed">
-                We replaced traditional 35% staffing agency markups with transparent, predictable subscription tiers. Retain more capital and hire top 1% independent talent with zero friction.
+                Compare the plans for your workspace. Paid subscriptions are billed securely through Stripe when checkout is configured.
               </p>
 
               {/* Value Badges */}
@@ -183,7 +197,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#F36B21]" />
-                  <span>100% Escrow protected</span>
+                  <span>Secure Stripe subscription checkout</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#F36B21]" />
@@ -220,22 +234,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                   </button>
                 </div>
 
-                {/* Currency Switch */}
-                <div className="flex items-center bg-white border border-[#EAE2DC] rounded-full p-1 text-xs shadow-xs">
-                  {['USD', 'EUR', 'INR'].map((curr) => (
-                    <button
-                      key={curr}
-                      onClick={() => setCurrency(curr)}
-                      className={`px-3 py-1.5 rounded-full font-bold transition-colors ${
-                        currency === curr
-                          ? 'bg-[#F36B21] text-white'
-                          : 'text-[#777777] hover:text-[#171717]'
-                      }`}
-                    >
-                      {curr === 'USD' ? 'USD ($)' : curr === 'EUR' ? 'EUR (€)' : 'INR (₹)'}
-                    </button>
-                  ))}
-                </div>
+                <span className="text-xs font-semibold text-[#777777]">Billed in USD · secure Stripe checkout</span>
               </div>
             </div>
 
@@ -250,7 +249,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                     </span>
                     <div>
                       <h3 className="text-sm font-bold text-[#171717]">Team Workspace</h3>
-                      <p className="text-[11px] text-[#777777]">Most Chosen by Startups</p>
+                      <p className="text-[11px] text-[#777777]">For collaborative teams</p>
                     </div>
                   </div>
                   <span className="px-2.5 py-0.5 rounded-full bg-[#FFF3EC] text-[#F36B21] text-[10px] font-extrabold border border-[#FCE2D3]">
@@ -262,17 +261,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                 <div className="p-4 rounded-2xl bg-[#FFF9F5] border border-[#F3ECE7] flex items-baseline justify-between">
                   <div>
                     <span className="text-3xl font-extrabold text-[#171717] tracking-tight">
-                      {currency === 'INR'
-                        ? billingCycle === 'monthly'
-                          ? '₹1,499'
-                          : '₹1,199'
-                        : currency === 'EUR'
-                        ? billingCycle === 'monthly'
-                          ? '€45'
-                          : '€36'
-                        : billingCycle === 'monthly'
-                        ? '$49'
-                        : '$39'}
+                      {getPrice(plans.find((p) => p.id === 'team'))}
                     </span>
                     <span className="text-xs text-[#777777]">/month</span>
                   </div>
@@ -285,11 +274,11 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center gap-2 text-[#444444]">
                     <CheckCircle2 className="w-4 h-4 text-[#F36B21] shrink-0" />
-                    <span>Priority talent matching (within 24 hrs)</span>
+                    <span>Shared team workspace</span>
                   </div>
                   <div className="flex items-center gap-2 text-[#444444]">
                     <CheckCircle2 className="w-4 h-4 text-[#F36B21] shrink-0" />
-                    <span>Regulated milestone escrow holding</span>
+                    <span>Milestone tracking in your workspace</span>
                   </div>
                   <div className="flex items-center gap-2 text-[#444444]">
                     <CheckCircle2 className="w-4 h-4 text-[#F36B21] shrink-0" />
@@ -313,7 +302,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                   }
                   className="w-full py-3 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-orange-500/25 transition-all"
                 >
-                  <span>Start 14-Day Free Trial</span>
+                  <span>Choose Team</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -515,7 +504,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
             {/* Right Action */}
             <div className="shrink-0 text-left lg:text-right space-y-2">
               <div className="text-2xl sm:text-3xl font-extrabold text-[#171717]">
-                {currency === 'INR' ? '₹4,999' : currency === 'EUR' ? '€139' : '$149'}
+                {getPrice(enterprisePlan)}
                 <span className="text-xs font-normal text-[#777777]">/month</span>
               </div>
               <button
@@ -549,7 +538,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
               </h2>
 
               <p className="text-xs sm:text-sm text-[#666666] leading-relaxed max-w-xl">
-                Staffing agencies charge 30% to 40% markups on every hour worked. Legacy freelance sites impose 20% fees. Workverse caps escrow processing at a flat 4%, saving your business tens of thousands in payroll costs.
+                Adjust the slider for an illustrative fee comparison. These assumptions are examples, not a quote or a promise of actual savings.
               </p>
 
               {/* Interactive Range Slider */}
@@ -608,7 +597,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
               {/* Workverse Bar */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs font-bold text-[#171717]">
-                  <span className="text-[#F36B21]">Workverse Capped Escrow (4%)</span>
+                  <span className="text-[#F36B21]">Illustrative 4% Platform Fee</span>
                   <span className="text-[#F36B21]">${workverseFee.toLocaleString()}</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-[#FCE2D3]">
@@ -623,7 +612,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                   ${annualSavings.toLocaleString()} <span className="text-sm font-normal text-[#777777]">/ yr</span>
                 </span>
                 <p className="text-[11px] text-emerald-600 font-semibold mt-1">
-                  Pure capital saved to accelerate your product roadmap
+                    Illustrative estimate based on assumed platform fees
                 </p>
               </div>
             </div>
@@ -696,11 +685,11 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
 
                   <tr>
                     <td colSpan={5} className="py-3 pt-5 font-bold uppercase tracking-wider text-[10px] text-[#F36B21]">
-                      Talent Matching & Escrow
+                      Collaboration & Payments
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-3 text-[#171717] font-medium">Milestone Escrow Protection</td>
+                    <td className="py-3 text-[#171717] font-medium">Milestone Tracking</td>
                     <td className="py-3 px-4"><Check className="w-4 h-4 text-[#F36B21]" /></td>
                     <td className="py-3 px-4"><Check className="w-4 h-4 text-[#F36B21]" /></td>
                     <td className="py-3 px-4"><Check className="w-4 h-4 text-[#F36B21]" /></td>
@@ -759,7 +748,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
             Frequently Asked Questions
           </h2>
           <p className="text-xs sm:text-sm text-[#777777] max-w-md mx-auto">
-            Everything you need to know about plans, escrow protection, and billing terms.
+            Everything you need to know about plans, milestone tracking, and billing terms.
           </p>
         </div>
 
@@ -832,14 +821,13 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                     <span className="font-semibold text-[#171717] capitalize">{billingCycle}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#777777]">Escrow Protection:</span>
-                    <span className="font-semibold text-emerald-600">Active</span>
+                    <span className="text-[#777777]">Payment:</span>
+                    <span className="font-semibold text-[#171717]">{selectedPlanModal.id === 'free' ? 'No charge' : 'Stripe hosted checkout'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#777777]">Trial Guarantee:</span>
-                    <span className="font-semibold text-[#171717]">14-Day Full Refund</span>
-                  </div>
+                  <p className="text-[#777777]">{selectedPlanModal.id === 'free' ? 'Your free plan activates immediately.' : billingReady ? 'You will review the final amount and payment terms securely on Stripe before paying.' : 'Billing is not configured on this server. No payment can be taken yet.'}</p>
                 </div>
+
+                {checkoutError && <p role="alert" className="text-xs text-red-700 bg-red-50 rounded-xl p-3">{checkoutError}</p>}
 
                 <div className="flex items-center gap-3 pt-2">
                   <button
@@ -849,21 +837,28 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                     Cancel
                   </button>
                   <button
+                    disabled={checkoutBusy || (selectedPlanModal.id !== 'free' && !billingReady)}
                     onClick={async () => {
+                      setCheckoutBusy(true);
+                      setCheckoutError('');
                       try {
-                        const res = await subscribeToPlan({ planId: selectedPlanModal.id, billingCycle });
-                        setSubscriptionSuccessMsg(res.message || `Your ${selectedPlanModal.name} subscription is now active!`);
-                      } catch {
-                        setSubscriptionSuccessMsg(`Your ${selectedPlanModal.name} subscription is now active!`);
+                        if (selectedPlanModal.id === 'free') {
+                          const res = await subscribeToPlan({ planId: 'free', billingCycle });
+                          setSubscriptionSuccessMsg(res.message);
+                        } else {
+                          const res = await createCheckout({ planId: selectedPlanModal.id, billingCycle });
+                          if (!res.url || !res.url.startsWith('https://checkout.stripe.com/')) throw new Error('Checkout did not return a secure Stripe URL');
+                          window.location.assign(res.url);
+                        }
+                      } catch (err) {
+                        setCheckoutError(err.message || 'Checkout could not be started.');
+                      } finally {
+                        setCheckoutBusy(false);
                       }
-                      setTimeout(() => {
-                        setSubscriptionSuccessMsg('');
-                        setSelectedPlanModal(null);
-                      }, 1500);
                     }}
-                    className="flex-1 py-3 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-semibold shadow-md shadow-orange-500/20"
+                    className="flex-1 py-3 rounded-full bg-[#F36B21] hover:bg-[#e05e16] disabled:opacity-50 text-white text-xs font-semibold shadow-md shadow-orange-500/20"
                   >
-                    Confirm & Activate
+                    {checkoutBusy ? 'Please wait…' : selectedPlanModal.id === 'free' ? 'Activate Free' : 'Continue to Stripe'}
                   </button>
                 </div>
               </>
