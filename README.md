@@ -63,6 +63,12 @@ Discover talent. Find meaningful work. Collaborate with clients and teams. Manag
 
 It brings essential freelance workflows into a unified digital workspace, allowing users to discover opportunities, manage projects, coordinate teams, exchange deliverables, and track payment-related activities.
 
+### Subscription checkout setup
+
+Paid plans use Stripe hosted Checkout. Copy `backend/.env.example` to `backend/.env`, set a Stripe secret key, webhook signing secret, and the six recurring USD price IDs. In development, use Stripe test mode and forward `checkout.session.completed` and `customer.subscription.updated/deleted` events to `http://localhost:5000/api/billing/webhook` with the Stripe CLI. Restart the backend after changing environment values. The paid plan is activated only by a verified payment webhook; a redirect or a failed API call cannot activate it. Existing subscribers can open the Stripe billing portal from Pricing. Configure the portal in Stripe before using that button.
+
+Without these credentials, paid checkout is disabled and no payment is taken. The Free plan can be activated locally. Project contract offers are not funded by the subscription checkout; milestone payment collection still requires a separate integration.
+
 ### The Workverse Workflow
 
 **Discover Talent → Explore Opportunities → Submit Proposals → Manage Projects → Deliver Work → Track Payments**
