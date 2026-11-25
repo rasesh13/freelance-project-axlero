@@ -458,6 +458,18 @@ export async function subscribeToPlan({ planId, billingCycle }) {
   });
 }
 
+export async function fetchBillingConfig() {
+  return await request('/billing/config');
+}
+
+export async function createCheckout({ planId, billingCycle }) {
+  return await request('/billing/checkout', { method: 'POST', body: JSON.stringify({ planId, billingCycle }) });
+}
+
+export async function openBillingPortal() {
+  return await request('/billing/portal', { method: 'POST' });
+}
+
 export async function fetchResources() {
   return await request('/resources', { cache: true });
 }
