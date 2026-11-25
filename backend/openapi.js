@@ -327,13 +327,9 @@ function getOpenApiSpec(port = 5000) {
       '/api/wallet/withdraw': {
         post: {
           tags: ['Time & Wallet'],
-          summary: 'Withdraw available earnings via Stripe or Wire',
+          summary: 'Payouts unavailable until a payout provider is configured',
           security: [{ bearerAuth: [] }],
-          requestBody: {
-            required: true,
-            content: { 'application/json': { example: { amount: 250, method: 'stripe' } } },
-          },
-          responses: { 200: { description: 'Withdrawal completed' }, 400: { description: 'Insufficient funds' } },
+          responses: { 503: { description: 'Payouts not configured; balance unchanged' } },
         },
       },
       '/api/messages': {
@@ -425,14 +421,27 @@ function getOpenApiSpec(port = 5000) {
       '/api/subscriptions': {
         post: {
           tags: ['Platform Catalog'],
-          summary: 'Activate subscription tier for user workspace',
+          summary: 'Switch workspace back to the Free demo plan',
           security: [{ bearerAuth: [] }],
           requestBody: {
             required: true,
-            content: { 'application/json': { example: { planId: 'pro', billingCycle: 'yearly' } } },
+            content: { 'application/json': { example: { planId: 'free', billingCycle: 'monthly' } } },
           },
-          responses: { 200: { description: 'Subscription activated' } },
+          responses: { 200: { description: 'Free plan activated without payment' } },
         },
+      },
+      '/api/billing/config': {
+        get: { tags: ['Platform Catalog'], summary: 'Describe demo-only billing mode', responses: { 200: { description: 'Simulation is always true' } } },
+      },
+      '/api/billing/checkout': {
+        post: {
+          tags: ['Platform Catalog'], summary: 'Simulate a plan payment; no real card or money is used', security: [{ bearerAuth: [] }],
+          requestBody: { required: true, content: { 'application/json': { example: { planId: 'pro', billingCycle: 'yearly', paymentMethod: 'demo_card' } } } },
+          responses: { 201: { description: 'Demo receipt and plan activation' }, 400: { description: 'Invalid demo selection' } },
+        },
+      },
+      '/api/billing/receipts': {
+        get: { tags: ['Platform Catalog'], summary: 'List only the signed-in user’s simulated receipts', security: [{ bearerAuth: [] }], responses: { 200: { description: 'Demo receipts' } } },
       },
       '/api/resources': {
         get: { tags: ['Platform Catalog'], summary: 'List Workverse guides & tutorials', responses: { 200: { description: 'Articles array' } } },

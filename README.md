@@ -63,11 +63,11 @@ Discover talent. Find meaningful work. Collaborate with clients and teams. Manag
 
 It brings essential freelance workflows into a unified digital workspace, allowing users to discover opportunities, manage projects, coordinate teams, exchange deliverables, and track payment-related activities.
 
-### Subscription checkout setup
+### Demo subscription checkout
 
-Paid plans use Stripe hosted Checkout. Copy `backend/.env.example` to `backend/.env`, set a Stripe secret key, webhook signing secret, and the six recurring USD price IDs. In development, use Stripe test mode and forward `checkout.session.completed` and `customer.subscription.updated/deleted` events to `http://localhost:5000/api/billing/webhook` with the Stripe CLI. Restart the backend after changing environment values. The paid plan is activated only by a verified payment webhook; a redirect or a failed API call cannot activate it. Existing subscribers can open the Stripe billing portal from Pricing. Configure the portal in Stripe before using that button.
+Pricing uses a local demo checkout. Signed-in users can select a paid tier and billing cycle, review the illustrative total, and simulate payment. The backend uses its stored plan price, records a demo receipt in SQLite, and updates the user's demo plan. No card number is collected, no provider is called, and no money or recurring charge is created. Users can switch back to Free on the Pricing page.
 
-Without these credentials, paid checkout is disabled and no payment is taken. The Free plan can be activated locally. Project contract offers are not funded by the subscription checkout; milestone payment collection still requires a separate integration.
+This demo checkout does not fund project contract offers or enable freelancer payouts. Those flows remain unavailable until separately implemented.
 
 ### The Workverse Workflow
 
