@@ -265,7 +265,7 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage, isLo
           {/* Main Column */}
           <div className="lg:col-span-8 space-y-8">
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-2 border-b border-[#EAE2DC] pb-2 text-xs font-semibold">
+            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap border-b border-[#EAE2DC] pb-2 text-xs font-semibold [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {[
                 { id: 'overview', label: 'Overview & Bio' },
                 { id: 'portfolio', label: `Portfolio (${currentFreelancer.portfolio?.length || 0})` },
@@ -275,9 +275,9 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage, isLo
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-2 rounded-full transition-all ${activeTab === tab.id
-                      ? 'bg-[#FCE2D3] text-[#171717] font-bold'
-                      : 'text-[#777777] hover:text-[#171717]'
+                  className={`shrink-0 px-4 py-2 rounded-full border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F36B21]/40 ${activeTab === tab.id
+                      ? 'bg-[#FFF3EC] text-[#F36B21] border-[#F36B21]/25 font-bold shadow-sm'
+                      : 'border-transparent text-[#777777] hover:bg-[#FFF9F5] hover:text-[#171717] hover:border-[#EAE2DC]'
                     }`}
                 >
                   {tab.label}
@@ -304,7 +304,7 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage, isLo
                     {(currentFreelancer.skills || []).map((skill, idx) => (
                       <span
                         key={idx}
-                        className="px-3 py-1 rounded-full bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-medium text-[#171717]"
+                        className="px-3 py-1 rounded-full bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-medium text-[#171717] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#F36B21]/40 hover:bg-[#FFF3EC] hover:shadow-sm"
                       >
                         {skill}
                       </span>
