@@ -101,6 +101,13 @@ async function main() {
 
   assert(clientA.user.wallet_balance === 0 && freelancer.user.wallet_balance === 0, 'New users must start with real zero balances');
 
+  const billing = await api('/billing/config');
+  assert(billing.configured === false, 'Unconfigured test billing must be unavailable');
+  await api('/subscriptions', { token: clientA.token, method: 'POST', expected: 409, body: { planId: 'pro', billingCycle: 'monthly' } });
+  await api('/billing/checkout', { token: clientA.token, method: 'POST', expected: 503, body: { planId: 'pro', billingCycle: 'monthly' } });
+  const afterFailedCheckout = await api('/auth/me', { token: clientA.token });
+  assert(afterFailedCheckout.user.subscription_plan === 'free', 'A failed checkout must never activate a paid plan');
+
   const profile = await api('/auth/profile', {
     token: freelancer.token,
     method: 'PATCH',
@@ -143,6 +150,12 @@ async function main() {
   const contracts = await api('/contracts', { token: freelancer.token });
   assert(contracts.some((item) => item.title === project.title), 'Accepted proposal did not create a live contract');
 
+  const offer = await api('/contracts', { token: clientA.token, method: 'POST', expected: 201,
+    body: { title: `Offer ${stamp}`, freelancerId: freelancer.user.id, budget: 125 } });
+  assert(offer.message.includes('Funding has not been collected'), 'New contract incorrectly claims payment was collected');
+  const unfunded = db.prepare("SELECT id FROM payments WHERE client_id = ? AND milestone LIKE 'Funding required:%' ORDER BY created_at DESC LIMIT 1").get(clientA.user.id);
+  await api(`/payments/${unfunded.id}/release`, { token: clientA.token, method: 'PATCH', expected: 409 });
+
   const message = await api('/messages', {
     token: clientA.token,
     method: 'POST',
@@ -172,7 +185,7 @@ async function main() {
   assert(filesA.some((file) => file.id === upload.file.id), 'Uploaded file is missing from owner workspace');
   assert(!filesB.some((file) => file.id === upload.file.id), 'Unrelated user can see uploaded file');
 
-  console.log('Live-data isolation: 18/18 checks passed');
+  console.log('Live-data isolation and billing: 24/24 checks passed');
 }
 
 main()

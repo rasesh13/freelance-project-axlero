@@ -61,6 +61,8 @@ async function main() {
     WORKVERSE_DB_PATH: testDbPath,
     WORKVERSE_SEED_DEMO_DATA: 'true',
     JWT_SECRET: 'workverse-isolated-integration-test',
+    STRIPE_SECRET_KEY: '',
+    STRIPE_WEBHOOK_SECRET: '',
   };
   let spawnedServer = null;
 

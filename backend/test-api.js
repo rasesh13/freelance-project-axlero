@@ -314,7 +314,7 @@ async function runApiTestSuite() {
     assert.strictEqual(res.data.newWalletBalance, initialBal + accountRate);
   });
 
-  await test('POST /api/wallet/withdraw processes withdrawal request', async () => {
+  await test('POST /api/wallet/withdraw rejects unconfigured payouts', async () => {
     const res = await request('/api/wallet/withdraw', {
       method: 'POST',
       body: JSON.stringify({
@@ -322,10 +322,8 @@ async function runApiTestSuite() {
         method: 'stripe',
       }),
     });
-    assert.strictEqual(res.status, 200);
-    assert.strictEqual(res.data.success, true);
-    assert(res.data.transactionId);
-    assert.strictEqual(typeof res.data.remainingBalance, 'number');
+    assert.strictEqual(res.status, 503);
+    assert.match(res.data.error, /not configured/);
   });
 
   await test('GET /api/payments returns escrow milestone records', async () => {
