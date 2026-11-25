@@ -1,7 +1,9 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const Stripe = require('stripe');
 const { db, logAuditEvent } = require('./db');
 const { renderDashboardHtml, renderDocsHtml } = require('./dashboard');
 const { getOpenApiSpec } = require('./openapi');
@@ -9,6 +11,9 @@ const { getOpenApiSpec } = require('./openapi');
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'workverse_super_secret_jwt_key_2026';
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+const checkoutOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+const stripePriceId = (planId, cycle) => process.env[`STRIPE_PRICE_${planId.toUpperCase()}_${cycle.toUpperCase()}`];
 
 // ==========================================
 // GLOBAL MIDDLEWARE
@@ -18,6 +23,40 @@ app.use(cors({
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+// Stripe signs the exact request bytes; this route must precede JSON parsing.
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) return res.status(503).json({ error: 'Billing webhook is not configured' });
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET);
+  } catch {
+    return res.status(400).json({ error: 'Invalid webhook signature' });
+  }
+  try {
+    const object = event.data.object;
+    if (['checkout.session.completed', 'checkout.session.async_payment_succeeded'].includes(event.type) && object.mode === 'subscription' && object.payment_status === 'paid' && object.subscription && object.customer) {
+      const userId = object.metadata?.userId;
+      const planId = object.metadata?.planId;
+      const cycle = object.metadata?.billingCycle;
+      if (userId && ['pro', 'team', 'business'].includes(planId) && ['monthly', 'yearly'].includes(cycle)) {
+        db.prepare(`UPDATE users SET stripe_customer_id = ?, stripe_subscription_id = ?, subscription_plan = ?, billing_cycle = ?, subscription_status = 'active' WHERE id = ?`)
+          .run(object.customer, object.subscription, planId, cycle, userId);
+      }
+    }
+    if (['customer.subscription.deleted', 'customer.subscription.updated'].includes(event.type)) {
+      const active = ['active', 'trialing'].includes(object.status);
+      const currentPrice = object.items?.data?.[0]?.price?.id;
+      const match = ['pro', 'team', 'business'].flatMap((plan) => ['monthly', 'yearly'].map((cycle) => ({ plan, cycle })))
+        .find(({ plan, cycle }) => stripePriceId(plan, cycle) === currentPrice);
+      db.prepare(`UPDATE users SET subscription_status = ?, subscription_plan = CASE WHEN ? THEN COALESCE(?, subscription_plan) ELSE 'free' END, billing_cycle = COALESCE(?, billing_cycle) WHERE stripe_subscription_id = ?`)
+        .run(object.status, active ? 1 : 0, match?.plan || null, match?.cycle || null, object.id);
+    }
+    res.json({ received: true });
+  } catch (err) {
+    console.error('Billing webhook error:', err);
+    res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
 app.use(express.json({ limit: '16mb' }));
 
 // Security Headers
@@ -182,6 +221,7 @@ function formatUserRow(row) {
     hourly_rate: row.hourly_rate,
     subscription_plan: row.subscription_plan || 'free',
     billing_cycle: row.billing_cycle || 'monthly',
+    subscription_status: row.subscription_status || 'inactive',
     workspace_name: row.workspace_name || 'Workverse Ventures',
     billing_email: row.billing_email || row.email,
     auto_escrow_release: Boolean(row.auto_escrow_release ?? 1),
@@ -1170,7 +1210,8 @@ app.post('/api/contracts', authenticateToken, requireRole('client'), (req, res) 
     }
     const linkedProject = projectId ? db.prepare('SELECT * FROM projects WHERE id = ? AND client_id = ?').get(projectId, req.user.id) : null;
 
-    const numericBudget = parseFloat(String(budget).replace(/[^0-9.]/g, '')) || 2500;
+    const numericBudget = Number(budget);
+    if (!Number.isFinite(numericBudget) || numericBudget <= 0 || numericBudget > 10000000) return res.status(400).json({ error: 'Enter a valid milestone budget' });
     const formattedBudget = `$${numericBudget.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const id = `cnt-${Date.now()}`;
     const clientName = req.user ? req.user.name : 'Sarah Jenkins';
@@ -1195,7 +1236,7 @@ app.post('/api/contracts', authenticateToken, requireRole('client'), (req, res) 
       formattedBudget,
       type === 'Hourly' ? '40 hrs/wk' : 'Fixed Milestone',
       '$0.00',
-      formattedBudget,
+      '$0.00',
       `Phase 1: ${title.trim()}`,
       deadline,
       'In Progress',
@@ -1206,21 +1247,21 @@ app.post('/api/contracts', authenticateToken, requireRole('client'), (req, res) 
       req.user.id
     );
 
-    // Create funded escrow entry in payments ledger
+    // A contract offer is not a payment. Funding requires a separate provider flow.
     const payId = `tx-${Date.now()}`;
     db.prepare(`
       INSERT INTO payments (id, milestone, project, recipient, recipient_id, amount, status, date, escrow_protected, client_id, project_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       payId,
-      `Escrow Deposit: ${title.trim()}`,
+      `Funding required: ${title.trim()}`,
       title.trim(),
       freelancerName || freelancerUser.name,
       freelancerUser.id,
       formattedBudget,
-      'In Escrow',
+      'Pending Funding',
       new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      1,
+      0,
       req.user.id,
       linkedProject?.id || null
     );
@@ -1230,12 +1271,12 @@ app.post('/api/contracts', authenticateToken, requireRole('client'), (req, res) 
       userId: freelancerUser.id,
       role: 'freelancer',
       type: 'payment',
-      title: `New Escrow Contract Funded (${formattedBudget})`,
-      message: `${clientName} funded milestone "${title.trim()}".`,
+      title: `New Contract Offer (${formattedBudget})`,
+      message: `${clientName} proposed milestone "${title.trim()}". Funding has not been collected.`,
       targetPage: 'projects',
       targetTab: 'contracts',
     });
-    res.status(201).json({ success: true, contract: created, message: `Escrow contract funded with ${formattedBudget}.` });
+    res.status(201).json({ success: true, contract: created, message: `Contract offer created for ${formattedBudget}. Funding has not been collected.` });
   } catch (err) {
     console.error('Create contract error:', err);
     res.status(500).json({ error: 'Failed to create contract' });
@@ -1490,62 +1531,7 @@ app.get('/api/wallet', authenticateToken, (req, res) => {
 });
 
 app.post('/api/wallet/withdraw', authenticateToken, (req, res) => {
-  try {
-    const { amount, method = 'stripe' } = req.body || {};
-    const withdrawAmt = parseFloat(amount);
-
-    if (isNaN(withdrawAmt) || withdrawAmt <= 0) {
-      return res.status(400).json({ error: 'Valid positive withdrawal amount required' });
-    }
-
-    const userId = req.user.id;
-    const user = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(userId);
-
-    if (!user || user.wallet_balance < withdrawAmt) {
-      return res.status(400).json({
-        error: `Insufficient funds. Available balance is $${user ? user.wallet_balance.toFixed(2) : '0.00'}`,
-      });
-    }
-
-    db.prepare('UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?').run(withdrawAmt, userId);
-
-    const txId = `wtx-${Date.now()}`;
-    db.prepare(`
-      INSERT INTO wallet_transactions (id, user_id, type, amount, method, status, note)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(txId, userId, 'withdrawal', withdrawAmt, method, 'Completed', `Withdrawal via ${method.toUpperCase()}`);
-
-    const updated = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(userId);
-    createNotification({
-      userId,
-      role: 'freelancer',
-      type: 'payment',
-      title: `Withdrawal Processed ($${withdrawAmt.toFixed(2)})`,
-      message: `Disbursed via ${method.toUpperCase()} — remaining balance $${updated.wallet_balance.toFixed(2)}.`,
-      targetPage: 'projects',
-      targetTab: 'earnings',
-    });
-
-    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
-    logAuditEvent({
-      userId,
-      action: 'wallet.withdraw',
-      entityType: 'transaction',
-      entityId: txId,
-      details: `Disbursed $${withdrawAmt.toFixed(2)} via ${method.toUpperCase()}`,
-      ip,
-    });
-    res.json({
-      success: true,
-      withdrawn: withdrawAmt,
-      remainingBalance: updated.wallet_balance,
-      transactionId: txId,
-      message: `Disbursement of $${withdrawAmt.toFixed(2)} completed via ${method.toUpperCase()}.`,
-    });
-  } catch (err) {
-    console.error('Withdrawal error:', err);
-    res.status(500).json({ error: 'Failed to process withdrawal request' });
-  }
+  res.status(503).json({ error: 'Payouts are not configured. No withdrawal or balance change was made.' });
 });
 
 // ==========================================
@@ -1886,6 +1872,9 @@ app.patch('/api/payments/:id/release', authenticateToken, (req, res) => {
     if (payment.status === 'Disputed') {
       return res.status(409).json({ error: 'This payment is frozen while an open dispute is reviewed' });
     }
+    if (payment.status !== 'In Escrow' && payment.status !== 'Pending Approval') {
+      return res.status(409).json({ error: 'This milestone has not been funded and cannot be released' });
+    }
 
     db.prepare('UPDATE payments SET status = ? WHERE id = ?').run('Released', id);
 
@@ -2011,23 +2000,70 @@ app.get('/api/pricing', (req, res) => {
 app.post('/api/subscriptions', authenticateToken, (req, res) => {
   try {
     const { planId, billingCycle = 'monthly' } = req.body || {};
-    if (!planId) return res.status(400).json({ error: 'Plan ID is required' });
+    if (!planId || !['monthly', 'yearly'].includes(billingCycle)) return res.status(400).json({ error: 'A valid plan and billing cycle are required' });
 
     const plan = db.prepare('SELECT * FROM pricing_plans WHERE id = ?').get(planId);
     if (!plan) return res.status(404).json({ error: 'Selected plan does not exist' });
 
-    const userId = req.user.id;
-    db.prepare('UPDATE users SET subscription_plan = ?, billing_cycle = ? WHERE id = ?').run(planId, billingCycle, userId);
+    if (planId !== 'free') return res.status(409).json({ error: 'Paid plans require Stripe Checkout. Use /api/billing/checkout.' });
+    const account = db.prepare('SELECT stripe_subscription_id FROM users WHERE id = ?').get(req.user.id);
+    if (account?.stripe_subscription_id) return res.status(409).json({ error: 'Manage your existing paid subscription in the billing portal before switching to Free.' });
+    db.prepare("UPDATE users SET subscription_plan = 'free', billing_cycle = ?, subscription_status = 'inactive' WHERE id = ?").run(billingCycle, req.user.id);
 
     res.json({
       success: true,
       planId,
       billingCycle,
-      message: `Subscribed to the ${plan.name} plan (${billingCycle} billing).`,
+      message: 'Free plan is active. No payment was taken.',
     });
   } catch (err) {
     console.error('Subscription error:', err);
     res.status(500).json({ error: 'Failed to update subscription plan' });
+  }
+});
+
+app.get('/api/billing/config', (req, res) => {
+  res.json({ provider: 'stripe', configured: Boolean(stripe && process.env.STRIPE_WEBHOOK_SECRET && ['pro', 'team', 'business'].every((plan) => ['monthly', 'yearly'].every((cycle) => stripePriceId(plan, cycle)))), currency: 'USD' });
+});
+
+app.post('/api/billing/checkout', authenticateToken, async (req, res) => {
+  const { planId, billingCycle = 'monthly' } = req.body || {};
+  if (!['pro', 'team', 'business'].includes(planId) || !['monthly', 'yearly'].includes(billingCycle)) {
+    return res.status(400).json({ error: 'Choose a paid plan and valid billing cycle' });
+  }
+  const priceId = stripePriceId(planId, billingCycle);
+  if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET || !priceId) {
+    return res.status(503).json({ error: 'Secure checkout is not configured for this plan yet. Add Stripe keys, webhook secret, and price IDs.' });
+  }
+  try {
+    const account = db.prepare('SELECT email, stripe_customer_id, stripe_subscription_id FROM users WHERE id = ?').get(req.user.id);
+    if (account.stripe_subscription_id) return res.status(409).json({ error: 'You already have a paid subscription. Manage it in the billing portal.' });
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      ...(account.stripe_customer_id ? { customer: account.stripe_customer_id } : { customer_email: account.email }),
+      client_reference_id: req.user.id,
+      metadata: { userId: req.user.id, planId, billingCycle },
+      success_url: `${checkoutOrigin}/?checkout=success#pricing`,
+      cancel_url: `${checkoutOrigin}/?checkout=cancelled#pricing`,
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('Create checkout error:', err);
+    res.status(502).json({ error: 'Unable to open secure checkout. Please try again.' });
+  }
+});
+
+app.post('/api/billing/portal', authenticateToken, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Billing portal is not configured' });
+  const account = db.prepare('SELECT stripe_customer_id FROM users WHERE id = ?').get(req.user.id);
+  if (!account?.stripe_customer_id) return res.status(404).json({ error: 'No Stripe billing account exists yet' });
+  try {
+    const session = await stripe.billingPortal.sessions.create({ customer: account.stripe_customer_id, return_url: `${checkoutOrigin}/#pricing` });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('Open billing portal error:', err);
+    res.status(502).json({ error: 'Unable to open the billing portal' });
   }
 });
 
