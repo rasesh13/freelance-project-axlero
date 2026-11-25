@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const Stripe = require('stripe');
+const { randomUUID } = require('node:crypto');
 const { db, logAuditEvent } = require('./db');
 const { renderDashboardHtml, renderDocsHtml } = require('./dashboard');
 const { getOpenApiSpec } = require('./openapi');
@@ -11,9 +11,6 @@ const { getOpenApiSpec } = require('./openapi');
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'workverse_super_secret_jwt_key_2026';
-const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
-const checkoutOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
-const stripePriceId = (planId, cycle) => process.env[`STRIPE_PRICE_${planId.toUpperCase()}_${cycle.toUpperCase()}`];
 
 // ==========================================
 // GLOBAL MIDDLEWARE
@@ -23,40 +20,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-// Stripe signs the exact request bytes; this route must precede JSON parsing.
-app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), (req, res) => {
-  if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) return res.status(503).json({ error: 'Billing webhook is not configured' });
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET);
-  } catch {
-    return res.status(400).json({ error: 'Invalid webhook signature' });
-  }
-  try {
-    const object = event.data.object;
-    if (['checkout.session.completed', 'checkout.session.async_payment_succeeded'].includes(event.type) && object.mode === 'subscription' && object.payment_status === 'paid' && object.subscription && object.customer) {
-      const userId = object.metadata?.userId;
-      const planId = object.metadata?.planId;
-      const cycle = object.metadata?.billingCycle;
-      if (userId && ['pro', 'team', 'business'].includes(planId) && ['monthly', 'yearly'].includes(cycle)) {
-        db.prepare(`UPDATE users SET stripe_customer_id = ?, stripe_subscription_id = ?, subscription_plan = ?, billing_cycle = ?, subscription_status = 'active' WHERE id = ?`)
-          .run(object.customer, object.subscription, planId, cycle, userId);
-      }
-    }
-    if (['customer.subscription.deleted', 'customer.subscription.updated'].includes(event.type)) {
-      const active = ['active', 'trialing'].includes(object.status);
-      const currentPrice = object.items?.data?.[0]?.price?.id;
-      const match = ['pro', 'team', 'business'].flatMap((plan) => ['monthly', 'yearly'].map((cycle) => ({ plan, cycle })))
-        .find(({ plan, cycle }) => stripePriceId(plan, cycle) === currentPrice);
-      db.prepare(`UPDATE users SET subscription_status = ?, subscription_plan = CASE WHEN ? THEN COALESCE(?, subscription_plan) ELSE 'free' END, billing_cycle = COALESCE(?, billing_cycle) WHERE stripe_subscription_id = ?`)
-        .run(object.status, active ? 1 : 0, match?.plan || null, match?.cycle || null, object.id);
-    }
-    res.json({ received: true });
-  } catch (err) {
-    console.error('Billing webhook error:', err);
-    res.status(500).json({ error: 'Webhook processing failed' });
-  }
-});
 app.use(express.json({ limit: '16mb' }));
 
 // Security Headers
@@ -154,6 +117,7 @@ function getDatabaseStats() {
     'time_logs',
     'wallet_transactions',
     'pricing_plans',
+    'demo_payments',
     'resources',
     'bookmarks',
     'newsletter_subscribers',
@@ -2005,9 +1969,7 @@ app.post('/api/subscriptions', authenticateToken, (req, res) => {
     const plan = db.prepare('SELECT * FROM pricing_plans WHERE id = ?').get(planId);
     if (!plan) return res.status(404).json({ error: 'Selected plan does not exist' });
 
-    if (planId !== 'free') return res.status(409).json({ error: 'Paid plans require Stripe Checkout. Use /api/billing/checkout.' });
-    const account = db.prepare('SELECT stripe_subscription_id FROM users WHERE id = ?').get(req.user.id);
-    if (account?.stripe_subscription_id) return res.status(409).json({ error: 'Manage your existing paid subscription in the billing portal before switching to Free.' });
+    if (planId !== 'free') return res.status(409).json({ error: 'Use demo checkout to select a paid tier.' });
     db.prepare("UPDATE users SET subscription_plan = 'free', billing_cycle = ?, subscription_status = 'inactive' WHERE id = ?").run(billingCycle, req.user.id);
 
     res.json({
@@ -2023,48 +1985,42 @@ app.post('/api/subscriptions', authenticateToken, (req, res) => {
 });
 
 app.get('/api/billing/config', (req, res) => {
-  res.json({ provider: 'stripe', configured: Boolean(stripe && process.env.STRIPE_WEBHOOK_SECRET && ['pro', 'team', 'business'].every((plan) => ['monthly', 'yearly'].every((cycle) => stripePriceId(plan, cycle)))), currency: 'USD' });
+  res.json({ provider: 'demo', configured: true, currency: 'USD', simulation: true });
 });
 
-app.post('/api/billing/checkout', authenticateToken, async (req, res) => {
-  const { planId, billingCycle = 'monthly' } = req.body || {};
-  if (!['pro', 'team', 'business'].includes(planId) || !['monthly', 'yearly'].includes(billingCycle)) {
-    return res.status(400).json({ error: 'Choose a paid plan and valid billing cycle' });
-  }
-  const priceId = stripePriceId(planId, billingCycle);
-  if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET || !priceId) {
-    return res.status(503).json({ error: 'Secure checkout is not configured for this plan yet. Add Stripe keys, webhook secret, and price IDs.' });
+app.post('/api/billing/checkout', authenticateToken, (req, res) => {
+  const { planId, billingCycle = 'monthly', paymentMethod } = req.body || {};
+  if (!['pro', 'team', 'business'].includes(planId) || !['monthly', 'yearly'].includes(billingCycle) || paymentMethod !== 'demo_card') {
+    return res.status(400).json({ error: 'Choose a paid plan, billing cycle, and demo card' });
   }
   try {
-    const account = db.prepare('SELECT email, stripe_customer_id, stripe_subscription_id FROM users WHERE id = ?').get(req.user.id);
-    if (account.stripe_subscription_id) return res.status(409).json({ error: 'You already have a paid subscription. Manage it in the billing portal.' });
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
-      ...(account.stripe_customer_id ? { customer: account.stripe_customer_id } : { customer_email: account.email }),
-      client_reference_id: req.user.id,
-      metadata: { userId: req.user.id, planId, billingCycle },
-      success_url: `${checkoutOrigin}/?checkout=success#pricing`,
-      cancel_url: `${checkoutOrigin}/?checkout=cancelled#pricing`,
-    });
-    res.json({ url: session.url });
+    const plan = db.prepare('SELECT * FROM pricing_plans WHERE id = ?').get(planId);
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+    const monthlyUsd = billingCycle === 'yearly' ? plan.price_usd_yearly : plan.price_usd_monthly;
+    const amountCents = monthlyUsd * (billingCycle === 'yearly' ? 12 : 1) * 100;
+    if (!Number.isSafeInteger(amountCents) || amountCents <= 0) return res.status(500).json({ error: 'Plan price is unavailable' });
+    const receipt = { id: `demo-${randomUUID()}`, userId: req.user.id, planId, billingCycle, amountCents, currency: 'USD', status: 'simulated' };
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      db.prepare('INSERT INTO demo_payments (id, user_id, plan_id, billing_cycle, amount_cents, currency, status) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(receipt.id, receipt.userId, receipt.planId, receipt.billingCycle, receipt.amountCents, receipt.currency, receipt.status);
+      db.prepare("UPDATE users SET subscription_plan = ?, billing_cycle = ?, subscription_status = 'demo_active' WHERE id = ?")
+        .run(planId, billingCycle, req.user.id);
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+    res.status(201).json({ success: true, simulation: true, receipt, message: `${plan.name} demo plan activated. No real payment was made.` });
   } catch (err) {
-    console.error('Create checkout error:', err);
-    res.status(502).json({ error: 'Unable to open secure checkout. Please try again.' });
+    console.error('Demo checkout error:', err);
+    res.status(500).json({ error: 'Could not complete demo checkout' });
   }
 });
 
-app.post('/api/billing/portal', authenticateToken, async (req, res) => {
-  if (!stripe) return res.status(503).json({ error: 'Billing portal is not configured' });
-  const account = db.prepare('SELECT stripe_customer_id FROM users WHERE id = ?').get(req.user.id);
-  if (!account?.stripe_customer_id) return res.status(404).json({ error: 'No Stripe billing account exists yet' });
-  try {
-    const session = await stripe.billingPortal.sessions.create({ customer: account.stripe_customer_id, return_url: `${checkoutOrigin}/#pricing` });
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error('Open billing portal error:', err);
-    res.status(502).json({ error: 'Unable to open the billing portal' });
-  }
+app.get('/api/billing/receipts', authenticateToken, (req, res) => {
+  const receipts = db.prepare('SELECT id, plan_id AS planId, billing_cycle AS billingCycle, amount_cents AS amountCents, currency, status, created_at AS createdAt FROM demo_payments WHERE user_id = ? ORDER BY created_at DESC, id DESC').all(req.user.id);
+  res.json(receipts);
 });
 
 app.get('/api/resources', (req, res) => {

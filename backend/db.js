@@ -36,8 +36,6 @@ CREATE TABLE IF NOT EXISTS users (
   hourly_rate REAL DEFAULT 45.00,
   subscription_plan TEXT DEFAULT 'free',
   billing_cycle TEXT DEFAULT 'monthly',
-  stripe_customer_id TEXT,
-  stripe_subscription_id TEXT,
   subscription_status TEXT DEFAULT 'inactive',
   workspace_name TEXT DEFAULT 'Workverse Ventures',
   billing_email TEXT DEFAULT '',
@@ -257,6 +255,17 @@ CREATE TABLE IF NOT EXISTS pricing_plans (
   sort_order INTEGER DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS demo_payments (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  plan_id TEXT NOT NULL,
+  billing_cycle TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  status TEXT NOT NULL DEFAULT 'simulated',
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS resources (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
@@ -326,8 +335,6 @@ CREATE TABLE IF NOT EXISTS disputes (
 
 // Upgrade existing tables if database.sqlite came from an earlier version
 ensureColumn('users', 'subscription_plan', "TEXT DEFAULT 'free'");
-ensureColumn('users', 'stripe_customer_id', 'TEXT');
-ensureColumn('users', 'stripe_subscription_id', 'TEXT');
 ensureColumn('users', 'subscription_status', "TEXT DEFAULT 'inactive'");
 ensureColumn('users', 'billing_cycle', "TEXT DEFAULT 'monthly'");
 ensureColumn('users', 'workspace_name', "TEXT DEFAULT 'Workverse Ventures'");
