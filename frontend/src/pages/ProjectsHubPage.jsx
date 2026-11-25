@@ -3250,18 +3250,19 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
-                          <span className="text-[#777777] truncate">Locked in Escrow</span>
+                          <span className="text-[#777777] truncate">Tracked Milestones</span>
                         </div>
                         <span className="font-bold text-amber-600 tabular-nums shrink-0">{formatUsd(escrowBalance)}</span>
                       </div>
                     </div>
 
                     <button
-                      onClick={() => setIsWithdrawModalOpen(true)}
-                      className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                      disabled
+                      title="Payouts require a separate provider integration"
+                      className="w-full py-2.5 px-3 rounded-xl bg-gray-400 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-not-allowed"
                     >
                       <Wallet className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">Instant Withdrawal</span>
+                      <span className="truncate">Payouts not configured</span>
                     </button>
                   </div>
 
