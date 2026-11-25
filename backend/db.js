@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS users (
   hourly_rate REAL DEFAULT 45.00,
   subscription_plan TEXT DEFAULT 'free',
   billing_cycle TEXT DEFAULT 'monthly',
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT,
+  subscription_status TEXT DEFAULT 'inactive',
   workspace_name TEXT DEFAULT 'Workverse Ventures',
   billing_email TEXT DEFAULT '',
   auto_escrow_release INTEGER DEFAULT 1,
@@ -323,6 +326,9 @@ CREATE TABLE IF NOT EXISTS disputes (
 
 // Upgrade existing tables if database.sqlite came from an earlier version
 ensureColumn('users', 'subscription_plan', "TEXT DEFAULT 'free'");
+ensureColumn('users', 'stripe_customer_id', 'TEXT');
+ensureColumn('users', 'stripe_subscription_id', 'TEXT');
+ensureColumn('users', 'subscription_status', "TEXT DEFAULT 'inactive'");
 ensureColumn('users', 'billing_cycle', "TEXT DEFAULT 'monthly'");
 ensureColumn('users', 'workspace_name', "TEXT DEFAULT 'Workverse Ventures'");
 ensureColumn('users', 'billing_email', "TEXT DEFAULT ''");
