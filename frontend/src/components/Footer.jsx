@@ -4,38 +4,39 @@ import { subscribeNewsletter } from '../api/client';
 
 const LEGAL_MODAL_CONTENT = {
   escrow: {
-    title: 'Bank-Grade Milestone Escrow Protection',
-    body: 'Every contract commissioned on Workverse is protected by regulated milestone escrow. Funds are securely held before engineering begins and disbursed only when deliverables pass client acceptance verification.',
+    title: 'Milestone Tracking',
+    body: 'Contract milestones and their status are stored in the workspace. This local version does not collect project payments or hold escrow funds.',
   },
   enterprise: {
-    title: 'Workverse Enterprise & Team Solutions',
-    body: 'Scale engineering squads with consolidated invoicing, custom MSA contracts, SSO security, role-based workspace controls, and dedicated talent advisors.',
+    title: 'Team Workspace',
+    body: 'Registered team members can collaborate in projects. The Business pricing tier is a demo selection; custom invoicing, SSO, and account managers are not provided.',
   },
   assurance: {
-    title: 'Contractor Payment Assurance',
-    body: 'Verified builders on Workverse never chase invoices. Funded milestones and hourly stopwatch logs with escrow audit trails ensure deterministic, on-time payouts via Stripe Instant or Wire.',
+    title: 'Payment Status',
+    body: 'The workspace tracks contract and milestone records. Real funding and freelancer payouts are not enabled on this local version.',
   },
   guilds: {
-    title: 'Workverse Community Guilds',
-    body: 'Collaborate in domain guilds across Full Stack Architecture, Design Systems, and AI Engineering with peer code reviews, benchmarks, and curated resources.',
+    title: 'Workverse Resources',
+    body: 'Browse the available guides in the Resources Hub. Dedicated guilds and peer review groups are not available yet.',
   },
   security: {
     title: 'Security & Trust Compliance',
-    body: 'Workverse enforces bcrypt credential hashing, signed JWT authentication, encrypted TLS transport, strict role isolation, and SOC-2 aligned audit trails across project workspaces.',
+    body: 'Accounts use hashed passwords and signed sessions. Workspace API routes check user roles and ownership. Use HTTPS and a private JWT secret before any public deployment.',
   },
   privacy: {
-    title: 'Privacy Policy',
-    body: 'We collect only the account, contract, and telemetry data needed to deliver your workspace and protect escrow settlements. Workverse never sells workspace data or client IP to third parties.',
+    title: 'Privacy Overview',
+    body: 'This local instance stores account details, projects, messages, files, and demo receipts in its SQLite database. A formal privacy policy is required before public launch.',
   },
   terms: {
-    title: 'Terms of Service',
-    body: 'By commissioning or delivering projects on Workverse, clients retain 100% ownership of paid deliverables upon milestone release, and both parties agree to transparent milestone arbitration standards.',
+    title: 'Demo Use Notice',
+    body: 'This is a local demo workspace. Demo plan payments do not move money; contract offers do not fund milestones. No legal terms or arbitration service are offered here.',
   },
 };
 
 export default function Footer({ setCurrentPage }) {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [subscribeError, setSubscribeError] = useState('');
   const [infoModalKey, setInfoModalKey] = useState(null);
 
   const handleSubscribe = async (e) => {
@@ -43,11 +44,12 @@ export default function Footer({ setCurrentPage }) {
     if (email.trim()) {
       try {
         await subscribeNewsletter(email.trim());
+        setSubscribeError('');
         setSubscribed(true);
         setEmail('');
         setTimeout(() => setSubscribed(false), 5000);
       } catch (err) {
-        console.error('Newsletter error:', err);
+        setSubscribeError(err.message || 'Could not save your email.');
       }
     }
   };
@@ -93,12 +95,12 @@ export default function Footer({ setCurrentPage }) {
             {/* Newsletter Form */}
             <div className="space-y-2 pt-2">
               <p className="text-xs font-semibold text-[#171717] uppercase tracking-wider">
-                Stay updated with modern work insights
+                Join the Workverse interest list
               </p>
               {subscribed ? (
                 <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-700 text-xs font-medium">
                   <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Thank you! You're subscribed to Workverse Weekly.</span>
+                  <span>Thanks! Your email is saved. Email delivery is not enabled yet.</span>
                 </div>
               ) : (
                 <form onSubmit={handleSubscribe} className="flex items-center max-w-md gap-2">
@@ -119,6 +121,7 @@ export default function Footer({ setCurrentPage }) {
                   </button>
                 </form>
               )}
+              {subscribeError && <p role="alert" className="text-xs text-red-700">{subscribeError}</p>}
             </div>
           </div>
 
@@ -157,7 +160,7 @@ export default function Footer({ setCurrentPage }) {
                   onClick={() => setInfoModalKey('escrow')}
                   className="hover:text-[#F36B21] transition-colors cursor-pointer"
                 >
-                  Escrow Protection
+                  Milestone Tracking
                 </button>
               </li>
               <li>
@@ -165,7 +168,7 @@ export default function Footer({ setCurrentPage }) {
                   onClick={() => setInfoModalKey('enterprise')}
                   className="hover:text-[#F36B21] transition-colors cursor-pointer"
                 >
-                  Enterprise Solutions
+                  Team Workspace
                 </button>
               </li>
             </ul>
@@ -206,7 +209,7 @@ export default function Footer({ setCurrentPage }) {
                   onClick={() => setInfoModalKey('assurance')}
                   className="hover:text-[#F36B21] transition-colors cursor-pointer"
                 >
-                  Payment Assurance
+                  Payment Status
                 </button>
               </li>
               <li>
@@ -214,7 +217,7 @@ export default function Footer({ setCurrentPage }) {
                   onClick={() => setInfoModalKey('guilds')}
                   className="hover:text-[#F36B21] transition-colors cursor-pointer"
                 >
-                  Community Guilds
+                  Resource Guides
                 </button>
               </li>
             </ul>
@@ -255,7 +258,7 @@ export default function Footer({ setCurrentPage }) {
                   onClick={() => setInfoModalKey('privacy')}
                   className="hover:text-[#F36B21] transition-colors cursor-pointer"
                 >
-                  Privacy Policy
+                  Privacy Overview
                 </button>
               </li>
               <li>
@@ -263,7 +266,7 @@ export default function Footer({ setCurrentPage }) {
                   onClick={() => setInfoModalKey('terms')}
                   className="hover:text-[#F36B21] transition-colors cursor-pointer"
                 >
-                  Terms of Service
+                  Demo Use Notice
                 </button>
               </li>
             </ul>
@@ -280,7 +283,7 @@ export default function Footer({ setCurrentPage }) {
               className="flex items-center gap-1 text-[#F36B21] hover:underline cursor-pointer"
             >
               <Shield className="w-3.5 h-3.5" />
-              Bank-grade Escrow
+              Milestone Tracking
             </button>
           </div>
 
