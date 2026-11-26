@@ -136,7 +136,7 @@ export default function AuthPage({
           <div className="relative z-10 pt-4 border-t border-white/15 flex items-center justify-between text-xs text-white/70">
             <span className="flex items-center gap-1.5">
               <Shield className="w-4 h-4 text-[#F36B21]" />
-              Bank-grade Escrow
+              Demo payment tracking
             </span>
             <span>Live Marketplace Accounts</span>
           </div>
@@ -203,7 +203,7 @@ export default function AuthPage({
               </h3>
               <p className="text-xs sm:text-sm text-[#777777] mt-1">
                 {authMode === 'login'
-                  ? 'Access your projects, escrow milestones, and team messages.'
+                  ? 'Access your projects, demo milestones, and team messages.'
                   : 'Get started in minutes and connect with world-class opportunities.'}
               </p>
             </div>
@@ -322,7 +322,7 @@ export default function AuthPage({
                 </div>
                 <p className="text-[11px] text-[#888888]">
                   {role === 'client'
-                    ? 'Opens Client Hub to manage project postings, review bids, and release escrow.'
+                    ? 'Opens Client Hub to manage project postings, review bids, and record demo payments.'
                     : 'Opens Freelancer Hub to manage active contracts, time tracker, and earnings.'}
                 </p>
               </div>

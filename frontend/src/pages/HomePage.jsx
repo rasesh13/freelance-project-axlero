@@ -630,7 +630,7 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
             {
               step: '03',
               title: 'Tracked Milestone Payments',
-              desc: 'Record milestone funding states and release payouts after deliverables are reviewed and approved.',
+              desc: 'Record demo milestone payment states after deliverables are reviewed and approved.',
             },
           ].map((item, idx) => (
             <div
@@ -733,13 +733,13 @@ export default function HomePage({ setCurrentPage, setSelectedFreelancer, setSel
               Engineered for Visionaries, Built for High Performance.
             </h2>
             <p className="text-base text-[#777777] leading-relaxed mb-8">
-              Legacy freelance sites are crowded with generic bids and opaque fees. Workverse is designed like a modern architectural atelier: curated talent, milestone transparency, and an intuitive, beautiful interface.
+              Workverse brings registered freelancer profiles, project proposals, milestone tracking, and collaboration into one workspace.
             </p>
 
             <div className="space-y-4">
               {[
                 { title: 'Live Freelancer Profiles', desc: 'Ratings, reviews, availability, skills, and completed work come from registered accounts.' },
-                { title: 'Tracked Milestone Escrow', desc: 'Payment states, releases, and disputes are persisted with role-based access controls.' },
+                { title: 'Tracked Milestones', desc: 'Contract and dispute records are persisted with role-based access controls. Real funding is not enabled.' },
                 { title: 'Integrated Project Workspace', desc: 'Manage deadlines, team members, deliverables, and communication in one hub.' },
               ].map((item, idx) => (
                 <div key={idx} className="flex items-start gap-3.5">

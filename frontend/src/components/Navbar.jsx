@@ -405,7 +405,7 @@ export default function Navbar({
                             {notifFilter === 'unread' ? 'No unread notifications' : "You're all caught up!"}
                           </p>
                           <p className="text-xs text-[#777777]">
-                            New messages, proposals, milestones, and escrow payouts appear here live.
+                            New messages, proposals, milestones, and demo payment updates appear here.
                           </p>
                         </div>
                       ) : (
