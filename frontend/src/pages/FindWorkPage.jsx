@@ -50,13 +50,14 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
   const [appliedProjectIds, setAppliedProjectIds] = useState([]);
   const [selectedDetailProject, setSelectedDetailProject] = useState(null);
   const [projectList, setProjectList] = useState([]);
+  const [projectsError, setProjectsError] = useState('');
 
   useEffect(() => {
     fetchProjects()
       .then((data) => {
         if (Array.isArray(data)) setProjectList(data);
       })
-      .catch((err) => console.error('Failed to fetch projects for work page:', err));
+      .catch((err) => setProjectsError(err.message || 'Could not load opportunities.'));
   }, []);
 
   useEffect(() => {
@@ -107,14 +108,11 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
       setCurrentPage('auth', { notice: 'Sign in to bookmark projects.', returnTo: 'work' });
       return;
     }
-    setSavedProjectIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
     try {
       const res = await toggleBookmarkApi('project', id);
       if (res?.ids) setSavedProjectIds(res.ids);
     } catch (err) {
-      console.error('Failed to persist bookmark:', err);
+      setProjectsError(err.message || 'Could not save this project.');
     }
   };
 
@@ -186,8 +184,8 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
     const matchesSearch =
       searchQuery === '' ||
       p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.skills.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
+      (p.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.skills || []).some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
 
     // Category
     const matchesCategory =
@@ -196,6 +194,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
     // Budget Type
     const matchesBudgetType =
       selectedBudgetType === 'All' || p.budgetType === selectedBudgetType;
+    const matchesDuration = selectedDuration === 'All' || p.duration === selectedDuration;
 
     // Budget Range
     let matchesBudgetRange = true;
@@ -214,12 +213,13 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
       matchesSearch &&
       matchesCategory &&
       matchesBudgetType &&
+      matchesDuration &&
       matchesBudgetRange &&
       matchesFeatured
     );
   }).sort((a, b) => {
     if (sortBy === 'Highest Budget') return b.budgetMax - a.budgetMax;
-    if (sortBy === 'Shortest Duration') return a.duration.localeCompare(b.duration);
+    if (sortBy === 'Shortest Duration') return (a.duration || '').localeCompare(b.duration || '');
     return 0; // default 'Newest'
   });
 
@@ -230,6 +230,17 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
   };
 
   const activeProjectCount = projectList.filter((project) => project.status !== 'Completed').length;
+  const featuredProject = projectList.find((project) => project.featured && project.status !== 'Completed')
+    || projectList.find((project) => project.status !== 'Completed');
+  const recommendedCount = projectList.filter((project) => project.featured || project.budgetType === 'Fixed Price').length;
+  const categories = [
+    { name: 'All Categories', count: projectList.length },
+    ...[...new Set(projectList.map((project) => project.category).filter(Boolean))].map((name) => ({
+      name,
+      count: projectList.filter((project) => project.category === name).length,
+    })),
+  ];
+  const durations = ['All', ...new Set(projectList.map((project) => project.duration).filter(Boolean))];
   const registeredClientCount = new Set(projectList.map((project) => project.clientId).filter(Boolean)).size;
   const ratedProjects = projectList.filter((project) => Number(project.clientRating) > 0);
   const averageClientRating = ratedProjects.length > 0
@@ -392,21 +403,21 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
                       <Briefcase className="w-5 h-5" />
                     </div>
                     <span className="px-2.5 py-0.5 rounded-full bg-[#FFF3EC] text-[#F36B21] text-xs font-semibold border border-[#FCE2D3]">
-                      Featured Project
+                      {featuredProject ? 'Live Opportunity' : 'Your Next Opportunity'}
                     </span>
                   </div>
 
                   <div>
                     <h3 className="text-base font-bold text-[#171717] tracking-tight">
-                      SaaS Dashboard Development
+                      {featuredProject?.title || 'New projects will appear here'}
                     </h3>
                     <p className="text-xs text-[#777777] line-clamp-2 mt-1">
-                      Build a modern analytics dashboard with telemetry visualization and role management.
+                      {featuredProject?.description || 'There are no open projects yet. Check back as clients post opportunities.'}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-1.5 pt-1">
-                    {['Next.js', 'TypeScript', 'Tailwind'].map((t, idx) => (
+                    {(featuredProject?.skills || []).slice(0, 3).map((t, idx) => (
                       <span
                         key={idx}
                         className="px-2.5 py-0.5 rounded-md bg-[#FFF9F5] border border-[#EAE2DC] text-[10px] font-medium text-[#777777]"
@@ -419,25 +430,15 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
                   <div className="flex items-center justify-between pt-3 border-t border-[#F3ECE7]">
                     <div>
                       <span className="text-base font-extrabold text-[#171717]">
-                        $1,200 – $1,800
+                        {featuredProject?.budget || 'No active listings'}
                       </span>
-                      <p className="text-[10px] text-[#888888]">Fixed Price • 3-4 Weeks</p>
+                      <p className="text-[10px] text-[#888888]">{featuredProject ? `${featuredProject.budgetType} • ${featuredProject.duration || 'Flexible'}` : 'Browse the project feed'}</p>
                     </div>
                     <button
-                      onClick={(e) =>
-                        handleOpenApply(
-                          projectList[0] || {
-                            id: 'proj-1',
-                            title: 'SaaS Dashboard UI/UX & Full Stack',
-                            budgetMin: 1200,
-                            skills: ['React', 'Node.js', 'Figma'],
-                            duration: '3-4 Weeks',
-                          },
-                          e
-                        )
-                      }
+                      onClick={(e) => featuredProject && handleOpenApply(featuredProject, e)}
+                      disabled={!featuredProject}
                       className="w-10 h-10 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-md shadow-orange-500/25"
-                      title="Apply Now"
+                      title={featuredProject ? 'Apply Now' : 'No open projects'}
                     >
                       <ArrowRight className="w-4 h-4" />
                     </button>
@@ -479,7 +480,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
               { id: 'all', label: 'All Projects', count: projectList.length, icon: Briefcase },
               { id: 'saved', label: 'Saved', count: savedProjectIds.length, icon: Bookmark },
               { id: 'applied', label: 'Applied', count: appliedProjectIds.length, icon: CheckCircle2 },
-              { id: 'recommended', label: 'Recommended', count: 4, icon: Sparkles },
+              { id: 'recommended', label: 'Recommended', count: recommendedCount, icon: Sparkles },
             ].map((tab) => {
               const isActive = activeTab === tab.id;
               const Icon = tab.icon;
@@ -609,7 +610,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
             <span>High Budget (&gt; $3,000)</span>
           </button>
 
-          {(featuredOnly || selectedBudgetType !== 'All' || selectedBudgetRange !== 'All' || selectedCategory !== 'All Categories' || searchQuery) && (
+          {(featuredOnly || selectedBudgetType !== 'All' || selectedBudgetRange !== 'All' || selectedCategory !== 'All Categories' || selectedDuration !== 'All' || searchQuery) && (
             <button
               onClick={clearAllFilters}
               className="text-xs font-semibold text-[#F36B21] hover:underline ml-auto"
@@ -657,13 +658,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
 
                 {openSections.category && (
                   <div className="space-y-1.5 pt-1">
-                    {[
-                      { name: 'All Categories', count: 6 },
-                      { name: 'Web Development', count: 2 },
-                      { name: 'UI/UX Design', count: 2 },
-                      { name: 'Data & AI', count: 1 },
-                      { name: 'Marketing', count: 1 },
-                    ].map((cat) => {
+                    {categories.map((cat) => {
                       const isSelected = selectedCategory === cat.name;
                       return (
                         <button
@@ -765,7 +760,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
 
                 {openSections.duration && (
                   <div className="space-y-1.5 pt-1">
-                    {['All', '1 - 2 Weeks', '3 - 4 Weeks', 'Ongoing'].map((dur) => {
+                    {durations.map((dur) => {
                       const isSelected = selectedDuration === dur;
                       return (
                         <button
@@ -1014,11 +1009,11 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
                 <Briefcase className="w-12 h-12 text-[#F36B21] mx-auto mb-3 opacity-60" />
                 <h3 className="text-base font-bold text-[#171717]">No opportunities match your filter</h3>
                 <p className="text-xs text-[#777777] mt-1 mb-5 max-w-sm mx-auto">
-                  {activeTab === 'saved'
+                  {projectsError || (projectList.length === 0 ? 'No clients have posted an open project yet.' : activeTab === 'saved'
                     ? "You haven't bookmarked any projects yet."
                     : activeTab === 'applied'
                     ? "You haven't submitted any proposals yet."
-                    : 'Try clearing your filters or search keywords to see all available listings.'}
+                    : 'Try clearing your filters or search keywords to see all available listings.')}
                 </p>
                 <button
                   onClick={clearAllFilters}
@@ -1054,9 +1049,9 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
               <div className="w-12 h-12 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] flex items-center justify-center text-[#F36B21]">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-[#171717]">Tracked Escrow Payouts</h3>
+              <h3 className="text-base font-bold text-[#171717]">Tracked Milestones</h3>
               <p className="text-xs text-[#777777] leading-relaxed">
-                Clients deposit funds upfront before you start writing a single line of code or designing a single wireframe.
+                Follow contract milestones and their status from your workspace. Payment collection is not connected yet.
               </p>
             </div>
 
@@ -1064,9 +1059,9 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
               <div className="w-12 h-12 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] flex items-center justify-center text-[#F36B21]">
                 <Zap className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-[#171717]">0% Intro Commission</h3>
+              <h3 className="text-base font-bold text-[#171717]">Direct Proposals</h3>
               <p className="text-xs text-[#777777] leading-relaxed">
-                Keep 100% of your earnings on your first milestone up to $1,000, and industry-low 5% flat rates thereafter.
+                Send a proposal to a registered client and track its status in your account.
               </p>
             </div>
 
@@ -1074,9 +1069,9 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
               <div className="w-12 h-12 rounded-xl bg-[#FFF3EC] border border-[#FCE2D3] flex items-center justify-center text-[#F36B21]">
                 <Lock className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-[#171717]">Dispute Protection</h3>
+              <h3 className="text-base font-bold text-[#171717]">Dispute Records</h3>
               <p className="text-xs text-[#777777] leading-relaxed">
-                Comprehensive contract protection and dedicated arbitration support in the rare event of scope changes or delays.
+                Contract participants can record and review a dispute. No arbitration service is provided.
               </p>
             </div>
           </div>
@@ -1108,7 +1103,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
                     </span>
                   )}
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-semibold border border-emerald-200">
-                    Verified Escrow
+                    Project posted
                   </span>
                 </div>
 
@@ -1128,7 +1123,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
                   <span>•</span>
                   <span className="flex items-center gap-1">
                     <Calendar className="w-3.5 h-3.5 text-[#777777]" />
-                    Posted 2 hrs ago
+                    Posted {selectedDetailProject.createdAt ? new Date(selectedDetailProject.createdAt).toLocaleDateString() : 'recently'}
                   </span>
                 </div>
               </div>
@@ -1160,7 +1155,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
                 </div>
                 <div>
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#888888]">Experience</span>
-                  <p className="text-sm font-semibold text-[#171717] mt-0.5">Senior / Lead</p>
+                  <p className="text-sm font-semibold text-[#171717] mt-0.5">Discuss with client</p>
                 </div>
               </div>
 
@@ -1172,46 +1167,12 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
                 <p className="text-sm text-[#555555] leading-relaxed">
                   {selectedDetailProject.description}
                 </p>
-                <p className="text-sm text-[#555555] leading-relaxed">
-                  The ideal specialist will work closely with our core team, maintaining high architectural standards, comprehensive documentation, and direct milestone reviews. Clear async updates and robust test coverage are strictly prioritized.
-                </p>
+                <p className="text-sm text-[#777777] leading-relaxed">Confirm deliverables and milestones directly with the client before accepting work.</p>
               </div>
 
-              {/* Milestones Breakdown */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-[#171717]">
-                  Milestone Escrow Schedule
-                </h3>
-                <div className="space-y-2">
-                  {[
-                    {
-                      phase: 'Milestone 1: Architectural Blueprint & Discovery',
-                      share: '30% of Escrow',
-                      desc: 'Technical architecture document, component hierarchy, design token sync, and milestone review.',
-                    },
-                    {
-                      phase: 'Milestone 2: Core Feature Implementation',
-                      share: '50% of Escrow',
-                      desc: 'End-to-end frontend/backend implementation, state management, API integration, and staging deployment.',
-                    },
-                    {
-                      phase: 'Milestone 3: QA, Performance & Handoff',
-                      share: '20% of Escrow',
-                      desc: 'Lighthouse audit 95+, comprehensive test suites, pull request reviews, and production release.',
-                    },
-                  ].map((m, idx) => (
-                    <div key={idx} className="p-3.5 rounded-xl border border-[#EAE2DC] bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="space-y-0.5">
-                        <span className="text-xs font-bold text-[#171717]">{m.phase}</span>
-                        <p className="text-[11px] text-[#777777]">{m.desc}</p>
-                      </div>
-                      <span className="px-2.5 py-1 rounded-full bg-[#FFF3EC] text-[#F36B21] text-xs font-bold shrink-0 self-start sm:self-center">
-                        {m.share}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <p className="text-xs text-[#777777] rounded-xl border border-[#EAE2DC] bg-[#FFF9F5] p-3.5">
+                Milestone terms and payment arrangements are agreed with the client. No funds are held by this demo.
+              </p>
 
               {/* Required Skills */}
               <div className="space-y-3">
@@ -1219,7 +1180,7 @@ export default function FindWorkPage({ setCurrentPage, setSelectedProject, isLog
                   Required Expertise & Stack
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {selectedDetailProject.skills.map((skill, idx) => (
+                  {(selectedDetailProject.skills || []).map((skill, idx) => (
                     <span
                       key={idx}
                       className="px-3 py-1 rounded-full bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold text-[#171717]"
