@@ -51,6 +51,7 @@ import {
 } from 'lucide-react';
 import {
   fetchProjects,
+  fetchTalents,
   createProject,
   fetchKanbanTasks,
   createKanbanTask,
@@ -80,6 +81,7 @@ import {
   getAuthToken,
   exportFinancialsCsv,
 } from '../api/client';
+import { avatarSrc, avatarStyleFromUrl, avatarUrl } from '../utils/avatar';
 
 function formatUsd(val, decimals = 2) {
   const num = Number(val);
@@ -133,6 +135,7 @@ export default function ProjectsHubPage({
   setUserRole,
   currentUser,
   setCurrentUser,
+  setSelectedFreelancer,
 }) {
   const [activeSidebarNav, setActiveSidebarNav] = useState(() => {
     if (!initialTab || initialTab === 'projects') {
@@ -324,6 +327,21 @@ const completedLength =
   const [profileName, setProfileName] = useState(currentUser?.name || '');
   const [profileTitle, setProfileTitle] = useState(currentUser?.title || '');
   const [profileAvatar, setProfileAvatar] = useState(currentUser?.avatar || '');
+  const selectedAvatarStyle = avatarStyleFromUrl(profileAvatar);
+  useEffect(() => {
+    setProfileAvatar(currentUser?.avatar || '');
+  }, [currentUser?.avatar]);
+  const openMyPublicProfile = async () => {
+    try {
+      const talents = await fetchTalents();
+      const ownProfile = talents.find((talent) => talent.userId === currentUser?.id);
+      if (!ownProfile) throw new Error('Your public profile is not available yet.');
+      setSelectedFreelancer(ownProfile);
+      setCurrentPage('profile');
+    } catch (error) {
+      triggerToast('Profile unavailable', error.message, 'error');
+    }
+  };
   const workspaceMembers = teamList.length > 0
     ? teamList.map((member) => ({ name: member.name, role: member.role, avatar: member.avatar }))
     : currentUser
@@ -1615,7 +1633,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                       <div className="flex items-center gap-4">
                         <div className="relative">
                           <img
-                            src={currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
+                            src={avatarSrc(currentUser?.avatar, currentUser?.name)}
                             alt={currentUser?.name || 'Contractor'}
                             className="w-14 h-14 rounded-2xl object-cover border-2 border-[#F36B21] shadow-md"
                           />
@@ -2378,7 +2396,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                 <div className="p-6 rounded-3xl bg-[#FFF9F5] border border-[#EAE2DC] flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                   <div className="flex items-center gap-4">
                     <img
-                      src={currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
+                      src={avatarSrc(currentUser?.avatar, currentUser?.name)}
                       alt={currentUser?.name || 'Freelancer'}
                       className="w-18 h-18 rounded-2xl object-cover border-2 border-[#F36B21] shadow-md"
                     />
@@ -2401,10 +2419,10 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                   </div>
 
                   <button
-                    onClick={() => setCurrentPage('profile')}
+                    onClick={() => setActiveSidebarNav('settings')}
                     className="px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold transition-all shadow-md shadow-orange-500/20 cursor-pointer self-start sm:self-auto"
                   >
-                    View & Edit Full Profile →
+                    Edit Avatar & Profile →
                   </button>
                 </div>
               </div>
@@ -2868,7 +2886,14 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                         type="text"
                         required
                         value={profileName}
-                        onChange={(e) => setProfileName(e.target.value)}
+                        onChange={(e) => {
+                          const nextName = e.target.value;
+                          setProfileName(nextName);
+                          setProfileAvatar((current) => {
+                            const style = avatarStyleFromUrl(current);
+                            return style ? avatarUrl(nextName, style) : current;
+                          });
+                        }}
                         className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
                       />
                     </div>
@@ -2883,12 +2908,33 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#171717] mb-1.5">Profile Image URL</label>
+                  <div className="space-y-3">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#171717]">Your Avatar</label>
+                    <p className="text-xs text-[#777777]">A face is suggested from familiar first names. Choose the look you prefer, or add your own photo.</p>
+                    <img src={avatarSrc(profileAvatar, profileName)} alt="Current avatar preview" className="h-20 w-20 rounded-2xl border-2 border-[#F36B21] bg-[#FFF3EC]" />
+                    <div className="flex flex-wrap gap-3">
+                      {[
+                        { style: 'masculine', label: 'Masculine' },
+                        { style: 'feminine', label: 'Feminine' },
+                        { style: 'neutral', label: 'Neutral' },
+                      ].map(({ style, label }) => (
+                        <button
+                          key={style}
+                          type="button"
+                          onClick={() => setProfileAvatar(avatarUrl(profileName, style))}
+                          aria-pressed={selectedAvatarStyle === style}
+                          className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-semibold transition-colors ${selectedAvatarStyle === style ? 'border-[#F36B21] bg-[#FFF3EC] text-[#C94C0C]' : 'border-[#EAE2DC] text-[#555555] hover:border-[#F36B21]'}`}
+                        >
+                          <img src={avatarUrl(profileName, style)} alt="" className="h-9 w-9 rounded-xl" />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#171717]">Or use a photo URL</label>
                     <input
                       type="url"
-                      value={profileAvatar}
-                      onChange={(e) => setProfileAvatar(e.target.value)}
+                      value={selectedAvatarStyle ? '' : profileAvatar}
+                      onChange={(e) => setProfileAvatar(e.target.value || avatarUrl(profileName, 'neutral'))}
                       placeholder="https://example.com/profile.jpg"
                       className="w-full px-4 py-2.5 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
                     />
@@ -3219,7 +3265,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                     </div>
 
                     <button
-                      onClick={() => setCurrentPage('profile')}
+                      onClick={openMyPublicProfile}
                       className="w-full py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <span>Public Profile</span>

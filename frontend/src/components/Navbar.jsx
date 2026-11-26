@@ -24,6 +24,7 @@ import {
   deleteNotification,
   getAuthToken,
 } from '../api/client';
+import { avatarSrc } from '../utils/avatar';
 
 function formatRelativeTime(isoOrSqlDate) {
   if (!isoOrSqlDate) return 'Just now';
@@ -510,12 +511,7 @@ export default function Navbar({
                   className="flex items-center gap-2 p-1 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] transition-all bg-white cursor-pointer"
                 >
                   <img
-                    src={
-                      currentUser?.avatar ||
-                      (userRole === 'client'
-                        ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80'
-                        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80')
-                    }
+                    src={avatarSrc(currentUser?.avatar, currentUser?.name)}
                     alt={currentUser?.name || (userRole === 'client' ? 'Sarah Jenkins' : 'Arjun Mehta')}
                     className="w-8 h-8 rounded-full object-cover"
                   />

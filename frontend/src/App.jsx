@@ -310,6 +310,7 @@ export default function App() {
             setUserRole={handleSetUserRole}
             currentUser={currentUser}
             setCurrentUser={setCurrentUser}
+            setSelectedFreelancer={setSelectedFreelancer}
           />
         )}
 
