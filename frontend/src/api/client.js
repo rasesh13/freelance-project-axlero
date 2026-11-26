@@ -66,8 +66,9 @@ export function clearApiCache() {
 }
 
 async function request(endpoint, options = {}, retries = 2) {
+  const { cache: useCache = false, ...fetchOptions } = options;
   const isGet = !options.method || options.method.toUpperCase() === 'GET';
-  if (options.cache && isGet) {
+  if (useCache && isGet) {
     const cached = getCached(endpoint);
     if (cached !== null) return cached;
   }
@@ -84,7 +85,7 @@ async function request(endpoint, options = {}, retries = 2) {
 
   try {
     const res = await fetch(`${API_BASE}${endpoint}`, {
-      ...options,
+      ...fetchOptions,
       headers,
     });
 
@@ -101,7 +102,7 @@ async function request(endpoint, options = {}, retries = 2) {
       throw new Error(errMsg);
     }
 
-    if (options.cache && isGet) {
+    if (useCache && isGet) {
       setCached(endpoint, data);
     }
 
