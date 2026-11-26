@@ -1,6 +1,7 @@
 const { spawn } = require('node:child_process');
 const path = require('node:path');
 const { db } = require('./db');
+const { inferAvatarStyle } = require('./avatar');
 
 const port = 5051;
 const base = `http://127.0.0.1:${port}/api`;
@@ -99,6 +100,13 @@ async function main() {
   const clientA = await register('client', 'ClientA');
   const clientB = await register('client', 'ClientB');
   const freelancer = await register('freelancer', 'Freelancer');
+  assert(inferAvatarStyle('Rasesh Varshney') === 'masculine', 'Rasesh should receive the expected starting avatar');
+  assert(inferAvatarStyle('Neha Sharma') === 'feminine', 'Known feminine first name should receive the matching avatar');
+  assert(inferAvatarStyle('Unknown Name') === 'neutral', 'Unknown names must use a neutral avatar');
+  assert(freelancer.user.avatar.startsWith('/api/avatar?'), 'Registration should create an illustrated avatar');
+  const avatarResponse = await fetch(`http://127.0.0.1:${port}${freelancer.user.avatar}`);
+  assert(avatarResponse.ok && (avatarResponse.headers.get('content-type') || '').includes('image/svg+xml'), 'Avatar image endpoint did not render');
+  assert((await avatarResponse.text()).includes('prefers-reduced-motion'), 'Avatar animation must support reduced motion');
 
   assert(clientA.user.wallet_balance === 0 && freelancer.user.wallet_balance === 0, 'New users must start with real zero balances');
 
@@ -126,6 +134,20 @@ async function main() {
     body: { title: 'Live Data Engineer', hourlyRate: 72, skills: ['Node.js', 'SQLite'] },
   });
   assert(profile.user.title === 'Live Data Engineer', 'Profile update was not persisted');
+  const illustratedProfile = await api('/auth/profile', {
+    token: freelancer.token,
+    method: 'PATCH',
+    body: { name: 'Rasesh Test', avatarStyle: 'masculine' },
+  });
+  assert(illustratedProfile.user.avatar.includes('seed=Rasesh%20Test') && illustratedProfile.user.avatar.includes('style=masculine'), 'Chosen avatar style was not saved with the current name');
+  assert(db.prepare('SELECT avatar FROM talents WHERE user_id = ?').get(freelancer.user.id).avatar === illustratedProfile.user.avatar, 'Directory avatar did not update');
+  const customProfile = await api('/auth/profile', {
+    token: freelancer.token,
+    method: 'PATCH',
+    body: { avatar: 'https://example.com/my-photo.png' },
+  });
+  assert(customProfile.user.avatar === 'https://example.com/my-photo.png', 'Custom photo was not preserved');
+  await api('/auth/profile', { token: freelancer.token, method: 'PATCH', body: { avatarStyle: 'neutral' } });
 
   const projectResult = await api('/projects', {
     token: clientA.token,
