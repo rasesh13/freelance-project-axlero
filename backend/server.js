@@ -1047,18 +1047,128 @@ app.patch('/api/projects/:id', authenticateToken, (req, res) => {
 });
 
 app.delete('/api/projects/:id', authenticateToken, (req, res) => {
+  let transactionStarted = false;
+
   try {
-    const existing = db.prepare('SELECT client_id FROM projects WHERE id = ?').get(req.params.id);
-    if (!existing) return res.status(404).json({ error: 'Project not found' });
-    if (existing.client_id !== req.user.id) {
-      return res.status(403).json({ error: 'Only the project owner can delete this project' });
+    const projectId = req.params.id;
+
+    const existing = db.prepare(
+      'SELECT * FROM projects WHERE id = ?'
+    ).get(projectId);
+
+    if (!existing) {
+      return res.status(404).json({
+        error: 'Project not found'
+      });
     }
-    const result = db.prepare('DELETE FROM projects WHERE id = ? AND client_id = ?').run(req.params.id, req.user.id);
-    if (result.changes === 0) return res.status(404).json({ error: 'Project not found' });
-    res.json({ success: true, deletedId: req.params.id });
+
+    if (existing.client_id !== req.user.id) {
+      return res.status(403).json({
+        error: 'Only the project owner can delete this project'
+      });
+    }
+
+    const projectTitle = existing.title;
+
+    // Check contractual and financial history.
+    const activeContracts = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM contracts
+      WHERE title = ?
+    `).get(projectTitle).count;
+
+    const relatedPayments = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM payments
+      WHERE project = ?
+    `).get(projectTitle).count;
+
+    const relatedTimeLogs = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM time_logs
+      WHERE project_title = ?
+    `).get(projectTitle).count;
+
+    // Preserve projects with financial history.
+    if (
+      activeContracts > 0 ||
+      relatedPayments > 0 ||
+      relatedTimeLogs > 0
+    ) {
+      return res.status(409).json({
+        error: 'Project has contractual or financial history and cannot be permanently deleted.',
+        requiresArchive: true,
+        relatedRecords: {
+          contracts: activeContracts,
+          payments: relatedPayments,
+          timeLogs: relatedTimeLogs
+        }
+      });
+    }
+
+    // Start SQLite transaction.
+    db.exec('BEGIN IMMEDIATE TRANSACTION');
+    transactionStarted = true;
+
+    // Remove associated non-financial records.
+    db.prepare(`
+      DELETE FROM kanban_tasks
+      WHERE project_id = ? OR project = ?
+    `).run(projectId, projectTitle);
+
+    db.prepare(`
+      DELETE FROM proposals
+      WHERE project_id = ? OR project_title = ?
+    `).run(projectId, projectTitle);
+
+    db.prepare(`
+      DELETE FROM files
+      WHERE project = ?
+    `).run(projectTitle);
+
+    db.prepare(`
+      DELETE FROM team_members
+      WHERE project = ?
+    `).run(projectTitle);
+
+    // Delete the project only if the requester owns it.
+    const result = db.prepare(`
+      DELETE FROM projects
+      WHERE id = ? AND client_id = ?
+    `).run(projectId, req.user.id);
+
+    if (result.changes !== 1) {
+      throw new Error('Project deletion failed');
+    }
+
+    // Commit all deletion operations.
+    db.exec('COMMIT');
+    transactionStarted = false;
+
+    return res.status(200).json({
+      success: true,
+      deletedId: projectId,
+      message: 'Project and associated non-financial records deleted successfully.'
+    });
+
   } catch (err) {
+
+    // Roll back if any operation fails.
+    if (transactionStarted) {
+      try {
+        db.exec('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('Rollback error:', rollbackError.message);
+      }
+    }
+
     console.error('Delete project error:', err);
-    res.status(500).json({ error: 'Failed to delete project' });
+    console.error('Actual error:', err.message);
+
+    return res.status(500).json({
+      error: 'Failed to delete project',
+      details: err.message
+    });
   }
 });
 
