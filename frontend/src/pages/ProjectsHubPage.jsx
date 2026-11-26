@@ -314,11 +314,6 @@ const completedLength =
   // Settings State
   const [workspaceName, setWorkspaceName] = useState(currentUser?.workspace_name || 'Workverse Ventures');
   const [billingEmail, setBillingEmail] = useState(currentUser?.billing_email || currentUser?.email || '');
-  const [autoEscrowRelease, setAutoEscrowRelease] = useState(currentUser?.auto_escrow_release ?? true);
-  const [twoFactorAuth, setTwoFactorAuth] = useState(currentUser?.two_factor_auth ?? true);
-  const [twoFactorMethod, setTwoFactorMethod] = useState('TOTP Authenticator');
-  const [sessionTimeout, setSessionTimeout] = useState('1 Hour');
-  const [payoutThreshold, setPayoutThreshold] = useState('1,000');
   const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
   const [disputeContract, setDisputeContract] = useState('');
   const [disputeReason, setDisputeReason] = useState('Deliverable Specs Discrepancy');
@@ -424,8 +419,6 @@ const completedLength =
           const s = settingsRes.value;
           if (s.workspaceName) setWorkspaceName(s.workspaceName);
           if (s.billingEmail) setBillingEmail(s.billingEmail);
-          if (typeof s.autoEscrowRelease === 'boolean') setAutoEscrowRelease(s.autoEscrowRelease);
-          if (typeof s.twoFactorAuth === 'boolean') setTwoFactorAuth(s.twoFactorAuth);
           if (s.emailDigest) setEmailDigest(s.emailDigest);
         }
       } catch (err) {
@@ -824,7 +817,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
     try {
       const content =
         summaryText ||
-        `Workverse Deliverable / Escrow Receipt\nFile: ${fileName}\nExported: ${new Date().toISOString()}\nWorkspace: ${workspaceName}\nStatus: Verified & Archived\n`;
+        `Workverse Deliverable\nFile: ${fileName}\nExported: ${new Date().toISOString()}\nWorkspace: ${workspaceName}\nStatus: Exported from demo workspace\n`;
       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -892,8 +885,6 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
         saveSettings({
           workspaceName,
           billingEmail,
-          autoEscrowRelease,
-          twoFactorAuth,
           emailDigest,
         }),
         updateMyProfile({
@@ -1442,7 +1433,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                   <div>
                     <h2 className="text-xl sm:text-2xl font-bold text-[#171717]">My Active Contracts</h2>
                     <p className="text-xs text-[#888888] mt-0.5">
-                      Showing {freelancerContracts.length} awarded contracts with persisted escrow records
+                      Showing {freelancerContracts.length} awarded contracts with saved milestone records
                     </p>
                   </div>
 
@@ -1606,14 +1597,14 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                         <span className="text-white/40">•</span>
                         <div className="flex items-center gap-2 text-xs text-white/80">
                           <span className="text-[#888888]">Active Milestone:</span>
-                          <span className="font-semibold text-white bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">Phase 2: Core Components & Escrow Hook</span>
+                          <span className="font-semibold text-white bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">{freelancerContracts[0]?.title || 'No active contract'}</span>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs">
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-semibold">
                           <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>Escrow Funded: $4,850.00</span>
+                          <span>Demo milestone total: {formatUsd(escrowBalance)}</span>
                         </span>
                       </div>
                     </div>
@@ -2293,20 +2284,13 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
 
                     <button
                       onClick={() => {
-                        const first = paymentsList[0] || {
-                          id: 'TAX-2026',
-                          milestone: '2026 Annual Escrow Summary',
-                          project: 'Workverse Workspace',
-                          recipient: currentUser?.name || 'Current user',
-                          amount: formatUsd(freelancerTotalEarnings),
-                          date: 'Today',
-                        };
-                        setActiveInvoicePayment(first);
+                        if (paymentsList[0]) setActiveInvoicePayment(paymentsList[0]);
                       }}
-                      className="px-4 py-2 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] text-xs font-semibold text-[#171717] hover:text-[#F36B21] transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                      disabled={paymentsList.length === 0}
+                      className="px-4 py-2 rounded-full border border-[#EAE2DC] hover:border-[#F36B21] text-xs font-semibold text-[#171717] hover:text-[#F36B21] transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                     >
                       <Printer className="w-3.5 h-3.5" />
-                      <span>Generate Tax Statement</span>
+                      <span>View Demo Receipt</span>
                     </button>
                   </div>
 
@@ -2549,7 +2533,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                     {[
                       '✓ Deliverables uploaded for review',
                       '⚡ Ready for QA validation',
-                      '💳 Escrow milestone release approved',
+                      '💬 Milestone review requested',
                       '💬 Need brief sync on architecture',
                     ].map((tag) => (
                       <button
@@ -2786,7 +2770,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                   <div className="p-5 rounded-3xl bg-white border border-[#EAE2DC] shadow-xs space-y-1 min-w-0 overflow-hidden">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#888888] block">Escrow Holding</span>
                     <div className="text-2xl font-extrabold text-[#171717] tabular-nums truncate">{formatUsd(clientEscrowHolding)}</div>
-                    <span className="text-[10px] text-emerald-600 font-semibold">● 100% Guaranteed</span>
+                    <span className="text-[10px] text-amber-700 font-semibold">Demo records only · no funds held</span>
                   </div>
                   <div className="p-5 rounded-3xl bg-white border border-[#EAE2DC] shadow-xs space-y-1 min-w-0 overflow-hidden">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#888888] block">Released to Date</span>
@@ -2948,79 +2932,9 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                     />
                   </div>
 
-                  <div className="pt-2 space-y-4 border-t border-[#F3ECE7]">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-xs font-bold text-[#171717]">Automate Milestone Escrow Release</h4>
-                        <p className="text-[11px] text-[#777777]">Disburse milestone funds automatically upon review approval.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setAutoEscrowRelease(!autoEscrowRelease)}
-                        className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${autoEscrowRelease ? 'bg-[#F36B21]' : 'bg-[#EAE2DC]'
-                          }`}
-                      >
-                        <span
-                          className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-0.5 transition-transform ${autoEscrowRelease ? 'right-0.5' : 'left-0.5'
-                            }`}
-                        />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-xs font-bold text-[#171717]">Two-Factor Escrow Authorization (2FA)</h4>
-                        <p className="text-[11px] text-[#777777]">Require biometric or TOTP authorization for payouts over ${payoutThreshold}.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setTwoFactorAuth(!twoFactorAuth)}
-                        className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${twoFactorAuth ? 'bg-[#F36B21]' : 'bg-[#EAE2DC]'
-                          }`}
-                      >
-                        <span
-                          className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-0.5 transition-transform ${twoFactorAuth ? 'right-0.5' : 'left-0.5'
-                            }`}
-                        />
-                      </button>
-                    </div>
-
-                    {twoFactorAuth && (
-                      <div className="p-4 rounded-2xl bg-[#FFF9F5] border border-[#EAE2DC] space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#171717] mb-1">
-                              2FA Authenticator Method
-                            </label>
-                            <select
-                              value={twoFactorMethod}
-                              onChange={(e) => setTwoFactorMethod(e.target.value)}
-                              className="w-full px-3 py-2 rounded-xl bg-white border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
-                            >
-                              <option value="TOTP Authenticator">Google Authenticator / Authy (TOTP)</option>
-                              <option value="Hardware Key">Hardware Security Key (FIDO2 / WebAuthn)</option>
-                              <option value="SMS Verification">Encrypted SMS PIN</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#171717] mb-1">
-                              Session Inactivity Lockout
-                            </label>
-                            <select
-                              value={sessionTimeout}
-                              onChange={(e) => setSessionTimeout(e.target.value)}
-                              className="w-full px-3 py-2 rounded-xl bg-white border border-[#EAE2DC] text-xs font-semibold focus:outline-none focus:border-[#F36B21]"
-                            >
-                              <option value="15 Minutes">15 Minutes</option>
-                              <option value="1 Hour">1 Hour (Recommended)</option>
-                              <option value="8 Hours">8 Hours (Workday)</option>
-                              <option value="30 Days">30 Days</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <p className="pt-4 border-t border-[#F3ECE7] text-xs text-[#777777]">
+                    Payments and milestone releases here are simulated. This workspace does not hold funds or enforce payout authentication.
+                  </p>
 
                   {/* Escrow Dispute & Mediation Resolution Card */}
                   <div className="pt-4 border-t border-[#F3ECE7]">
@@ -3031,7 +2945,7 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                           <span>Escrow Mediation & Dispute Center</span>
                         </h4>
                         <p className="text-[11px] text-[#777777] mt-0.5">
-                          File an official dispute or claim mediation for deliverable discrepancies or contractual defaults.
+                          Record a contract concern for review in this demo workspace.
                         </p>
                       </div>
                       <button
