@@ -27,6 +27,8 @@ import { fetchPricingPlans, subscribeToPlan, createCheckout, fetchDemoReceipts, 
 
 export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
   const [plans, setPlans] = useState([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState('');
   const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'yearly'
   const [activePlan, setActivePlan] = useState(() => getStoredUser()?.subscription_plan || 'free');
   const [receipts, setReceipts] = useState([]);
@@ -39,6 +41,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
   const [isCompareOpen, setIsCompareOpen] = useState(false);
 
   const handleSelectPlan = (plan) => {
+    if (!plan) return;
     setCheckoutError('');
     setSubscriptionSuccessMsg('');
     if (!isLoggedIn || !getAuthToken()) {
@@ -56,7 +59,8 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
       .then((data) => {
         if (Array.isArray(data)) setPlans(data);
       })
-      .catch((err) => console.error('Failed to load pricing plans:', err));
+      .catch((err) => setPlansError(err.message || 'Could not load pricing plans.'))
+      .finally(() => setPlansLoading(false));
   }, []);
 
   useEffect(() => {
@@ -68,7 +72,8 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
 
   // Price formatting helper
   const getPrice = (plan) => {
-    if (!plan || plan.id === 'free') return '$0';
+    if (!plan) return '—';
+    if (plan.id === 'free') return '$0';
     return `$${billingCycle === 'monthly' ? plan.priceUsdMonthly : plan.priceUsdYearly}`;
   };
 
@@ -81,18 +86,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
 
   // Split plans: 3 Core Cards + 1 Enterprise Band
   const corePlans = plans.filter((p) => p.id !== 'business');
-  const enterprisePlan = plans.find((p) => p.id === 'business') || {
-    id: 'business',
-    name: 'Business',
-    tagline: 'For organizations that need more.',
-    priceMonthly: 4999,
-    priceYearly: 3999,
-    priceUsdMonthly: 149,
-    priceUsdYearly: 119,
-    period: '/month',
-    buttonText: 'Contact Sales',
-    features: [],
-  };
+  const enterprisePlan = plans.find((p) => p.id === 'business');
 
   const faqs = [
     {
@@ -109,7 +103,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
     },
     {
       q: 'What is included in the Team plan?',
-      a: 'The Team plan unlocks multi-seat workspaces (up to 10 members), shared milestone dashboards, team analytics, consolidated company billing, and priority candidate matching.',
+      a: 'The Team tier is a demo plan selection. Shared workspace features depend on the current app implementation; the tier does not enforce additional seat or billing capabilities.',
     },
     {
       q: 'How are plan changes handled on localhost?',
@@ -117,7 +111,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
     },
     {
       q: 'How does Enterprise custom invoicing work?',
-      a: 'The Business plan is listed for larger teams. Contact the Workverse operator for any custom agreement or invoicing arrangements.',
+      a: 'The Business tier is an illustrative demo selection. Custom invoices and enterprise services are not offered by this local instance.',
     },
   ];
 
@@ -187,7 +181,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
               </h1>
 
               <p className="text-base sm:text-lg text-[#666666] max-w-xl font-normal leading-relaxed">
-                Compare the plans for your workspace. Checkout is a demo simulation; no real charges occur.
+                Compare illustrative plans for your workspace. Checkout is a demo simulation; no real charges occur or extra features unlock automatically.
               </p>
 
               {/* Value Badges */}
@@ -288,19 +282,8 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                 </div>
 
                 <button
-                  onClick={() =>
-                    handleSelectPlan(
-                      plans.find((p) => p.id === 'team') || {
-                        id: 'team',
-                        name: 'Team',
-                        period: '/month',
-                        priceMonthly: 1499,
-                        priceYearly: 1199,
-                        priceUsdMonthly: 49,
-                        priceUsdYearly: 39,
-                      }
-                    )
-                  }
+                  onClick={() => handleSelectPlan(plans.find((p) => p.id === 'team'))}
+                  disabled={!plans.some((p) => p.id === 'team')}
                   className="w-full py-3 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-orange-500/25 transition-all"
                 >
                   <span>Choose Team</span>
@@ -317,6 +300,8 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
           3 Spacious Core Cards + Full-Width Enterprise Concierge Band
       ======================================================== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 relative z-20 pb-16">
+        {plansLoading && <p className="mb-6 text-sm text-[#777777]">Loading plans…</p>}
+        {plansError && <p role="alert" className="mb-6 text-sm text-red-700">{plansError}</p>}
         {/* 3 Core Cards (Free, Pro, Team Showcase) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
           {corePlans.map((plan) => {
@@ -466,7 +451,7 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
         {/* ========================================================
             ENTERPRISE FULL-WIDTH CONCIERGE BAND (DIFFERENT FORMAT!)
         ======================================================== */}
-        <div className="mt-8 bg-white rounded-3xl border border-[#EAE2DC] hover:border-[#F36B21]/50 p-7 sm:p-10 shadow-[0_4px_24px_rgba(0,0,0,0.02)] transition-all">
+        {enterprisePlan && <div className="mt-8 bg-white rounded-3xl border border-[#EAE2DC] hover:border-[#F36B21]/50 p-7 sm:p-10 shadow-[0_4px_24px_rgba(0,0,0,0.02)] transition-all">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
             {/* Left Info */}
             <div className="space-y-3 max-w-xl">
@@ -475,10 +460,10 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                 <span>Enterprise & Custom Volume</span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold text-[#171717] tracking-tight">
-                Scale with Dedicated Concierge Sourcing
+                Business Demo Tier
               </h3>
               <p className="text-xs sm:text-sm text-[#666666] leading-relaxed">
-                For venture-backed startups and organizations with high talent volume. Includes custom master service agreements (MSAs), Net-30 invoicing, dedicated talent partners, and SOC-2 compliance workflows.
+                An illustrative tier for larger workspaces. Selecting it records a demo plan and receipt; no enterprise service or real invoice is created.
               </p>
             </div>
 
@@ -486,19 +471,19 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
             <div className="grid grid-cols-2 gap-3 text-xs text-[#171717]">
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-[#F36B21] shrink-0" />
-                <span className="font-semibold">Unlimited Team Seats</span>
+                <span className="font-semibold">Workspace collaboration</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-[#F36B21] shrink-0" />
-                <span className="font-semibold">Dedicated Slack Channel</span>
+                <span className="font-semibold">Project tracking</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-[#F36B21] shrink-0" />
-                <span className="font-semibold">Custom NDAs & IP Legal</span>
+                <span className="font-semibold">Team conversations</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-[#F36B21] shrink-0" />
-                <span className="font-semibold">99.9% Support SLA</span>
+                <span className="font-semibold">Demo plan receipt</span>
               </div>
             </div>
 
@@ -512,12 +497,12 @@ export default function PricingPage({ setCurrentPage, isLoggedIn = false }) {
                 onClick={() => handleSelectPlan(enterprisePlan)}
                 className="px-8 py-3.5 rounded-full bg-[#171717] hover:bg-[#F36B21] text-white text-xs sm:text-sm font-bold transition-all shadow-md active:scale-95 flex items-center gap-2"
               >
-                <span>Contact Enterprise</span>
+                <span>Choose Business Demo</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
-        </div>
+        </div>}
       </section>
 
       {/* ========================================================
