@@ -294,25 +294,40 @@ async function runApiTestSuite() {
     assert(Array.isArray(res.data.transactions));
   });
 
-  await test('POST /api/time/log records session and updates wallet', async () => {
-    const initialWallet = await request('/api/wallet');
-    const account = await request('/api/auth/me');
-    const initialBal = initialWallet.data.walletBalance;
-    const accountRate = Number(account.data.user.hourly_rate);
+  await test('POST /api/time/log submits session without crediting wallet', async () => {
+  const initialWallet = await request('/api/wallet');
+  const initialBal = initialWallet.data.walletBalance;
+  const initialTransactions = initialWallet.data.transactions.length;
 
-    const res = await request('/api/time/log', {
-      method: 'POST',
-      body: JSON.stringify({
-        seconds: 3600, // 1 hr
-        hourly_rate: 99999,
-        project_title: 'SaaS Dashboard Development',
-        formatted_time: '01:00:00',
-      }),
-    });
-    assert.strictEqual(res.status, 200);
-    assert.strictEqual(typeof res.data.newWalletBalance, 'number');
-    assert.strictEqual(res.data.newWalletBalance, initialBal + accountRate);
+  const res = await request('/api/time/log', {
+    method: 'POST',
+    body: JSON.stringify({
+      seconds: 3600,
+      hourly_rate: 99999,
+      project_title: 'SaaS Dashboard Development',
+      formatted_time: '01:00:00',
+    }),
   });
+
+  assert.strictEqual(res.status, 201);
+  assert.strictEqual(res.data.success, true);
+  assert.strictEqual(res.data.paymentStatus, 'Pending Approval');
+  assert.strictEqual(typeof res.data.logId, 'string');
+
+  const updatedWallet = await request('/api/wallet');
+
+  assert.strictEqual(
+    updatedWallet.data.walletBalance,
+    initialBal,
+    'Wallet balance must not increase before client approval'
+  );
+
+  assert.strictEqual(
+    updatedWallet.data.transactions.length,
+    initialTransactions,
+    'No completed wallet transaction should be created before approval'
+  );
+});
 
   await test('POST /api/wallet/withdraw rejects unconfigured payouts', async () => {
     const res = await request('/api/wallet/withdraw', {
