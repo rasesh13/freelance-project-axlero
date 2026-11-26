@@ -2413,15 +2413,15 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                   </p>
                 </div>
 
-                <div className="p-6 rounded-3xl bg-[#FFF9F5] border border-[#EAE2DC] flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                  <div className="flex items-center gap-4">
+                <div className="p-6 rounded-3xl bg-[#FFF9F5] border border-[#EAE2DC] flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                  <div className="flex items-center gap-4 min-w-0">
                     <img
                       src={avatarSrc(currentUser?.avatar, currentUser?.name)}
                       alt={currentUser?.name || 'Freelancer'}
                       className="w-18 h-18 rounded-2xl object-cover border-2 border-[#F36B21] shadow-md"
                     />
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-lg font-bold text-[#171717]">{currentUser?.name || 'Current user'}</h3>
                         <span className="px-2.5 py-0.5 rounded-full bg-[#FFF3EC] text-[#F36B21] text-[10px] font-bold border border-[#FCE2D3]">
                           {currentUser?.verified ? 'Verified Talent' : 'Profile In Review'}
@@ -2438,12 +2438,21 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => setActiveSidebarNav('settings')}
-                    className="px-6 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold transition-all shadow-md shadow-orange-500/20 cursor-pointer self-start sm:self-auto"
-                  >
-                    Edit Avatar & Profile →
-                  </button>
+                  <div className="flex flex-col items-start gap-2 shrink-0">
+                    <label htmlFor="profile-card-photo-upload" className="inline-flex cursor-pointer items-center gap-2 px-5 py-2.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold transition-all shadow-md shadow-orange-500/20">
+                      <UploadCloud className="h-4 w-4" />
+                      {profilePhotoUploading ? 'Uploading Photo…' : 'Upload Profile Photo'}
+                    </label>
+                    <input id="profile-card-photo-upload" type="file" accept="image/jpeg,image/png,image/webp" onChange={handleProfilePhotoSelected} disabled={profilePhotoUploading} className="sr-only" />
+                    <button
+                      type="button"
+                      onClick={() => setActiveSidebarNav('settings')}
+                      className="px-5 py-2 rounded-full border border-[#EAE2DC] bg-white text-[#171717] hover:border-[#F36B21] text-xs font-semibold transition-colors"
+                    >
+                      Edit Avatar Style & Profile
+                    </button>
+                    <p className="text-[11px] text-[#888888]">Optional photo · default avatar stays until you upload</p>
+                  </div>
                 </div>
               </div>
             )}
