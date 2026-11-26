@@ -3,20 +3,24 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { randomUUID } = require('node:crypto');
+const { randomUUID, randomBytes } = require('node:crypto');
 const { db, logAuditEvent } = require('./db');
 const { renderDashboardHtml, renderDocsHtml } = require('./dashboard');
 const { getOpenApiSpec } = require('./openapi');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'workverse_super_secret_jwt_key_2026';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET must be configured in production');
+}
+const JWT_SECRET = process.env.JWT_SECRET || randomBytes(32).toString('hex');
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://127.0.0.1:5173').split(',').map((origin) => origin.trim());
 
 // ==========================================
 // GLOBAL MIDDLEWARE
 // ==========================================
 app.use(cors({
-  origin: '*',
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -48,11 +52,11 @@ const rateLimitStore = new Map();
 
 function createRateLimiter({ windowMs = 60 * 1000, max = 120, message = 'Too many requests, please try again later.' } = {}) {
   return (req, res, next) => {
-    if (process.env.NODE_ENV === 'test' || req.headers['x-bypass-ratelimit']) {
+    if (process.env.NODE_ENV === 'test') {
       return next();
     }
 
-    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
+    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
     const key = `${req.baseUrl || ''}${req.path}:${ip}`;
     const now = Date.now();
 
