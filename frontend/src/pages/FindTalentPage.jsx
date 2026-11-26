@@ -26,6 +26,7 @@ import { fetchTalents, fetchBookmarks, toggleBookmark, sendMessage, getAuthToken
 
 export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, isLoggedIn = false }) {
   const [talentsList, setTalentsList] = useState([]);
+  const [talentsError, setTalentsError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedExperience, setSelectedExperience] = useState('All');
@@ -45,7 +46,7 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
       .then((data) => {
         if (Array.isArray(data)) setTalentsList(data);
       })
-      .catch((err) => console.error('Failed to load talents:', err));
+      .catch((err) => setTalentsError(err.message || 'Could not load the talent directory.'));
   }, []);
 
   useEffect(() => {
@@ -83,14 +84,11 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
       setCurrentPage('auth', { notice: 'Sign in to bookmark verified freelancers.', returnTo: 'talent' });
       return;
     }
-    setSavedTalents((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
     try {
       const res = await toggleBookmark('talent', id);
       if (res?.ids) setSavedTalents(res.ids);
     } catch (err) {
-      console.error('Failed to toggle talent bookmark:', err);
+      setTalentsError(err.message || 'Could not save this profile.');
     }
   };
 
@@ -213,6 +211,7 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
 
   return (
     <div className="w-full min-h-screen bg-[#FFF9F5] text-[#171717] pb-24 relative">
+      {talentsError && <p role="alert" className="max-w-7xl mx-auto px-4 pt-4 text-sm text-red-700">{talentsError}</p>}
       {/* ========================================================
           HERO BANNER: EDITORIAL TYPOGRAPHY & SEAMLESS BACKGROUND WAVE
       ======================================================== */}
@@ -1116,7 +1115,7 @@ export default function FindTalentPage({ setCurrentPage, setSelectedFreelancer, 
 
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-[11px] text-[#888888]">
-                    Rate: <strong className="text-[#171717]">${contactModalTalent.hourlyRate}/hr</strong> • Escrow protected
+                    Rate: <strong className="text-[#171717]">${contactModalTalent.hourlyRate}/hr</strong> • Contract offers do not collect payment
                   </span>
                   <div className="flex items-center gap-2">
                     <button
