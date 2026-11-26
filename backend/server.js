@@ -1468,65 +1468,103 @@ app.patch('/api/proposals/:id/status', authenticateToken, (req, res) => {
 app.post('/api/time/log', authenticateToken, requireRole('freelancer'), (req, res) => {
   try {
     const {
-      seconds = 0,
+      seconds,
       project_title = '',
       formatted_time = '00:00:00',
     } = req.body || {};
 
-    if (typeof seconds !== 'number' || seconds <= 0 || seconds > 86400) {
-      return res.status(400).json({ error: 'Session time must be between 1 second and 24 hours' });
-    }
-
-    const contract = db.prepare(`
-      SELECT id FROM contracts WHERE freelancer_id = ? AND title = ? LIMIT 1
-    `).get(req.user.id, String(project_title).trim());
-    if (!contract) {
-      return res.status(403).json({ error: 'Time can only be logged against one of your awarded contracts' });
-    }
-
-    const account = db.prepare('SELECT hourly_rate FROM users WHERE id = ?').get(req.user.id);
-    const hourlyRate = Number(account?.hourly_rate || 0);
-
-    const amountEarned = Number(((seconds / 3600) * hourlyRate).toFixed(2));
-    const userId = req.user.id;
-    const logId = `time-${Date.now()}`;
-
-    db.prepare(`
-      INSERT INTO time_logs (id, user_id, project_title, seconds, formatted_time, hourly_rate, amount_earned)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(logId, userId, project_title, seconds, formatted_time, hourlyRate, amountEarned);
-
-    db.prepare('UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?').run(amountEarned, userId);
-
-    if (amountEarned > 0) {
-      db.prepare(`
-        INSERT INTO wallet_transactions (id, user_id, type, amount, method, status, note)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(`wtx-${Date.now()}`, userId, 'time_log', amountEarned, 'escrow', 'Completed', `Logged ${formatted_time} on ${project_title}`);
-    }
-
-    const updatedUser = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(userId);
-    if (amountEarned > 0) {
-      createNotification({
-        userId,
-        role: 'freelancer',
-        type: 'payment',
-        title: `Milestone Time Credited (+$${amountEarned.toFixed(2)})`,
-        message: `Logged ${formatted_time} on ${project_title} to escrow wallet.`,
-        targetPage: 'projects',
-        targetTab: 'earnings',
+    // Validate session duration
+    if (
+      typeof seconds !== 'number' ||
+      !Number.isInteger(seconds) ||
+      seconds <= 0 ||
+      seconds > 86400
+    ) {
+      return res.status(400).json({
+        error: 'Session time must be between 1 second and 24 hours',
       });
     }
-    res.json({
+
+    // Validate project title
+    const projectTitle = String(project_title).trim();
+
+    if (!projectTitle) {
+      return res.status(400).json({
+        error: 'Project title is required',
+      });
+    }
+
+    // Verify awarded contract
+    const contract = db.prepare(`
+      SELECT id
+      FROM contracts
+      WHERE freelancer_id = ? AND title = ?
+      LIMIT 1
+    `).get(req.user.id, projectTitle);
+
+    if (!contract) {
+      return res.status(403).json({
+        error: 'Time can only be logged against one of your awarded contracts',
+      });
+    }
+
+    // Get freelancer hourly rate
+    const account = db.prepare(
+      'SELECT hourly_rate FROM users WHERE id = ?'
+    ).get(req.user.id);
+
+    const hourlyRate = Number(account?.hourly_rate || 0);
+
+    if (!Number.isFinite(hourlyRate) || hourlyRate < 0) {
+      return res.status(400).json({
+        error: 'Invalid hourly rate',
+      });
+    }
+
+    const amountEarned = Number(
+      ((seconds / 3600) * hourlyRate).toFixed(2)
+    );
+
+    const userId = req.user.id;
+    const logId = `time-${randomUUID()}`;
+
+    // Save time log only.
+    // Do NOT credit wallet before client approval.
+    db.prepare(`
+      INSERT INTO time_logs (
+        id,
+        user_id,
+        project_title,
+        seconds,
+        formatted_time,
+        hourly_rate,
+        amount_earned
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      logId,
+      userId,
+      projectTitle,
+      seconds,
+      formatted_time,
+      hourlyRate,
+      amountEarned
+    );
+
+    res.status(201).json({
       success: true,
       logId,
       amountEarned,
-      newWalletBalance: updatedUser ? updatedUser.wallet_balance : null,
-      message: `Logged ${formatted_time} ($${amountEarned.toFixed(2)}) to live escrow wallet.`,
+      paymentStatus: 'Pending Approval',
+      message: 'Time log submitted successfully. Earnings will be credited after client approval.',
     });
+
   } catch (err) {
     console.error('Time log error:', err);
-    res.status(500).json({ error: 'Failed to log milestone time session' });
+
+    res.status(500).json({
+      error: 'Failed to submit time log',
+    });
   }
 });
 
