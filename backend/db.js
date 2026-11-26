@@ -1,6 +1,7 @@
 const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 const bcrypt = require('bcryptjs');
+const { avatarUrl, inferAvatarStyle, isLegacyDefaultAvatar } = require('./avatar');
 
 const dbPath = process.env.WORKVERSE_DB_PATH
   ? path.resolve(process.env.WORKVERSE_DB_PATH)
@@ -1192,6 +1193,20 @@ if (process.env.WORKVERSE_SEED_DEMO_DATA !== 'true') {
     DELETE FROM newsletter_subscribers WHERE email IN ('sarah@cloudscale.ai', 'founder@startup.io');
     COMMIT;
   `);
+}
+
+// Replace the two old role-based stock portraits for existing accounts. A photo
+// chosen by the person is left untouched, including its directory counterpart.
+const replaceDefaultAvatar = db.prepare('UPDATE users SET avatar = ? WHERE id = ?');
+const replaceDefaultTalentAvatar = db.prepare('UPDATE talents SET avatar = ? WHERE user_id = ?');
+for (const user of db.prepare('SELECT id, name, avatar FROM users').all()) {
+  if (!isLegacyDefaultAvatar(user.avatar)) continue;
+  const nextAvatar = avatarUrl(user.name, inferAvatarStyle(user.name));
+  replaceDefaultAvatar.run(nextAvatar, user.id);
+  const talent = db.prepare('SELECT avatar FROM talents WHERE user_id = ?').get(user.id);
+  if (talent && isLegacyDefaultAvatar(talent.avatar)) {
+    replaceDefaultTalentAvatar.run(nextAvatar, user.id);
+  }
 }
 
 module.exports = {

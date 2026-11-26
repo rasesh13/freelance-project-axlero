@@ -7,6 +7,7 @@ const { randomUUID, randomBytes } = require('node:crypto');
 const { db, logAuditEvent } = require('./db');
 const { renderDashboardHtml, renderDocsHtml } = require('./dashboard');
 const { getOpenApiSpec } = require('./openapi');
+const { avatarUrl, generatedAvatarStyle, inferAvatarStyle, renderAvatarSvg } = require('./avatar');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -458,6 +459,14 @@ app.get('/api/stats', (req, res) => {
 // ==========================================
 // 2. AUTHENTICATION & USER SETTINGS
 // ==========================================
+app.get('/api/avatar', (req, res) => {
+  const seed = String(req.query.seed || 'Member').slice(0, 80);
+  const svg = renderAvatarSvg(seed, req.query.style);
+  res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.send(svg);
+});
+
 app.post('/api/auth/register', authRateLimiter, (req, res) => {
   try {
     const { name, email, password, role = 'client' } = req.body || {};
@@ -483,10 +492,7 @@ app.post('/api/auth/register', authRateLimiter, (req, res) => {
 
     const id = `usr-${Date.now()}`;
     const passwordHash = bcrypt.hashSync(password, 10);
-    const defaultAvatar =
-      role === 'freelancer'
-        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=500&q=80'
-        : 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=500&q=80';
+    const defaultAvatar = avatarUrl(name, inferAvatarStyle(name));
     const defaultTitle = role === 'freelancer' ? 'Full Stack Developer' : 'Project Manager & Founder';
     const starterWallet = 0;
     const starterEscrow = 0;
@@ -604,7 +610,7 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
 
 app.patch('/api/auth/profile', authenticateToken, (req, res) => {
   try {
-    const { name, title, avatar, hourlyRate, location, about, skills, available } = req.body || {};
+    const { name, title, avatar, avatarStyle, hourlyRate, location, about, skills, available } = req.body || {};
     if (name !== undefined && !String(name).trim()) {
       return res.status(400).json({ error: 'Name cannot be empty' });
     }
@@ -612,6 +618,16 @@ app.patch('/api/auth/profile', authenticateToken, (req, res) => {
     if (safeRate !== null && (!Number.isFinite(safeRate) || safeRate < 0 || safeRate > 10000)) {
       return res.status(400).json({ error: 'Hourly rate must be between 0 and 10,000' });
     }
+    if (avatarStyle !== undefined && !['masculine', 'feminine', 'neutral'].includes(avatarStyle)) {
+      return res.status(400).json({ error: 'Choose a valid avatar appearance' });
+    }
+    const nextName = name === undefined ? req.user.name : String(name).trim();
+    const selectedStyle = avatarStyle || generatedAvatarStyle(avatar) || generatedAvatarStyle(req.user.avatar);
+    const nextAvatar = avatarStyle !== undefined || generatedAvatarStyle(avatar)
+      ? avatarUrl(nextName, selectedStyle)
+      : avatar === undefined && name !== undefined && generatedAvatarStyle(req.user.avatar)
+        ? avatarUrl(nextName, selectedStyle)
+        : avatar === undefined ? null : String(avatar).trim();
 
     db.prepare(`
       UPDATE users
@@ -621,7 +637,7 @@ app.patch('/api/auth/profile', authenticateToken, (req, res) => {
     `).run(
       name === undefined ? null : String(name).trim(),
       title === undefined ? null : String(title).trim(),
-      avatar === undefined ? null : String(avatar).trim(),
+      nextAvatar,
       safeRate,
       req.user.id
     );
@@ -638,7 +654,7 @@ app.patch('/api/auth/profile', authenticateToken, (req, res) => {
         name === undefined ? null : String(name).trim(),
         title === undefined ? null : String(title).trim(),
         title === undefined ? null : String(title).trim(),
-        avatar === undefined ? null : String(avatar).trim(),
+        nextAvatar,
         safeRate,
         location === undefined ? null : String(location).trim(),
         about === undefined ? null : String(about).trim(),
