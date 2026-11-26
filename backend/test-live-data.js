@@ -149,6 +149,22 @@ async function main() {
   assert(customProfile.user.avatar === 'https://example.com/my-photo.png', 'Custom photo was not preserved');
   await api('/auth/profile', { token: freelancer.token, method: 'PATCH', body: { avatarStyle: 'neutral' } });
 
+  const tinyPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==';
+  await api('/auth/avatar', { token: freelancer.token, method: 'PUT', expected: 400,
+    body: { mimeType: 'image/svg+xml', contentBase64: tinyPng } });
+  await api('/auth/avatar', { token: freelancer.token, method: 'PUT', expected: 400,
+    body: { mimeType: 'image/png', contentBase64: Buffer.from('not a photo').toString('base64') } });
+  const uploadedPhoto = await api('/auth/avatar', { token: freelancer.token, method: 'PUT',
+    body: { mimeType: 'image/png', contentBase64: tinyPng } });
+  assert(uploadedPhoto.user.avatar.startsWith(`/api/avatar/photo/${freelancer.user.id}`), 'Uploaded photo URL was not saved');
+  assert(db.prepare('SELECT avatar FROM talents WHERE user_id = ?').get(freelancer.user.id).avatar === uploadedPhoto.user.avatar, 'Uploaded photo did not reach public talent profile');
+  const photoResponse = await fetch(`http://127.0.0.1:${port}${uploadedPhoto.user.avatar}`);
+  assert(photoResponse.ok && (photoResponse.headers.get('content-type') || '').includes('image/png'), 'Uploaded photo was not served');
+  assert(Buffer.compare(Buffer.from(await photoResponse.arrayBuffer()), Buffer.from(tinyPng, 'base64')) === 0, 'Uploaded photo bytes changed');
+  const backToIllustration = await api('/auth/profile', { token: freelancer.token, method: 'PATCH', body: { avatarStyle: 'masculine' } });
+  assert(backToIllustration.user.avatar.includes('style=masculine'), 'Illustrated avatar was not restored');
+  assert(!db.prepare('SELECT user_id FROM profile_photos WHERE user_id = ?').get(freelancer.user.id), 'Old photo should be removed when illustration is chosen');
+
   const projectResult = await api('/projects', {
     token: clientA.token,
     method: 'POST',
