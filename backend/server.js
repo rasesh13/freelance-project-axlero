@@ -7,7 +7,7 @@ const { randomUUID, randomBytes } = require('node:crypto');
 const { db, logAuditEvent } = require('./db');
 const { renderDashboardHtml, renderDocsHtml } = require('./dashboard');
 const { getOpenApiSpec } = require('./openapi');
-const { avatarUrl, generatedAvatarStyle, inferAvatarStyle, renderAvatarSvg } = require('./avatar');
+const { avatarUrl, decodeProfilePhoto, generatedAvatarStyle, inferAvatarStyle, renderAvatarSvg } = require('./avatar');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -467,6 +467,46 @@ app.get('/api/avatar', (req, res) => {
   res.send(svg);
 });
 
+app.get('/api/avatar/photo/:userId', (req, res) => {
+  const photo = db.prepare('SELECT mime_type, content FROM profile_photos WHERE user_id = ?').get(req.params.userId);
+  if (!photo) return res.status(404).json({ error: 'Profile photo not found' });
+  res.setHeader('Content-Type', photo.mime_type);
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(Buffer.from(photo.content));
+});
+
+app.put('/api/auth/avatar', authenticateToken, (req, res) => {
+  const { mimeType, contentBase64 } = req.body || {};
+  if (typeof contentBase64 === 'string' && contentBase64.length > Math.ceil(2 * 1024 * 1024 * 4 / 3) + 4) {
+    return res.status(413).json({ error: 'Profile photos must be under 2 MB' });
+  }
+  let photo;
+  try {
+    photo = decodeProfilePhoto(contentBase64, mimeType);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+
+  try {
+    const photoUrl = `/api/avatar/photo/${encodeURIComponent(req.user.id)}?v=${Date.now()}`;
+    db.exec('BEGIN');
+    db.prepare(`
+      INSERT INTO profile_photos (user_id, mime_type, content, updated_at)
+      VALUES (?, ?, ?, datetime('now'))
+      ON CONFLICT(user_id) DO UPDATE SET mime_type = excluded.mime_type, content = excluded.content, updated_at = excluded.updated_at
+    `).run(req.user.id, mimeType, photo);
+    db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(photoUrl, req.user.id);
+    db.prepare('UPDATE talents SET avatar = ? WHERE user_id = ?').run(photoUrl, req.user.id);
+    db.exec('COMMIT');
+    const user = formatUserRow(db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id));
+    res.json({ success: true, user });
+  } catch (err) {
+    try { db.exec('ROLLBACK'); } catch {}
+    console.error('Profile photo upload error:', err);
+    res.status(500).json({ error: 'Could not save profile photo' });
+  }
+});
+
 app.post('/api/auth/register', authRateLimiter, (req, res) => {
   try {
     const { name, email, password, role = 'client' } = req.body || {};
@@ -662,6 +702,10 @@ app.patch('/api/auth/profile', authenticateToken, (req, res) => {
         available === undefined ? null : (available ? 1 : 0),
         req.user.id
       );
+    }
+
+    if (nextAvatar && nextAvatar !== req.user.avatar && req.user.avatar?.startsWith('/api/avatar/photo/')) {
+      db.prepare('DELETE FROM profile_photos WHERE user_id = ?').run(req.user.id);
     }
 
     const user = formatUserRow(db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id));

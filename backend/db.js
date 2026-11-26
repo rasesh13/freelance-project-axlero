@@ -332,6 +332,13 @@ CREATE TABLE IF NOT EXISTS disputes (
   status TEXT NOT NULL DEFAULT 'Open',
   created_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS profile_photos (
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  mime_type TEXT NOT NULL,
+  content BLOB NOT NULL,
+  updated_at TEXT DEFAULT (datetime('now'))
+);
 `);
 
 // Upgrade existing tables if database.sqlite came from an earlier version

@@ -45,6 +45,29 @@ function isLegacyDefaultAvatar(value) {
   ].some((photoId) => String(value).includes(photoId));
 }
 
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+const PHOTO_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+function decodeProfilePhoto(contentBase64, mimeType) {
+  if (!PHOTO_MIME_TYPES.has(mimeType)) {
+    throw new Error('Choose a JPEG, PNG, or WebP photo');
+  }
+  if (typeof contentBase64 !== 'string' || !contentBase64 || contentBase64.length > Math.ceil(MAX_PHOTO_BYTES * 4 / 3) + 4 || !/^[A-Za-z0-9+/]+={0,2}$/.test(contentBase64) || contentBase64.length % 4 !== 0) {
+    throw new Error('Choose a valid photo under 2 MB');
+  }
+  const bytes = Buffer.from(contentBase64, 'base64');
+  if (!bytes.length || bytes.length > MAX_PHOTO_BYTES) {
+    throw new Error('Choose a valid photo under 2 MB');
+  }
+  const isPng = bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  const isJpeg = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  const isWebp = bytes.length >= 12 && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
+  if (!({ 'image/png': isPng, 'image/jpeg': isJpeg, 'image/webp': isWebp })[mimeType]) {
+    throw new Error('Photo content does not match its file type');
+  }
+  return bytes;
+}
+
 function hashSeed(seed) {
   let hash = 2166136261;
   for (const char of String(seed || 'Member').toLocaleLowerCase('en').slice(0, 80)) {
@@ -101,4 +124,4 @@ function renderAvatarSvg(name, style) {
   </svg>`;
 }
 
-module.exports = { avatarUrl, generatedAvatarStyle, inferAvatarStyle, isLegacyDefaultAvatar, normalizeStyle, renderAvatarSvg };
+module.exports = { avatarUrl, decodeProfilePhoto, generatedAvatarStyle, inferAvatarStyle, isLegacyDefaultAvatar, normalizeStyle, renderAvatarSvg };
