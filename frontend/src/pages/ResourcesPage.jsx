@@ -4,6 +4,8 @@ import { fetchResources, fetchBookmarks, toggleBookmark, getAuthToken } from '..
 
 export default function ResourcesPage({ setCurrentPage, isLoggedIn = false }) {
   const [articles, setArticles] = useState([]);
+  const [resourcesError, setResourcesError] = useState('');
+  const [resourcesLoading, setResourcesLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [activeArticleModal, setActiveArticleModal] = useState(null);
@@ -14,9 +16,14 @@ export default function ResourcesPage({ setCurrentPage, isLoggedIn = false }) {
   useEffect(() => {
     fetchResources()
       .then((data) => {
-        if (Array.isArray(data)) setArticles(data);
+        if (Array.isArray(data)) {
+          setArticles(data);
+          const sharedId = new URLSearchParams(window.location.search).get('article');
+          if (sharedId) setActiveArticleModal(data.find((item) => item.id === sharedId) || null);
+        }
       })
-      .catch((err) => console.error('Failed to load resources:', err));
+      .catch((err) => setResourcesError(err.message || 'Could not load resources.'))
+      .finally(() => setResourcesLoading(false));
   }, []);
 
   useEffect(() => {
@@ -39,22 +46,25 @@ export default function ResourcesPage({ setCurrentPage, isLoggedIn = false }) {
       }
       return;
     }
-    setSavedArticleIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
     try {
       const res = await toggleBookmark('resource', id);
       if (res?.ids) setSavedArticleIds(res.ids);
     } catch (err) {
-      console.error('Failed to toggle bookmark:', err);
+      setResourcesError(err.message || 'Could not save this resource.');
     }
   };
 
-  const handleShareArticle = (article) => {
-    const shareText = `${article.title} — ${window.location.href}`;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(shareText).catch(() => {});
+  const handleShareArticle = async (article) => {
+    const shareUrl = new URL(window.location.href);
+    shareUrl.searchParams.set('article', article.id);
+    shareUrl.hash = 'resources';
+    try {
+      await navigator.clipboard.writeText(shareUrl.toString());
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2000);
+    } catch {
+      setResourcesError('Unable to copy the resource link.');
     }
-    setCopiedShare(true);
-    setTimeout(() => setCopiedShare(false), 2000);
   };
 
   const categories = ['All', 'Getting Started', 'Tutorials', 'Guides', 'Best Practices', 'FAQs'];
@@ -75,19 +85,19 @@ export default function ResourcesPage({ setCurrentPage, isLoggedIn = false }) {
   const faqs = [
     {
       q: 'How does Workverse protect freelancer and client payments?',
-      a: 'Workverse uses an automated milestone escrow system. When a contract starts, the client deposits the milestone funds into secure escrow. Workverse releases payment to the freelancer only after deliverables are inspected and approved.',
+      a: 'Workverse tracks contract and milestone status. Real project funding and payouts are not connected; pricing payments are simulations only.',
     },
     {
       q: 'What are the platform commission fees on Workverse?',
-      a: 'Workverse charges zero percent listing fees. For completed project milestones, freelancers enjoy industry-leading low rates of 5% to 8% depending on lifetime billing with each client.',
+      a: 'The plan prices are illustrative demo tiers. No real project payment or commission is collected on this local instance.',
     },
     {
       q: 'How do talent verifications work?',
-      a: 'Our review board reviews portfolio repositories, past production apps, and conducts architecture challenges to verify that builders meet our top 3% bar.',
+      a: 'The directory shows the verification status stored on each account. New freelancers are not automatically marked verified.',
     },
     {
       q: 'Can clients hire full distributed engineering teams?',
-      a: 'Yes. Through the Team and Business plans, organizations can create squad contracts, invite existing team members, and manage multi-contractor pipelines with centralized billing.',
+      a: 'Clients can invite registered users into project teams and manage work in the Projects Hub. Consolidated real billing is not available.',
     },
   ];
 
@@ -103,7 +113,7 @@ export default function ResourcesPage({ setCurrentPage, isLoggedIn = false }) {
           </div>
 
           <h1 className="font-editorial text-4xl sm:text-6xl lg:text-[62px] leading-[1.1] tracking-tight text-[#171717]">
-            Workora <span className="text-[#F36B21] italic">Resources Hub</span>
+            Workverse <span className="text-[#F36B21] italic">Resources Hub</span>
           </h1>
 
           <p className="text-base sm:text-lg text-[#777777] max-w-xl mx-auto">
@@ -148,6 +158,9 @@ export default function ResourcesPage({ setCurrentPage, isLoggedIn = false }) {
           </div>
         </div>
       </section>
+
+      {resourcesError && <p role="alert" className="max-w-7xl mx-auto px-4 text-sm text-red-700">{resourcesError}</p>}
+      {resourcesLoading && <p className="max-w-7xl mx-auto px-4 text-sm text-[#777777]">Loading resources…</p>}
 
       {/* ========================================================
           FEATURED RESOURCE BANNER
@@ -295,10 +308,9 @@ export default function ResourcesPage({ setCurrentPage, isLoggedIn = false }) {
             return (
               <div
                 key={idx}
-                className="wv-card bg-white p-5 transition-all cursor-pointer"
-                onClick={() => setOpenFaq(isOpen ? null : idx)}
+                className="wv-card bg-white p-5 transition-all"
               >
-                <div className="flex items-center justify-between">
+                <button type="button" aria-expanded={isOpen} onClick={() => setOpenFaq(isOpen ? null : idx)} className="w-full flex items-center justify-between text-left">
                   <h4 className="text-sm sm:text-base font-bold text-[#171717] pr-4">
                     {faq.q}
                   </h4>
@@ -307,7 +319,7 @@ export default function ResourcesPage({ setCurrentPage, isLoggedIn = false }) {
                   ) : (
                     <ChevronDown className="w-4 h-4 text-[#777777] shrink-0" />
                   )}
-                </div>
+                </button>
                 {isOpen && (
                   <p className="text-xs sm:text-sm text-[#777777] leading-relaxed pt-3 border-t border-[#EAE2DC] mt-3 animate-in fade-in duration-150">
                     {faq.a}
@@ -361,18 +373,7 @@ export default function ResourcesPage({ setCurrentPage, isLoggedIn = false }) {
 
             <div className="space-y-4 text-sm sm:text-base text-[#171717]/80 leading-relaxed font-sans">
               <p className="font-medium text-[#171717]">{activeArticleModal.excerpt}</p>
-              <p>
-                In the modern landscape of remote software engineering and digital design, client relationships have shifted from transactional hourly gigs to high-leverage strategic partnerships.
-              </p>
-              <p>
-                When presenting a proposal on Workverse, successful builders focus on business outcomes: conversion velocity, uptime resilience, and user delight rather than merely listing programming frameworks.
-              </p>
-              <h4 className="font-bold text-lg text-[#171717] pt-2">Key Takeaways</h4>
-              <ul className="list-disc pl-5 space-y-2 text-xs sm:text-sm text-[#777777]">
-                <li>Package deliverables into concrete milestones with verifiable review criteria.</li>
-                <li>Leverage Workverse Escrow to align expectations before code is written.</li>
-                <li>Communicate asynchronously with weekly video demos and sprint summaries.</li>
-              </ul>
+              <p>{activeArticleModal.content || 'The full guide has not been published yet.'}</p>
             </div>
 
             <div className="pt-6 border-t border-[#EAE2DC] flex items-center justify-between">
