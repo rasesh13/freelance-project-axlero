@@ -204,6 +204,19 @@ export default function App() {
       return;
     }
 
+    if (page === 'profile' && options?.ownProfile) {
+      fetchTalents()
+        .then((list) => {
+          const own = Array.isArray(list) ? list.find((talent) => talent.userId === currentUser?.id) : null;
+          if (own) {
+            setSelectedFreelancer(own);
+            navigateToPage('profile');
+          } else navigateToPage('projects', { tab: 'profile' });
+        })
+        .catch(() => navigateToPage('projects', { tab: 'profile' }));
+      return;
+    }
+
     if (page === 'auth') {
       setAuthNotice(options?.notice || '');
       if (options?.returnTo) {
@@ -357,6 +370,9 @@ export default function App() {
             freelancer={selectedFreelancer}
             setCurrentPage={navigateToPage}
             isLoggedIn={isLoggedIn}
+            currentUser={currentUser}
+            setCurrentUser={setCurrentUser}
+            setSelectedFreelancer={setSelectedFreelancer}
           />
         )}
       </main>

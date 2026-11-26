@@ -541,12 +541,12 @@ export default function Navbar({
                       <button
                         onClick={() => {
                           setUserDropdownOpen(false);
-                          handleNavClick('profile');
+                          handleNavClick(userRole === 'freelancer' ? 'profile' : 'projects', userRole === 'freelancer' ? { ownProfile: true } : { tab: 'settings' });
                         }}
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#171717] rounded-xl hover:bg-[#FFF3EC] transition-colors cursor-pointer"
                       >
                         <User className="w-4 h-4 text-[#777777]" />
-                        <span>{userRole === 'client' ? 'Company Profile' : 'My Public Profile'}</span>
+                        <span>{userRole === 'client' ? 'Workspace Settings' : 'My Public Profile'}</span>
                       </button>
 
                       <button
@@ -646,7 +646,7 @@ export default function Navbar({
             {isLoggedIn ? (
               <>
                 <button
-                  onClick={() => handleNavClick('profile')}
+                  onClick={() => handleNavClick(userRole === 'freelancer' ? 'profile' : 'projects', userRole === 'freelancer' ? { ownProfile: true } : { tab: 'settings' })}
                   className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white border border-[#EAE2DC] font-medium text-sm text-[#171717]"
                 >
                   <User className="w-4 h-4" />

@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Star, MapPin, Briefcase, Award, Heart, Share2, Send, ExternalLink, Calendar, MessageSquare, Shield, Clock, ChevronRight, X } from 'lucide-react';
-import { createContract, sendMessage, toggleBookmark, fetchBookmarks, getAuthToken } from '../api/client';
+import { Camera, CheckCircle2, Star, MapPin, Briefcase, Award, Heart, Share2, Send, ExternalLink, Calendar, MessageSquare, Shield, Clock, ChevronRight, X } from 'lucide-react';
+import { createContract, sendMessage, toggleBookmark, fetchBookmarks, getAuthToken, uploadProfilePhoto } from '../api/client';
 
-export default function FreelancerProfilePage({ freelancer, setCurrentPage, isLoggedIn = false }) {
+export default function FreelancerProfilePage({ freelancer, setCurrentPage, isLoggedIn = false, currentUser, setCurrentUser, setSelectedFreelancer }) {
   const currentFreelancer = freelancer;
+  const isOwnProfile = Boolean(isLoggedIn && currentUser?.id && currentFreelancer?.userId === currentUser.id);
   const [coverFailed, setCoverFailed] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoSuccess, setPhotoSuccess] = useState('');
   const coverImage = !coverFailed && currentFreelancer?.coverImage && !currentFreelancer.coverImage.includes('images.unsplash.com')
     ? currentFreelancer.coverImage : '/images/pricing-bg.jpg';
 
@@ -54,6 +57,27 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage, isLo
       </div>
     );
   }
+
+  const handlePhotoSelected = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !isOwnProfile) return;
+    setPhotoUploading(true);
+    setActionError('');
+    setPhotoSuccess('');
+    try {
+      const result = await uploadProfilePhoto(file);
+      setCurrentUser(result.user);
+      setSelectedFreelancer((previous) => previous?.userId === result.user.id
+        ? { ...previous, avatar: result.user.avatar }
+        : previous);
+      setPhotoSuccess('Profile photo updated.');
+    } catch (error) {
+      setActionError(error.message || 'Could not upload your photo.');
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
 
   const handleToggleSave = async () => {
     if (!isLoggedIn || !getAuthToken()) {
@@ -207,8 +231,22 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage, isLo
               </div>
             </div>
 
-            {/* Action Buttons: Hire Me, Message, Bookmark */}
-            <div className="flex items-center justify-center sm:justify-end gap-3 pt-4 md:pt-0 border-t md:border-t-0 border-[#EAE2DC]">
+            {/* Owners manage their photo; visitors can save, contact, or hire. */}
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 pt-4 md:pt-0 border-t md:border-t-0 border-[#EAE2DC]">
+              {isOwnProfile ? (
+                <>
+                  <label htmlFor="public-profile-photo-upload" className="inline-flex cursor-pointer items-center gap-2 px-6 py-3 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs sm:text-sm font-bold shadow-lg shadow-orange-500/25 transition-colors">
+                    <Camera className="w-4 h-4" />
+                    {photoUploading ? 'Uploading Photo…' : 'Change Profile Photo'}
+                  </label>
+                  <input id="public-profile-photo-upload" type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoSelected} disabled={photoUploading} className="sr-only" />
+                  <button type="button" onClick={() => setCurrentPage('projects', { tab: 'settings' })} className="px-5 py-3 rounded-full border border-[#EAE2DC] text-[#171717] hover:bg-[#FFF3EC] hover:border-[#F36B21] text-xs font-semibold transition-colors">
+                    Edit Profile
+                  </button>
+                  {photoSuccess && <span role="status" className="w-full text-center sm:text-right text-xs font-semibold text-emerald-700">{photoSuccess}</span>}
+                </>
+              ) : (
+                <>
               <button
                 onClick={handleToggleSave}
                 className={`w-11 h-11 rounded-full border border-[#EAE2DC] flex items-center justify-center hover:bg-[#FFF3EC] transition-colors ${isSaved ? 'text-[#F36B21] border-[#F36B21]' : 'text-[#777777]'
@@ -251,6 +289,8 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage, isLo
                 <span>Hire Me</span>
                 <Send className="w-4 h-4" />
               </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -481,19 +521,25 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage, isLo
                 </div>
               </div>
 
-              <button
-                onClick={() => {
-                  if (!isLoggedIn || !getAuthToken()) return setCurrentPage('auth', { notice: 'Sign in as a client to create a contract offer.', returnTo: 'profile' });
-                  setIsHireModalOpen(true);
-                }}
-                className="w-full py-3.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold transition-all shadow-md shadow-orange-500/20"
-              >
-                Hire {currentFreelancer.name}
-              </button>
+              {isOwnProfile ? (
+                <button onClick={() => setCurrentPage('projects', { tab: 'settings' })} className="w-full py-3.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold transition-all shadow-md shadow-orange-500/20">
+                  Edit My Profile
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (!isLoggedIn || !getAuthToken()) return setCurrentPage('auth', { notice: 'Sign in as a client to create a contract offer.', returnTo: 'profile' });
+                    setIsHireModalOpen(true);
+                  }}
+                  className="w-full py-3.5 rounded-full bg-[#F36B21] hover:bg-[#e05e16] text-white text-xs font-bold transition-all shadow-md shadow-orange-500/20"
+                >
+                  Hire {currentFreelancer.name}
+                </button>
+              )}
             </div>
 
             {/* Quick Inquiry Form */}
-            <div className="wv-card p-6 bg-white space-y-4">
+            {!isOwnProfile && <div className="wv-card p-6 bg-white space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-[#171717]">
                 Quick Project Inquiry
               </h4>
@@ -529,7 +575,7 @@ export default function FreelancerProfilePage({ freelancer, setCurrentPage, isLo
                   </button>
                 </form>
               )}
-            </div>
+            </div>}
 
             {/* Verification Credentials */}
             <div className="wv-card p-6 bg-white space-y-3">
