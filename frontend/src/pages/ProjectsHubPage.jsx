@@ -78,6 +78,7 @@ import {
   fetchSettings,
   saveSettings,
   updateMyProfile,
+  uploadProfilePhoto,
   getAuthToken,
   exportFinancialsCsv,
 } from '../api/client';
@@ -327,6 +328,7 @@ const completedLength =
   const [profileName, setProfileName] = useState(currentUser?.name || '');
   const [profileTitle, setProfileTitle] = useState(currentUser?.title || '');
   const [profileAvatar, setProfileAvatar] = useState(currentUser?.avatar || '');
+  const [profilePhotoUploading, setProfilePhotoUploading] = useState(false);
   const selectedAvatarStyle = avatarStyleFromUrl(profileAvatar);
   useEffect(() => {
     setProfileAvatar(currentUser?.avatar || '');
@@ -896,8 +898,26 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
   };
 
   // Handle Save Settings (API Sync)
+  const handleProfilePhotoSelected = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setProfilePhotoUploading(true);
+    try {
+      const result = await uploadProfilePhoto(file);
+      setProfileAvatar(result.user.avatar);
+      if (setCurrentUser) setCurrentUser(result.user);
+      triggerToast('Photo Updated', 'Your profile photo is saved and visible across Workverse.');
+    } catch (err) {
+      triggerToast('Photo Upload Failed', err.message || 'Could not upload the photo.', 'error');
+    } finally {
+      setProfilePhotoUploading(false);
+    }
+  };
+
   const handleSaveSettings = async (e) => {
     e.preventDefault();
+    if (profilePhotoUploading) return;
     try {
       const [settingsResult, profileResult] = await Promise.all([
         saveSettings({
@@ -2911,7 +2931,16 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                   <div className="space-y-3">
                     <label className="block text-xs font-bold uppercase tracking-wider text-[#171717]">Your Avatar</label>
                     <p className="text-xs text-[#777777]">A face is suggested from familiar first names. Choose the look you prefer, or add your own photo.</p>
-                    <img src={avatarSrc(profileAvatar, profileName)} alt="Current avatar preview" className="h-20 w-20 rounded-2xl border-2 border-[#F36B21] bg-[#FFF3EC]" />
+                    <div className="flex flex-wrap items-center gap-4">
+                      <img src={avatarSrc(profileAvatar, profileName)} alt="Current avatar preview" className="h-20 w-20 rounded-2xl border-2 border-[#F36B21] bg-[#FFF3EC] object-cover" />
+                      <div className="space-y-1.5">
+                        <label htmlFor="profile-photo-upload" className="inline-flex cursor-pointer items-center rounded-full bg-[#171717] px-4 py-2 text-xs font-semibold text-white hover:bg-[#F36B21]">
+                          {profilePhotoUploading ? 'Uploading…' : 'Choose Photo'}
+                        </label>
+                        <input id="profile-photo-upload" type="file" accept="image/jpeg,image/png,image/webp" onChange={handleProfilePhotoSelected} disabled={profilePhotoUploading} className="sr-only" />
+                        <p className="text-[11px] text-[#888888]">JPEG, PNG, or WebP · 2 MB max</p>
+                      </div>
+                    </div>
                     <div className="flex flex-wrap gap-3">
                       {[
                         { style: 'masculine', label: 'Masculine' },
@@ -3008,7 +3037,8 @@ const handleUpdateProposalStatus = async (id, newStatus) => {
                   <div className="pt-2 flex justify-end">
                     <button
                       type="submit"
-                      className="px-6 py-2.5 rounded-full bg-[#171717] hover:bg-[#F36B21] text-white text-xs font-semibold transition-all shadow-xs cursor-pointer"
+                      disabled={profilePhotoUploading}
+                      className="px-6 py-2.5 rounded-full bg-[#171717] hover:bg-[#F36B21] text-white text-xs font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Save Changes
                     </button>

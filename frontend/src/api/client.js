@@ -180,6 +180,22 @@ export async function updateMyProfile(profileData) {
   return data;
 }
 
+export async function uploadProfilePhoto(file) {
+  if (!file || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    throw new Error('Choose a JPEG, PNG, or WebP photo');
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    throw new Error('Profile photos must be under 2 MB');
+  }
+  const contentBase64 = await readFileAsBase64(file);
+  const data = await request('/auth/avatar', {
+    method: 'PUT',
+    body: JSON.stringify({ mimeType: file.type, contentBase64 }),
+  });
+  if (data.user) setStoredUser(data.user);
+  return data;
+}
+
 export async function forgotPasswordRequest(email) {
   return await request('/auth/forgot-password', {
     method: 'POST',
