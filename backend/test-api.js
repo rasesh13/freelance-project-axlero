@@ -427,30 +427,64 @@ async function runApiTestSuite() {
     assert(res.data.includes('Wallet Transaction') || res.data.includes('Escrow Payment'), 'CSV must contain ledger records');
   });
 
-  // -------------------------------------------------------------------------
+   // -------------------------------------------------------------------------
   // 8. TEARDOWN & CLEANUP
   // -------------------------------------------------------------------------
   console.log('\n\x1b[36m--- Section 8: Teardown & Resource Cleanup ---\x1b[0m');
+
   authToken = clientToken;
 
   if (createdKanbanTaskId) {
     await test(`DELETE /api/kanban/${createdKanbanTaskId} removes test task`, async () => {
-      const res = await request(`/api/kanban/${createdKanbanTaskId}`, { method: 'DELETE' });
-      assert.strictEqual(res.status, 200);
+      const res = await request(`/api/kanban/${createdKanbanTaskId}`, {
+        method: 'DELETE'
+      });
+
+      assert.strictEqual(
+        res.status,
+        200,
+        `Kanban deletion failed: ${JSON.stringify(res.data)}`
+      );
     });
   }
 
   if (createdFileId) {
     await test(`DELETE /api/files/${createdFileId} removes test file`, async () => {
-      const res = await request(`/api/files/${createdFileId}`, { method: 'DELETE' });
-      assert.strictEqual(res.status, 200);
+      const res = await request(`/api/files/${createdFileId}`, {
+        method: 'DELETE'
+      });
+
+      assert.strictEqual(
+        res.status,
+        200,
+        `File deletion failed: ${JSON.stringify(res.data)}`
+      );
     });
   }
 
   if (createdProjectId) {
     await test(`DELETE /api/projects/${createdProjectId} removes test project`, async () => {
-      const res = await request(`/api/projects/${createdProjectId}`, { method: 'DELETE' });
-      assert.strictEqual(res.status, 200);
+      const res = await request(`/api/projects/${createdProjectId}`, {
+        method: 'DELETE'
+      });
+
+      assert.strictEqual(
+        res.status,
+        200,
+        `Project deletion failed. Status: ${res.status}. Response: ${JSON.stringify(res.data)}`
+      );
+
+      assert.strictEqual(res.data.success, true);
+      assert.strictEqual(res.data.deletedId, createdProjectId);
+
+      // Verify that the project no longer exists.
+      const verifyRes = await request(`/api/projects/${createdProjectId}`);
+
+      assert.strictEqual(
+        verifyRes.status,
+        404,
+        `Deleted project should return 404, got ${verifyRes.status}`
+      );
     });
   }
 
