@@ -205,6 +205,76 @@ async function runApiTestSuite() {
     assert.strictEqual(res.data.title, 'E2E Automated Sprint Initiative');
   });
 
+    // -------------------------------------------------------------------------
+  // PROJECT UPDATE API VALIDATION
+  // -------------------------------------------------------------------------
+
+  await test('PATCH /api/projects/:id rejects progress above 100', async () => {
+    const res = await request(`/api/projects/${createdProjectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ progress: 150 }),
+    });
+
+    assert.strictEqual(res.status, 400);
+  });
+
+  await test('PATCH /api/projects/:id rejects negative progress', async () => {
+    const res = await request(`/api/projects/${createdProjectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ progress: -20 }),
+    });
+
+    assert.strictEqual(res.status, 400);
+  });
+
+  await test('PATCH /api/projects/:id rejects invalid status', async () => {
+    const res = await request(`/api/projects/${createdProjectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'Archived' }),
+    });
+
+    assert.strictEqual(res.status, 400);
+  });
+
+  await test('PATCH /api/projects/:id rejects invalid budget', async () => {
+    const res = await request(`/api/projects/${createdProjectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ budget: '-500' }),
+    });
+
+    assert.strictEqual(res.status, 400);
+  });
+
+  await test('PATCH /api/projects/:id rejects invalid deadline', async () => {
+    const res = await request(`/api/projects/${createdProjectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ deadline: 'not-a-date' }),
+    });
+
+    assert.strictEqual(res.status, 400);
+  });
+
+  await test('PATCH /api/projects/:id updates project with valid data', async () => {
+    const payload = {
+      status: 'In Review',
+      progress: 35,
+      deadline: '2026-12-20',
+      budget: '$5,000',
+    };
+
+    const res = await request(`/api/projects/${createdProjectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.success, true);
+    assert.strictEqual(res.data.project.status, payload.status);
+    assert.strictEqual(res.data.project.progress, payload.progress);
+    assert.strictEqual(res.data.project.deadline, payload.deadline);
+    assert.strictEqual(res.data.project.budget, payload.budget);
+  });
+
   // -------------------------------------------------------------------------
   // 4. KANBAN MILESTONES & DRAG AND DROP SYNC
   // -------------------------------------------------------------------------
