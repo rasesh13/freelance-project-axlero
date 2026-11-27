@@ -1022,27 +1022,151 @@ app.post('/api/projects', authenticateToken, requireRole('client'), (req, res) =
 
 app.patch('/api/projects/:id', authenticateToken, (req, res) => {
   try {
-    const existing = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
-    if (!existing) return res.status(404).json({ error: 'Project not found' });
+    const existing = db.prepare(
+      'SELECT * FROM projects WHERE id = ?'
+    ).get(req.params.id);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
     if (existing.client_id !== req.user.id) {
-      return res.status(403).json({ error: 'Only the project owner can update this project' });
+      return res.status(403).json({
+        error: 'Only the project owner can update this project'
+      });
     }
 
     const { status, progress, deadline, budget } = req.body || {};
+
+    const hasField = (field) =>
+      Object.prototype.hasOwnProperty.call(req.body || {}, field);
+
+    if (!['status', 'progress', 'deadline', 'budget'].some(hasField)) {
+      return res.status(400).json({
+        error: 'At least one valid project field must be provided'
+      });
+    }
+
+    // Validate project status
+    const allowedStatuses = [
+      'In Progress',
+      'In Review',
+      'Completed'
+    ];
+
+    if (hasField('status')) {
+      if (
+        typeof status !== 'string' ||
+        !allowedStatuses.includes(status)
+      ) {
+        return res.status(400).json({
+          error: 'Invalid project status',
+          allowedStatuses
+        });
+      }
+    }
+
+    // Validate project progress
+    if (hasField('progress')) {
+      if (
+        typeof progress !== 'number' ||
+        !Number.isFinite(progress) ||
+        progress < 0 ||
+        progress > 100
+      ) {
+        return res.status(400).json({
+          error: 'Progress must be a number between 0 and 100'
+        });
+      }
+    }
+
+    // Validate deadline
+    if (hasField('deadline')) {
+      if (
+        typeof deadline !== 'string' ||
+        !deadline.trim() ||
+        Number.isNaN(Date.parse(deadline))
+      ) {
+        return res.status(400).json({
+          error: 'Please provide a valid deadline'
+        });
+      }
+    }
+
+    // Validate budget
+    let validatedBudget = null;
+
+    if (hasField('budget')) {
+      if (
+        typeof budget !== 'string' &&
+        typeof budget !== 'number'
+      ) {
+        return res.status(400).json({
+          error: 'Budget must be a valid positive amount'
+        });
+      }
+
+      const budgetString = String(budget).trim();
+
+      if (!/^\$?\s*\d+(,\d{3})*(\.\d{1,2})?$/.test(budgetString)) {
+        return res.status(400).json({
+          error: 'Invalid budget format'
+        });
+      }
+
+      const numericBudget = Number(
+        budgetString.replace(/[$,\s]/g, '')
+      );
+
+      if (
+        !Number.isFinite(numericBudget) ||
+        numericBudget <= 0 ||
+        numericBudget > 10000000
+      ) {
+        return res.status(400).json({
+          error: 'Budget must be between 0 and 10,000,000'
+        });
+      }
+
+      validatedBudget = budgetString.startsWith('$')
+        ? budgetString
+        : `$${numericBudget.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+          })}`;
+    }
+
     db.prepare(`
       UPDATE projects
-      SET status = COALESCE(?, status),
-          progress = COALESCE(?, progress),
-          deadline = COALESCE(?, deadline),
-          budget = COALESCE(?, budget)
+      SET status = ?,
+          progress = ?,
+          deadline = ?,
+          budget = ?
       WHERE id = ?
-    `).run(status || null, typeof progress === 'number' ? progress : null, deadline || null, budget || null, req.params.id);
+    `).run(
+      hasField('status') ? status : existing.status,
+      hasField('progress') ? progress : existing.progress,
+      hasField('deadline') ? deadline.trim() : existing.deadline,
+      hasField('budget') ? validatedBudget : existing.budget,
+      req.params.id
+    );
 
-    const updated = formatProjectRow(db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id));
-    res.json({ success: true, project: updated });
+    const updated = formatProjectRow(
+      db.prepare('SELECT * FROM projects WHERE id = ?')
+        .get(req.params.id)
+    );
+
+    res.json({
+      success: true,
+      project: updated
+    });
+
   } catch (err) {
     console.error('Update project error:', err);
-    res.status(500).json({ error: 'Failed to update project' });
+
+    res.status(500).json({
+      error: 'Failed to update project'
+    });
   }
 });
 
