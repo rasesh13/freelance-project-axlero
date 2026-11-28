@@ -404,7 +404,7 @@ Environment variables allow the application to be configured without hardcoding 
 
 | `CORS_ORIGIN` | Allowed frontend origin for cross-origin requests |
 
-| `DATABASE_PATH` | SQLite database file path |
+| `WORKVERSE_DB_PATH` | Optional SQLite database file path (relative to the backend working directory when using `npm run dev`) |
 
 ### Example configuration
 
@@ -418,7 +418,7 @@ NODE_ENV=development
 
 CORS_ORIGIN=http://localhost:5173
 
-DATABASE_PATH=database.sqlite
+WORKVERSE_DB_PATH=database.sqlite
 
 ```
 
