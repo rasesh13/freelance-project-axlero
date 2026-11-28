@@ -372,6 +372,7 @@ ensureColumn('team_members', 'email', "TEXT DEFAULT ''");
 ensureColumn('team_members', 'project_id', 'TEXT');
 ensureColumn('payments', 'client_id', 'TEXT');
 ensureColumn('payments', 'project_id', 'TEXT');
+ensureColumn('contracts', 'project_id', 'TEXT');
 
 // Scope legacy demo records to the demo workspaces instead of exposing them to
 // every newly registered account.

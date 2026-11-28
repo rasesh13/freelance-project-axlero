@@ -352,21 +352,39 @@ function requireRole(...roles) {
   };
 }
 
+
 function canAccessProject(userId, projectId) {
   if (!userId || !projectId) return false;
+
   return Boolean(
     db.prepare(`
       SELECT p.id
       FROM projects p
-      WHERE p.id = ? AND (
+      WHERE p.id = ?
+      AND (
         p.client_id = ?
-        OR EXISTS (SELECT 1 FROM contracts c WHERE c.freelancer_id = ? AND c.title = p.title)
-        OR EXISTS (SELECT 1 FROM proposals pr WHERE pr.candidate_id = ? AND pr.project_id = p.id AND pr.status = 'Accepted')
+
+        OR EXISTS (
+          SELECT 1
+          FROM contracts c
+          WHERE c.project_id = p.id
+          AND c.freelancer_id = ?
+          AND c.client_id = p.client_id
+        )
+
+        OR EXISTS (
+          SELECT 1
+          FROM proposals pr
+          WHERE pr.candidate_id = ?
+          AND pr.project_id = p.id
+          AND pr.status = 'Accepted'
+        )
       )
       LIMIT 1
     `).get(projectId, userId, userId, userId)
   );
 }
+
 
 function resolveProjectForUser(userId, { projectId, projectTitle } = {}) {
   const project = projectId
