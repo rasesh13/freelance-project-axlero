@@ -352,21 +352,39 @@ function requireRole(...roles) {
   };
 }
 
+
 function canAccessProject(userId, projectId) {
   if (!userId || !projectId) return false;
+
   return Boolean(
     db.prepare(`
       SELECT p.id
       FROM projects p
-      WHERE p.id = ? AND (
+      WHERE p.id = ?
+      AND (
         p.client_id = ?
-        OR EXISTS (SELECT 1 FROM contracts c WHERE c.freelancer_id = ? AND c.title = p.title)
-        OR EXISTS (SELECT 1 FROM proposals pr WHERE pr.candidate_id = ? AND pr.project_id = p.id AND pr.status = 'Accepted')
+
+        OR EXISTS (
+          SELECT 1
+          FROM contracts c
+          WHERE c.project_id = p.id
+          AND c.freelancer_id = ?
+          AND c.client_id = p.client_id
+        )
+
+        OR EXISTS (
+          SELECT 1
+          FROM proposals pr
+          WHERE pr.candidate_id = ?
+          AND pr.project_id = p.id
+          AND pr.status = 'Accepted'
+        )
       )
       LIMIT 1
     `).get(projectId, userId, userId, userId)
   );
 }
+
 
 function resolveProjectForUser(userId, { projectId, projectTitle } = {}) {
   const project = projectId
@@ -1486,8 +1504,8 @@ app.post('/api/contracts', authenticateToken, requireRole('client'), (req, res) 
       INSERT INTO contracts (
         id, title, client_name, client_company, client_avatar, type, rate, weekly_limit,
         total_earned, escrow_locked, current_milestone, deadline, status, progress,
-        milestones_count, thumbnail, freelancer_id, client_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        milestones_count, thumbnail, freelancer_id, client_id, project_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       title.trim(),
@@ -1506,8 +1524,10 @@ app.post('/api/contracts', authenticateToken, requireRole('client'), (req, res) 
       '0 of 3 approved',
       'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=80',
       freelancerUser.id,
-      req.user.id
+      req.user.id,
+      linkedProject?.id || null
     );
+    
 
     // A contract offer is not a payment. Funding requires a separate provider flow.
     const payId = `tx-${Date.now()}`;
@@ -1654,8 +1674,8 @@ app.patch('/api/proposals/:id/status', authenticateToken, (req, res) => {
           INSERT INTO contracts (
             id, title, client_name, client_company, client_avatar, type, rate, weekly_limit,
             total_earned, escrow_locked, current_milestone, deadline, status, progress,
-            milestones_count, thumbnail, freelancer_id, client_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            milestones_count, thumbnail, freelancer_id, client_id, project_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           `cnt-${Date.now()}`,
           existing.project_title,
@@ -1674,7 +1694,8 @@ app.patch('/api/proposals/:id/status', authenticateToken, (req, res) => {
           '0 of 4 approved',
           'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=80',
           existing.candidate_id || 'usr-freelancer-1',
-          req.user.id
+          req.user.id,
+          existing.project_id
         );
       }
     }
