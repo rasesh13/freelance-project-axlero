@@ -1565,6 +1565,84 @@ app.post('/api/contracts', authenticateToken, requireRole('client'), (req, res) 
   }
 });
 
+const ALLOWED_CONTRACT_STATUSES = new Set(['In Progress', 'In Review', 'Completed', 'Paused', 'Cancelled']);
+
+app.get('/api/contracts/:id', authenticateToken, (req, res) => {
+  try {
+    const row = db.prepare('SELECT * FROM contracts WHERE id = ?').get(req.params.id);
+    if (!row) {
+      return res.status(404).json({ error: 'Contract not found' });
+    }
+
+    if (row.client_id !== req.user.id && row.freelancer_id !== req.user.id) {
+      return res.status(403).json({ error: 'You do not have permission to view this contract' });
+    }
+
+    const formatted = formatContractRow(row);
+    if (row.project_id) {
+      const proj = db.prepare('SELECT id, title, category, status FROM projects WHERE id = ?').get(row.project_id);
+      if (proj) formatted.projectDetails = proj;
+    }
+
+    res.json(formatted);
+  } catch (err) {
+    console.error('Fetch single contract error:', err);
+    res.status(500).json({ error: 'Failed to fetch contract' });
+  }
+});
+
+app.patch('/api/contracts/:id', authenticateToken, (req, res) => {
+  try {
+    const existing = db.prepare('SELECT * FROM contracts WHERE id = ?').get(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Contract not found' });
+    }
+
+    if (existing.client_id !== req.user.id && existing.freelancer_id !== req.user.id) {
+      return res.status(403).json({ error: 'You do not have permission to modify this contract' });
+    }
+
+    const { status, progress, currentMilestone, deadline } = req.body || {};
+
+    if (status !== undefined && !ALLOWED_CONTRACT_STATUSES.has(status)) {
+      return res.status(400).json({ error: 'Invalid contract status. Allowed: In Progress, In Review, Completed, Paused, Cancelled' });
+    }
+
+    if (progress !== undefined) {
+      const p = Number(progress);
+      if (!Number.isFinite(p) || p < 0 || p > 100) {
+        return res.status(400).json({ error: 'Progress must be a number between 0 and 100' });
+      }
+    }
+
+    const nextStatus = status !== undefined ? status : existing.status;
+    const nextProgress = progress !== undefined ? Math.round(Number(progress)) : existing.progress;
+    const nextMilestone = currentMilestone !== undefined ? String(currentMilestone).trim() : existing.current_milestone;
+    const nextDeadline = deadline !== undefined ? String(deadline).trim() : existing.deadline;
+
+    db.prepare(`
+      UPDATE contracts
+      SET status = ?, progress = ?, current_milestone = ?, deadline = ?
+      WHERE id = ?
+    `).run(nextStatus, nextProgress, nextMilestone, nextDeadline, req.params.id);
+
+    logAuditEvent({
+      userId: req.user.id,
+      action: 'contract.update',
+      entityType: 'contract',
+      entityId: req.params.id,
+      details: { status: nextStatus, progress: nextProgress },
+      ip: req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1',
+    });
+
+    const updated = db.prepare('SELECT * FROM contracts WHERE id = ?').get(req.params.id);
+    res.json(formatContractRow(updated));
+  } catch (err) {
+    console.error('Update contract error:', err);
+    res.status(500).json({ error: 'Failed to update contract' });
+  }
+});
+
 app.get('/api/proposals', authenticateToken, (req, res) => {
   try {
     const rows = db.prepare(`

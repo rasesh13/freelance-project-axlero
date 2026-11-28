@@ -319,10 +319,21 @@ export async function fetchContracts() {
   return await request('/contracts');
 }
 
+export async function fetchContractById(id) {
+  return await request(`/contracts/${encodeURIComponent(id)}`);
+}
+
 export async function createContract(contractData) {
   return await request('/contracts', {
     method: 'POST',
     body: JSON.stringify(contractData),
+  });
+}
+
+export async function updateContract(id, updates) {
+  return await request(`/contracts/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
   });
 }
 

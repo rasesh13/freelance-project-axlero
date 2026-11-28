@@ -428,6 +428,40 @@ async function runApiTestSuite() {
     assert(Array.isArray(res.data));
   });
 
+  await test('GET /api/contracts/:id and PATCH /api/contracts/:id lifecycle', async () => {
+    const contractsRes = await request('/api/contracts');
+    assert.strictEqual(contractsRes.status, 200);
+    if (contractsRes.data.length > 0) {
+      const contract = contractsRes.data[0];
+      const singleRes = await request(`/api/contracts/${contract.id}`);
+      assert.strictEqual(singleRes.status, 200);
+      assert.strictEqual(singleRes.data.id, contract.id);
+
+      // Rejects invalid progress > 100
+      const invalidProgRes = await request(`/api/contracts/${contract.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ progress: 150 }),
+      });
+      assert.strictEqual(invalidProgRes.status, 400);
+
+      // Rejects invalid status
+      const invalidStatusRes = await request(`/api/contracts/${contract.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'SuperDone' }),
+      });
+      assert.strictEqual(invalidStatusRes.status, 400);
+
+      // Updates valid progress
+      const updateRes = await request(`/api/contracts/${contract.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ progress: 75, status: 'In Review' }),
+      });
+      assert.strictEqual(updateRes.status, 200);
+      assert.strictEqual(updateRes.data.progress, 75);
+      assert.strictEqual(updateRes.data.status, 'In Review');
+    }
+  });
+
   await test('GET /api/proposals returns submitted client/contractor proposals', async () => {
     const res = await request('/api/proposals');
     assert.strictEqual(res.status, 200);
