@@ -1504,8 +1504,8 @@ app.post('/api/contracts', authenticateToken, requireRole('client'), (req, res) 
       INSERT INTO contracts (
         id, title, client_name, client_company, client_avatar, type, rate, weekly_limit,
         total_earned, escrow_locked, current_milestone, deadline, status, progress,
-        milestones_count, thumbnail, freelancer_id, client_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        milestones_count, thumbnail, freelancer_id, client_id, project_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       title.trim(),
@@ -1524,8 +1524,10 @@ app.post('/api/contracts', authenticateToken, requireRole('client'), (req, res) 
       '0 of 3 approved',
       'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=80',
       freelancerUser.id,
-      req.user.id
+      req.user.id,
+      linkedProject?.id || null
     );
+    
 
     // A contract offer is not a payment. Funding requires a separate provider flow.
     const payId = `tx-${Date.now()}`;
@@ -1672,8 +1674,8 @@ app.patch('/api/proposals/:id/status', authenticateToken, (req, res) => {
           INSERT INTO contracts (
             id, title, client_name, client_company, client_avatar, type, rate, weekly_limit,
             total_earned, escrow_locked, current_milestone, deadline, status, progress,
-            milestones_count, thumbnail, freelancer_id, client_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            milestones_count, thumbnail, freelancer_id, client_id, project_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           `cnt-${Date.now()}`,
           existing.project_title,
@@ -1692,7 +1694,8 @@ app.patch('/api/proposals/:id/status', authenticateToken, (req, res) => {
           '0 of 4 approved',
           'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=80',
           existing.candidate_id || 'usr-freelancer-1',
-          req.user.id
+          req.user.id,
+          existing.project_id
         );
       }
     }
