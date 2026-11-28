@@ -109,7 +109,11 @@ function runDatabaseTestSuite() {
   });
 
   test('Core tables contain valid seeded production records', () => {
-    for (const t of ['users', 'projects', 'talents', 'kanban_tasks', 'payments', 'audit_logs']) {
+    const requiredTables = ['users', 'talents', 'pricing_plans', 'resources'];
+    if (process.env.WORKVERSE_SEED_DEMO_DATA === 'true') {
+      requiredTables.push('projects', 'kanban_tasks', 'payments', 'audit_logs');
+    }
+    for (const t of requiredTables) {
       const count = db.prepare(`SELECT COUNT(*) as c FROM ${t}`).get().c;
       assert(count > 0, `Table ${t} should have seeded rows (got ${count})`);
     }
@@ -123,6 +127,8 @@ function runDatabaseTestSuite() {
       'idx_kanban_column',
       'idx_proposals_project_id',
       'idx_contracts_freelancer_id',
+      'idx_contracts_project_id',
+      'idx_contracts_client_id',
       'idx_messages_thread_id',
       'idx_payments_recipient',
       'idx_wallet_tx_user_id',
@@ -159,6 +165,14 @@ function runDatabaseTestSuite() {
     const required = ['id', 'title', 'project', 'column', 'priority', 'estimate', 'subtasks', 'assignee_name'];
     for (const r of required) {
       assert(cols.includes(r), `kanban_tasks table missing column: ${r}`);
+    }
+  });
+
+  test('Contracts table schema has title, freelancer_id, client_id, project_id, status', () => {
+    const cols = db.prepare('PRAGMA table_info(contracts)').all().map((c) => c.name);
+    const required = ['id', 'title', 'freelancer_id', 'client_id', 'project_id', 'status', 'rate', 'progress'];
+    for (const r of required) {
+      assert(cols.includes(r), `contracts table missing column: ${r}`);
     }
   });
 

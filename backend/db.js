@@ -442,6 +442,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_proposals_candidate_id ON proposals(candidate_id);
   CREATE INDEX IF NOT EXISTS idx_contracts_freelancer_id ON contracts(freelancer_id);
   CREATE INDEX IF NOT EXISTS idx_contracts_client_name ON contracts(client_name);
+  CREATE INDEX IF NOT EXISTS idx_contracts_project_id ON contracts(project_id);
+  CREATE INDEX IF NOT EXISTS idx_contracts_client_id ON contracts(client_id);
   CREATE INDEX IF NOT EXISTS idx_messages_thread_id ON messages(thread_id);
   CREATE INDEX IF NOT EXISTS idx_message_threads_owner ON message_threads(owner_id, participant_id);
   CREATE INDEX IF NOT EXISTS idx_files_project_user ON files(project_id, user_id);
