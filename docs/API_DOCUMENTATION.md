@@ -1122,7 +1122,9 @@ This section provides a consolidated reference of the API routes currently expos
 | Kanban | PATCH | /api/kanban/:id/column | JWT required |
 | Kanban | DELETE | /api/kanban/:id | JWT required |
 | Contracts | GET | /api/contracts | JWT required |
+| Contracts | GET | /api/contracts/:id | JWT required (contract participant) |
 | Contracts | POST | /api/contracts | JWT + client role |
+| Contracts | PATCH | /api/contracts/:id | JWT required (contract participant) |
 | Proposals | GET | /api/proposals | JWT required |
 | Proposals | POST | /api/proposals | JWT + freelancer role |
 | Proposals | PATCH | /api/proposals/:id/status | JWT required |
@@ -1565,6 +1567,14 @@ Returns contract records available to the authenticated user/workspace.
 ### `POST /api/contracts`
 
 Creates a contract or hiring agreement from the submitted contract details. The endpoint is protected by JWT authentication. Ensure that the request contains the contract fields required by the backend handler.
+
+### `GET /api/contracts/:id`
+
+Retrieves single contract details along with linked project summary information. Requires JWT authentication and authorization as either the contract's client or assigned freelancer.
+
+### `PATCH /api/contracts/:id`
+
+Updates contract milestone progress percentage (`0`–`100`), delivery status (`In Progress`, `In Review`, `Completed`, `Paused`, `Cancelled`), or current milestone notes. Requires JWT authentication and participant authorization. Automatically records an audit trail event.
 
 ## 20.2 Proposals
 

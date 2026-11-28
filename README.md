@@ -36,6 +36,7 @@
 - Create a public profile with your title, skills, availability, and an illustrated avatar.
 - Upload your own JPEG, PNG, or WebP profile photo (up to 2 MB), or keep the default avatar.
 - Find posted work, save projects, submit proposals, and manage awarded contracts.
+- Review contract terms, update milestone progress percentages, and submit deliverables for review.
 - Track time, tasks, files, messages, and recorded milestone status in the workspace.
 
 ### For clients

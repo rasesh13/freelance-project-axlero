@@ -271,6 +271,26 @@ function getOpenApiSpec(port = 5000) {
           responses: { 201: { description: 'Contract created & escrow funded' } },
         },
       },
+      '/api/contracts/{id}': {
+        get: {
+          tags: ['Contracts & Proposals'],
+          summary: 'Retrieve single contract details with linked project summary',
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          responses: { 200: { description: 'Contract details object' }, 403: { description: 'Unauthorized' }, 404: { description: 'Not found' } },
+        },
+        patch: {
+          tags: ['Contracts & Proposals'],
+          summary: 'Update contract delivery progress percentage or milestone status',
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          requestBody: {
+            required: true,
+            content: { 'application/json': { example: { progress: 75, status: 'In Review' } } },
+          },
+          responses: { 200: { description: 'Updated contract object' }, 400: { description: 'Invalid progress or status' } },
+        },
+      },
       '/api/proposals': {
         get: { tags: ['Contracts & Proposals'], summary: 'List submitted project proposals/bids', responses: { 200: { description: 'Proposals array' } } },
         post: {
