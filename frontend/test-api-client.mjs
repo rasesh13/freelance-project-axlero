@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { clearApiCache, fetchPricingPlans, fetchResources } from './src/api/client.js';
+import { clearApiCache, fetchPricingPlans, fetchResources, resolveApiBase } from './src/api/client.js';
+
+assert.equal(resolveApiBase(), '/api');
+assert.equal(resolveApiBase('  http://localhost:5000/api/  '), 'http://localhost:5000/api');
 
 const calls = [];
 globalThis.fetch = async (url, options) => {

@@ -1,7 +1,12 @@
 // frontend/src/api/client.js
 // Unified Client API Layer connecting the entire Workverse React Frontend to the Express + SQLite Backend (port 5000)
 
-const API_BASE = '/api';
+export function resolveApiBase(configuredBase) {
+  const base = typeof configuredBase === 'string' ? configuredBase.trim().replace(/\/+$/, '') : '';
+  return base || '/api';
+}
+
+const API_BASE = resolveApiBase(import.meta.env?.VITE_API_BASE_URL);
 
 export function getAuthToken() {
   try {

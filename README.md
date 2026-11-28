@@ -82,6 +82,8 @@ For a stable local sign-in across backend restarts, copy `backend/.env.example` 
 
 </details>
 
+The frontend uses Vite's `/api` proxy by default. If you host the frontend and API separately, set `VITE_API_BASE_URL` to the full API prefix (for example, `https://api.example.com/api`) in `frontend/.env`, and add the frontend origin to the backend's `CORS_ORIGIN`.
+
 ### Useful commands
 
 | Command | Result |
